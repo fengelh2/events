@@ -121,6 +121,10 @@ def scrape(venue_row: dict, session: Optional[requests.Session] = None) -> list[
             events = _scrape_sistic_api(venue_row, session=session)
         elif kind == "nextjs_contentful":
             events = _scrape_nextjs_contentful(venue_row, session=session)
+        elif kind == "et4_search":
+            events = _scrape_et4_search(venue_row, session=session)
+        elif kind == "toubiz_api":
+            events = _scrape_toubiz_api(venue_row, session=session)
         elif kind == "unknown":
             log.info("skip %s: kind=unknown (pending onboarding)", venue_id)
             return []
@@ -2577,6 +2581,255 @@ def _infer_category(title: str, venue_row: dict, stage_default: Optional[str] = 
 def load_venues(path: str | Path) -> list[dict]:
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+# ─── helpers for German aggregator parsers (et4, toubiz) ────────────────────
+import html as _html  # noqa: E402
+
+
+def _tribe_slug(s: str) -> str:
+    """Slugify a venue name for use as a venue_id suffix."""
+    s = _html.unescape(s).lower()
+    s = re.sub(r"[ä]", "ae", s)
+    s = re.sub(r"[ö]", "oe", s)
+    s = re.sub(r"[ü]", "ue", s)
+    s = re.sub(r"[ß]", "ss", s)
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s[:60]
+
+
+_ET4_CATEGORY_MAP = {
+    "Ausstellung": "museum_exhibition", "Theater & Film": "theatre",
+    "Schauspiel": "theatre", "Kinder- und Jugendtheater": "theatre",
+    "Kabarett & Co.": "theatre", "Musical & Musiktheater": "theatre",
+    "Oper": "opera", "Operette": "opera", "Ballett": "ballet",
+    "Tanz": "ballet", "Konzert": "concert", "Klassik": "concert",
+    "Jazz": "concert", "Pop/Rock": "concert", "Chormusik": "concert",
+    "Lesung": "other", "Vortrag/Lesung": "other", "Vortrag": "other",
+    "Brauchtum/Kultur": "other", "Führung": "other",
+}
+_ET4_DENY_CATEGORIES = frozenset({
+    "Markt", "Märkte", "Flohmarkt", "Sport", "Party", "Disco", "Messe",
+    "Ausflug/Exkursion",
+})
+
+
+def _et4_parse_dt(s):
+    if not s or not isinstance(s, str): return None
+    try: return datetime.fromisoformat(s)
+    except ValueError: return None
+
+
+def _et4_to_event(raw, venue_row, split_by_venue=True, vid_overrides=None,
+                  skip_substrings=None, drop_cancelled=True):
+    title = (raw.get("title") or "").strip()
+    if not title: return None
+    for suffix in (" | Abgesagt", " - Abgesagt", " | ABGESAGT"):
+        if title.endswith(suffix): title = title[:-len(suffix)].strip()
+    attrs_list = raw.get("attributes") or []
+    attrs = {a.get("key"): a.get("value") for a in attrs_list if isinstance(a, dict)}
+    if drop_cancelled and str(attrs.get("DETAILS_ABGESAGT", "")).lower() == "true":
+        return None
+    venue_name = (raw.get("name") or "").strip()
+    venue_lower = venue_name.lower()
+    if skip_substrings and any(s in venue_lower for s in skip_substrings):
+        return None
+    intervals = raw.get("timeIntervals") or []
+    if not intervals: return None
+    start = _et4_parse_dt(intervals[0].get("start"))
+    end = _et4_parse_dt(intervals[0].get("end"))
+    if start is None: return None
+    url_slug = attrs.get("URL_TITLE", "")
+    ev_id = raw.get("id", "")
+    if url_slug and ev_id:
+        base = "https://" + venue_row["calendar_url"].split("/")[2]
+        url = f"{base}/de/visitessen/streaming/detail/Event/{ev_id}/{url_slug}/"
+    else:
+        url = venue_row.get("homepage", "#")
+    overrides = vid_overrides or {}
+    if split_by_venue and venue_name:
+        venue_id = overrides.get(venue_name) or f"{venue_row['id']}-{_tribe_slug(venue_name)}"
+    else:
+        venue_id = venue_row["id"]
+        if not venue_name: venue_name = venue_row.get("display_name") or venue_row["name"]
+    cats = raw.get("categories") or []
+    raw_cat = cats[0] if cats else ""
+    cat_map = venue_row.get("category_map") or _ET4_CATEGORY_MAP
+    deny_cats = set(venue_row.get("deny_categories") or _ET4_DENY_CATEGORIES)
+    if raw_cat in deny_cats: return None
+    category = cat_map.get(raw_cat) or venue_row.get("category", "other")
+    if category == "mixed": category = "other"
+    category = _infer_category(title, venue_row, stage_default=category)
+    city = (raw.get("city") or venue_row.get("city") or "").strip()
+    skip_cities = [c.lower() for c in (venue_row.get("skip_cities") or [])]
+    if skip_cities and city.lower() in skip_cities: return None
+    return Event(title=title, start=start, end=end, venue_id=venue_id,
+                 venue_name=venue_name or venue_row["name"], city=city,
+                 category=category, url=url, description=None,
+                 source=venue_row["id"], audience=_infer_audience(title))
+
+
+def _scrape_et4_search(venue_row, session=None):
+    sess = session or requests
+    iframe_url = venue_row["calendar_url"]
+    experience = venue_row["experience"]
+    api_endpoint = venue_row.get("api_endpoint", "https://meta.et4.de/rest.ashx/search/")
+    template = venue_row.get("template", "ET2014A_LIGHT.json")
+    max_limit = int(venue_row.get("max_limit", 1000))
+    split_by_venue = bool(venue_row.get("split_by_venue", True))
+    vid_overrides = venue_row.get("venue_id_overrides") or {}
+    skip_substrings = [s.lower() for s in (venue_row.get("skip_venue_substrings") or [])]
+    drop_cancelled = bool(venue_row.get("drop_cancelled", True))
+    try:
+        r1 = sess.get(iframe_url, headers=DEFAULT_HEADERS, timeout=DEFAULT_TIMEOUT)
+        r1.raise_for_status()
+    except requests.RequestException as exc:
+        log.warning("%s: et4 iframe fetch failed: %s", venue_row["id"], exc)
+        return []
+    m = re.search(r'"licensekey"\s*:\s*"([^"]+)"', r1.text)
+    if not m:
+        log.warning("%s: et4 licensekey not found", venue_row["id"])
+        return []
+    licensekey = m.group(1)
+    page_size = min(max_limit, 200)
+    all_items, offset = [], 0
+    for _ in range(20):
+        payload = {"offset": offset, "limit": page_size, "facets": False,
+                   "type": "Event", "experience": experience,
+                   "q": venue_row.get("q", "all:all -systag:has_abnormal_interval"),
+                   "template": template, "licensekey": licensekey,
+                   "maxresponsetime": "0"}
+        try:
+            r = sess.post(api_endpoint, json=payload,
+                          headers={**DEFAULT_HEADERS, "Content-Type": "application/json",
+                                   "Origin": "https://" + iframe_url.split("/")[2]},
+                          timeout=DEFAULT_TIMEOUT + 10)
+            r.raise_for_status(); data = r.json()
+        except (requests.RequestException, ValueError) as exc:
+            log.warning("%s: et4 search offset=%d failed: %s", venue_row["id"], offset, exc)
+            break
+        items = data.get("items") or []
+        all_items.extend(items)
+        overallcount = int(data.get("overallcount") or 0)
+        offset += len(items)
+        if not items or offset >= overallcount: break
+    out, seen = [], set()
+    for it in all_items:
+        ev = _et4_to_event(it, venue_row, split_by_venue=split_by_venue,
+                           vid_overrides=vid_overrides, skip_substrings=skip_substrings,
+                           drop_cancelled=drop_cancelled)
+        if ev is None: continue
+        key = (ev.venue_id, ev.title, ev.start)
+        if key in seen: continue
+        seen.add(key); out.append(ev)
+    log.info("%s: %d events from et4_search", venue_row["id"], len(out))
+    return out
+
+
+_TOUBIZ_CATEGORY_MAP = {
+    "Ausstellung": "museum_exhibition", "Kunstausstellung": "museum_exhibition",
+    "Fotografie Ausstellung": "museum_exhibition", "Malerei Ausstellung": "museum_exhibition",
+    "Konzert": "concert", "Klassik Konzert": "concert", "Jazz Konzert": "concert",
+    "Pop Konzert": "concert", "Rock Konzert": "concert", "Musikfestival": "concert",
+    "Chorkonzert": "concert", "Theater": "theatre", "Kabarett & Kleinkunst": "theatre",
+    "Comedy": "theatre", "Show & Varieté": "theatre", "Aufführung": "theatre",
+    "Oper": "opera", "Musical": "opera", "Operette": "opera",
+    "Ballett": "ballet", "Tanz": "other", "Vortrag": "other", "Lesung": "other",
+    "Talkrunde": "other", "Führung": "other", "Themenführung": "other",
+    "Filmvorführung": "other",
+}
+_TOUBIZ_DENY_CATEGORIES = frozenset({
+    "Schifffahrt", "Stadtrundfahrt", "Stadtführung", "Markt",
+    "Nightlife & Party", "Kinder- und Jugendtheater", "Karneval",
+    "Aktivität", "Messe", "Zirkus", "Sport", "Straßenfest",
+    "Aktionstag", "Thementag", "Weitere Veranstaltungen",
+})
+
+
+def _toubiz_to_event(raw, venue_row, allowed, cat_map, deny_cats, vid_overrides, skip_substrings):
+    ev_obj = raw.get("event") or {}
+    title = (ev_obj.get("name") or "").strip()
+    if not title: return None
+    if ev_obj.get("canceled"): return None
+    raw_cat = ((ev_obj.get("category") or {}).get("name") or "").strip()
+    if raw_cat in deny_cats or raw_cat not in allowed: return None
+    category = cat_map.get(raw_cat) or venue_row.get("category", "other")
+    date_s = raw.get("date") or raw.get("startAt")
+    if not date_s: return None
+    start = _parse_one(date_s)
+    if start is None: return None
+    ld = ev_obj.get("locationData") or {}
+    addr = ld.get("address") if isinstance(ld, dict) else None
+    venue_name = ((addr or {}).get("name") or "").strip()
+    venue_lower = venue_name.lower()
+    if skip_substrings and any(s.lower() in venue_lower for s in skip_substrings):
+        venue_name = ""
+    if venue_name and venue_name in vid_overrides:
+        venue_id = vid_overrides[venue_name]
+    elif venue_name:
+        venue_id = f"{venue_row['id']}-{_tribe_slug(venue_name)}"
+    else:
+        venue_id = venue_row["id"]
+        venue_name = venue_row.get("display_name") or venue_row["name"]
+    addr_city = ((addr or {}).get("city") or "").strip()
+    base_city = (venue_row.get("city") or "").strip()
+    if addr_city and base_city and addr_city.lower().startswith(base_city.lower()):
+        city = base_city
+    else:
+        city = addr_city or base_city
+    return Event(title=title, start=start, end=None, venue_id=venue_id,
+                 venue_name=venue_name or venue_row["name"], city=city,
+                 category=category, url=venue_row.get("calendar_url", venue_row.get("homepage", "#")),
+                 description=None, source=venue_row["id"], audience=_infer_audience(title))
+
+
+def _scrape_toubiz_api(venue_row, session=None):
+    sess = session or requests
+    api_url = venue_row.get("api_url", "https://mein.toubiz.de/api/v1/eventDates")
+    bearer = venue_row.get("bearer_token")
+    if not bearer:
+        log.warning("%s: toubiz_api missing bearer_token", venue_row["id"]); return []
+    element = venue_row.get("element")
+    if not element:
+        log.warning("%s: toubiz_api missing element filter", venue_row["id"]); return []
+    referer = venue_row.get("referer") or venue_row.get("homepage") or ""
+    page_size = int(venue_row.get("page_size", 50))
+    max_pages = int(venue_row.get("max_pages", 25))
+    allowed = set(venue_row.get("allowed_categories") or _TOUBIZ_CATEGORY_MAP.keys())
+    cat_map = venue_row.get("category_map") or _TOUBIZ_CATEGORY_MAP
+    deny_cats = set(venue_row.get("deny_categories") or _TOUBIZ_DENY_CATEGORIES)
+    vid_overrides = venue_row.get("venue_id_overrides") or {}
+    skip_substrings = [s.lower() for s in (venue_row.get("skip_venue_substrings") or [])]
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {bearer}",
+               "Origin": referer.rstrip("/"), "Referer": referer,
+               "User-Agent": DEFAULT_HEADERS.get("User-Agent", "Mozilla/5.0")}
+    all_items = []
+    for page in range(1, max_pages + 1):
+        params = {"sorting[property]": "date", "unlicensed": "1",
+                  "filter[clientIncludingManaged]": "current",
+                  "filter[element]": element, "filter[date][after]": "today",
+                  "filter[date][includeOnDemand]": "1",
+                  "pagination[pageSize]": str(page_size),
+                  "pagination[page]": str(page), "language": "de"}
+        try:
+            r = sess.get(api_url, params=params, headers=headers, timeout=DEFAULT_TIMEOUT + 10)
+            r.raise_for_status(); data = r.json()
+        except (requests.RequestException, ValueError) as exc:
+            log.warning("%s: toubiz_api page=%d failed: %s", venue_row["id"], page, exc); break
+        items = data.get("payload") or []
+        if not items: break
+        all_items.extend(items)
+    out, seen = [], set()
+    for raw in all_items:
+        ev = _toubiz_to_event(raw, venue_row, allowed=allowed, cat_map=cat_map,
+                              deny_cats=deny_cats, vid_overrides=vid_overrides,
+                              skip_substrings=skip_substrings)
+        if ev is None: continue
+        key = (ev.venue_id, ev.title, ev.start)
+        if key in seen: continue
+        seen.add(key); out.append(ev)
+    log.info("%s: %d events from toubiz_api", venue_row["id"], len(out))
+    return out
 
 
 # ─── CLI smoke test ──────────────────────────────────────────────────────────
