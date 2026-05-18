@@ -56,7 +56,7 @@ import parse_ical  # noqa: E402
 
 log = logging.getLogger(__name__)
 
-DEFAULT_TIMEOUT = 20
+DEFAULT_TIMEOUT = 45  # bumped from 20s — Discover LA et al. occasionally time out
 DEFAULT_HEADERS = parse_ical.DEFAULT_HEADERS
 
 
