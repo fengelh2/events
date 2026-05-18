@@ -1,0 +1,11 @@
+code: la
+name: Los Angeles
+flag: "🇺🇸"
+title: "What's happening in LA"
+header_eyebrow: "Culture in LA"
+city_identity_word: "LA"
+lang: en
+date_order: MDY
+timezone: America/Los_Angeles
+horizon_days: 270
+goatcounter_code: events-la

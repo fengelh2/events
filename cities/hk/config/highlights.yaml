@@ -1,0 +1,58 @@
+# events-hk — featured / "must-see" highlights
+#
+# Same logic as events-nrw + events-la:
+#   1. featured_keywords: case-insensitive substring match on title (or description)
+#   2. featured_events: manual entries by venue_id + fuzzy title match (with `until:` expiry)
+#
+# Featured events appear pinned at top in "Don't Miss" + ★ badge inline.
+# Cap: 6 cards. Sort: closest closing first.
+
+featured_keywords:
+  # Old Masters / canonical Western
+  - Vermeer
+  - Rembrandt
+  - Caravaggio
+  - Picasso
+  - Monet
+  - Van Gogh
+  - Hokusai
+
+  # Classical composers (HK Phil staples)
+  - Beethoven
+  - Mozart
+  - Mahler
+  - Tchaikovsky
+  - Shostakovich
+  - Brahms
+  - Wagner
+  - Verdi
+  - Puccini
+
+  # Modern conductors / soloists frequently visiting HK
+  - Yo-Yo Ma
+  - Lang Lang
+  - Yuja Wang
+  - Jaap van Zweden
+
+  # Chinese masters
+  - Wu Guanzhong       # major M+ / HKMoA exhibitions
+  - Zao Wou-Ki
+  - Xu Bing
+  - Ai Weiwei
+
+  # Opera blockbusters
+  - Aida
+  - Carmen
+  - La Traviata
+  - Madama Butterfly
+  - Tosca
+  - Turandot
+
+  # Ballet blockbusters
+  - Swan Lake
+  - Nutcracker
+  - Sleeping Beauty
+  - Giselle
+  - Romeo and Juliet
+
+featured_events: []

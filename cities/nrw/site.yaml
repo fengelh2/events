@@ -1,0 +1,11 @@
+code: nrw
+name: NRW (Essen + Düsseldorf)
+flag: "🇩🇪"
+title: "Was läuft in Mamas Welt"
+header_eyebrow: "Kultur in NRW"
+city_identity_word: "NRW"
+lang: de
+date_order: DMY
+timezone: Europe/Berlin
+horizon_days: 270
+goatcounter_code: events-nrw

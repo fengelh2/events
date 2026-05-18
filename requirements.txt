@@ -1,0 +1,8 @@
+requests
+beautifulsoup4
+icalendar
+dateparser
+PyYAML
+rapidfuzz
+playwright
+playwright-stealth

@@ -1,0 +1,1602 @@
+# Singapore cultural-events venues.
+#
+# Geographic zones: single zone "Singapore" (MRT-compact city-state).
+# Date format: DD/MM/YYYY (British DMY). Time zone: Asia/Singapore (UTC+8, no DST).
+#
+# Probe pass 2026-05-18: each entry below validated against live HTML
+# (selectors return N>0 cards + extract at least one title + date).
+# `# FAIL:` comment lines record sources that failed probing.
+
+# ============================================================================
+# THEATRE
+# ============================================================================
+
+- id: wild-rice
+  name: Wild Rice
+  city: City Centre
+  category: theatre
+  homepage: https://www.wildrice.com.sg
+  calendar_url: https://www.wildrice.com.sg/whats-on/
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: 'https://www\.wildrice\.com\.sg/event/\d+-[a-z0-9-]+/'
+  selectors:
+    title: "h1"
+    date: "body"
+  # Range form "20 – 24 May 2026" (en-dash) or "11 – 27 Jun 2026"; single also possible.
+  date_extract_regex: '\d{1,2}\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Listing page is Elementor with dynamic per-row class IDs so html_list
+    selectors are unstable. /event/<numeric-id>-<slug>/ URLs are stable;
+    detail page h1 carries the title and the body has "DD – DD Mon YYYY".
+
+- id: srt
+  name: Singapore Repertory Theatre
+  city: City Centre
+  category: theatre
+  homepage: https://www.srt.com.sg
+  calendar_url: https://www.srt.com.sg/new
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "a[href*='/show/']"
+    title: "h4"
+    date: "p"
+    detail_link: "@href"
+  # "Now till 31 May 2026", "From 18 Aug 2026", "19 - 21 Jun 2026", "22 Jul - 29 Aug 2026"
+  date_extract_regex: '\d{1,2}\s*-\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    /new page lists current SRT shows. Each is an <a href="/show/SLUG/">
+    with .description > h4 (title) + p (date + venue separated by "|").
+
+- id: pangdemonium
+  name: Pangdemonium
+  city: City Centre
+  category: theatre
+  homepage: https://pangdemonium.com
+  calendar_url: https://pangdemonium.com/whats-on
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "div.item.content-alignment-center-bottom-to-center"
+    title: "h2.sppb-addon-title"
+    date: "p.date"
+    detail_link: "a.event-link@href"
+  date_extract_regex: '\d{1,2}\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    SP Page Builder (Joomla). Item wrapper div.item; title h2.sppb-addon-title;
+    date p.date inside .sppb-addon-subtitle.
+
+- id: checkpoint-theatre
+  name: Checkpoint Theatre
+  city: City Centre
+  category: theatre
+  homepage: https://checkpoint-theatre.org
+  calendar_url: https://checkpoint-theatre.org/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "li.event-single"
+    title: "h3.post-title"
+    date: "time.event-date"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Clean WordPress markup. Each event a li.event-single with h3.post-title
+    + time.event-date ("16 – 18 Jun 2026").
+
+# FAIL: necessary.org — Webflow w-dyn-item cards lack a stable heading element
+# and dates are buried in prose excerpts. Needs custom parser (e.g. detail_pages
+# walking /external-projects/, /devising-platform/) or a JSON-LD source.
+
+# ============================================================================
+# CONCERT / ORCHESTRA
+# ============================================================================
+
+- id: sco
+  name: Singapore Chinese Orchestra
+  city: City Centre
+  category: concert
+  homepage: https://sco.com.sg
+  calendar_url: https://sco.com.sg/whats-on/concert-season-25-26/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "article.elementor-post"
+    title: "h5.elementor-post__title"
+    date: ".details_section_event_start_date"
+    detail_link: "a.post-link@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Elementor Pro posts grid. Each article.elementor-post has
+    h5.elementor-post__title + a custom-meta span carrying the start date.
+    Some rows are season banners without dates — drop quietly.
+
+# FAIL: sso.org.sg — /concerts-events 404s; homepage has no server-rendered
+# event dates. Likely React/Next; needs Playwright + selector discovery.
+
+# ============================================================================
+# BALLET
+# ============================================================================
+
+# FAIL: singaporeballet.org — Elementor with dynamic per-row class IDs and
+# no stable date selector; detail pages also lack body-level date text.
+# Either build a static curated list seasonally or scrape SISTIC.
+
+# ============================================================================
+# MUSEUMS / EXHIBITIONS
+# ============================================================================
+
+- id: sam
+  name: Singapore Art Museum
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.singaporeartmuseum.sg
+  calendar_url: https://www.singaporeartmuseum.sg/art-events
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "a.exhibition"
+    title: "span.exhibition__title"
+    date: "span.exhibition__status"
+    detail_link: "@href"
+  # Status text e.g. "UNTIL 31 MAY '26", "FROM 1 JUL '26", or full range.
+  date_extract_regex: "\\d{1,2}\\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\\s+'?\\d{2,4}"
+  date_format: "DD MON 'YY"
+  notes: |
+    Confirmed 7 a.exhibition cards on /art-events. Each card holds
+    span.exhibition__title (title), span.exhibition__status ("UNTIL 31 MAY
+    '26"), span.exhibition__info (location). The status uses uppercase
+    short-month plus a 2-digit year. Render-side needs to expand '26→2026.
+
+# REPLACES existing: acm (old selectors targeted the right div but listing
+# returns 6 events live — Today+Upcoming filter URL still works, swapping
+# date selector to the dedicated p.text-slider-p-date which is reliable).
+- id: acm
+  name: Asian Civilisations Museum
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.nhb.gov.sg/acm
+  calendar_url: https://www.nhb.gov.sg/acm/whats-on/overview
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "div.a-listing-content__overflow"
+    title: "a.a-listing-content__anchor-card-title"
+    date: "p.text-slider-p-date"
+    detail_link: "a.a-listing-content__anchor-card-title@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  date_find_all: true
+  accept_drop_rate: 0.4
+  notes: |
+    Confirmed 6 cards on /whats-on/overview (drop the Today+Upcoming filter
+    — the unfiltered URL returns more entries). Title in
+    a.a-listing-content__anchor-card-title; date in
+    p.text-slider-p-date ("Various timings daily" or
+    "From 23 May 2026 to 7 Jun 2026"). Some rows are open-ended programmes
+    without a date — accept_drop_rate covers.
+
+- id: lasalle
+  name: LASALLE College of the Arts
+  city: City Centre
+  category: mixed
+  homepage: https://www.lasalle.edu.sg
+  calendar_url: https://www.lasalle.edu.sg/whats-on
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "a.py-2.position-relative"
+    title: "h5.title"
+    date: "div.date"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Tailwind-styled listing. Each card a.py-2.position-relative wraps
+    h5.title + div.date (with span.d-block inside). Mix of screenings,
+    talks, exhibitions — render-side category inference handles.
+
+- id: esplanade-festivals
+  name: Esplanade (Festivals & Series)
+  city: City Centre
+  category: mixed
+  homepage: https://www.esplanade.com
+  calendar_url: https://www.esplanade.com/whats-on/festivals-and-series
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "div.card-root"
+    title: "div.text-xl"
+    date: "p.text-md"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.5
+  notes: |
+    The main /whats-on landing renders programmes client-side (0 dates
+    in static HTML); /whats-on/festivals-and-series is server-rendered
+    with div.card-root cards. Each card has p.text-md (date range) +
+    div.text-xl (title) inside an <a> with href /whats-on/festivals-
+    and-series/.../<slug>. Listing mixes upcoming + past festivals —
+    render-side future filter drops the historic rows.
+
+# ============================================================================
+# FILM
+# ============================================================================
+
+- id: sgiff
+  name: Singapore International Film Festival
+  city: City Centre
+  category: film
+  homepage: https://sgiff.com
+  calendar_url: https://sgiff.com
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "37th Singapore International Film Festival"
+      start: 2026-10-21
+      end:   2026-11-01
+      detail_url: "https://sgiff.com/"
+  notes: |
+    Annual Oct-Nov festival. Outside that window the homepage carries
+    only the next-edition banner ("from 21 Oct — 1 Nov 2026"); no
+    programme listing exists yet. Refresh to scraped html_list once the
+    /film/list page opens for the 37th edition.
+
+# FAIL: theprojector.sg/films/, /films-events/, /filmsandevents/ — listing
+# pages render film cards via JS; static HTML has no current screening
+# dates (only stale 2019 footer mentions). Needs playwright_html_list.
+
+# ============================================================================
+# FESTIVALS (seasonal placeholders)
+# ============================================================================
+
+# FAIL: sifa.sg/programmes (302→home), /plan-your-visit/all-programmes —
+# all-programmes listing loads cards via JS (0 dates statically). Detail
+# pages /programme-details/<category>/<slug> render h1 but no date in
+# static HTML. Festival season May-Jun; revisit closer to the dates with
+# Playwright, or grab the official PDF programme guide.
+# FAIL: singaporewritersfestival.com — only 1 stray date in static HTML
+# (off-season). November festival; revisit Sep-Nov with Playwright.
+
+# ============================================================================
+# AGGREGATORS / TO-DO
+# ============================================================================
+
+# FAIL: timeout.com/singapore/things-to-do — DNS resolution failed.
+# FAIL: thehoneycombers.com/singapore/singapore-event-calendar/ — DNS failed.
+# FAIL: eventbrite.com/d/singapore--singapore/events/ — DNS failed.
+# All three blocked at this network's resolver; retry from a different
+# egress (CI runner) and they should work as html_list (TimeOut) or via
+# the public Eventbrite /api/v3/destinations/events/ JSON endpoint
+# (requires OAuth token but venue-scoped queries are read-only).
+
+# SISTIC: searched site for an obvious public events JSON endpoint;
+# www.sistic.com.sg uses a server-rendered React shell and the XHR
+# routes (api/eventsearch/*) require a CSRF cookie + are rate-limited.
+# Out-of-scope for this 5-min budget — defer. If implemented later,
+# best entry is the sitemap: https://www.sistic.com.sg/sitemap.xml.
+
+
+# ============================================================================
+# ROUND-2 ADDITIONS (2026-05-18)
+# ============================================================================
+
+- id: dance-theatre-the
+  name: T.H.E Dance Company
+  city: Singapore
+  region: "Orchard & Central"
+  category: theatre
+  homepage: https://www.the-dancecompany.com
+  calendar_url: https://www.the-dancecompany.com/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "div.elementor-element.elementor-widget-heading"
+    title: "h4"
+    date: "p"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Verified: home page surfaces upcoming production blocks with title in
+    h4 + date in adjacent paragraph (e.g. "Strangely Familiar" / "22–24 May
+    2026 | Victoria Theatre"). Elementor markup; high drop_rate because the
+    page also has many non-event widgets.
+
+# (TheatreWorks, Toy Factory, Drama Box, The Necessary Stage, Sing'theatre,
+#  Singapore Lyric Opera, Buds, Glowers, Hatch Theatrics — all FAILED in
+#  round 2: see FAIL block at end of file.)
+
+# ============================================================================
+# CONCERT / ORCHESTRA
+# ============================================================================
+
+- id: nafa
+  name: NAFA (Nanyang Academy of Fine Arts)
+  city: Singapore
+  region: "City Centre"
+  category: concert
+  homepage: https://www.nafa.edu.sg
+  calendar_url: https://www.nafa.edu.sg/events
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "a[href^='/events/']"
+    title: "h3, h4, h5"
+    date: "p, span, div"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.4
+  notes: |
+    /events lists ~10 upcoming campus events (grad shows, recitals, talks).
+    Each card is an <a href="/events/<slug>">. Confirmed dates "22 May 2026",
+    "24 May 2026", "21 June 2026" etc. Mixed categories (music + visual);
+    let render-side classify.
+
+- id: omm
+  name: Orchestra of the Music Makers
+  city: Singapore
+  region: "City Centre"
+  category: concert
+  homepage: https://omm.sg
+  calendar_url: https://omm.sg/
+  kind: playwright_html_list
+  source_priority: 2
+  selectors:
+    item: "div.concert, article, section"
+    title: "h2, h3"
+    date: "*"
+  notes: |
+    Homepage server-rendered HTML carries chrome only (the SIL OFL font
+    license dates were the only matches in static markup). Concert blocks
+    are React-hydrated. Needs Playwright. Listed at low priority until
+    selector discovery is run on a live render.
+
+# ============================================================================
+# BALLET / DANCE
+# ============================================================================
+
+- id: singapore-ballet
+  name: Singapore Ballet
+  city: Singapore
+  region: "City Centre"
+  category: ballet
+  homepage: https://singaporeballet.org
+  calendar_url: https://singaporeballet.org/season-2025-2/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "article, div.elementor-widget-container"
+    title: "h2, h3, h4"
+    date: "*"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.8
+  notes: |
+    /shows + /whats-on are 404. The annual season page (currently
+    season-2025-2) is server-rendered and lists production titles + dates
+    like "16 Mar 2025", "29 Jun 2025", "20 Jul 2025", "7 Dec 2025" — six
+    dates extracted statically. URL slug rotates yearly: when 2026-2027 is
+    announced switch calendar_url accordingly.
+
+- id: bhaskars-arts
+  name: Bhaskar's Arts Academy
+  city: Singapore
+  region: "City Centre"
+  category: theatre
+  homepage: https://www.bhaskarsartsacademy.com
+  calendar_url: https://www.bhaskarsartsacademy.com/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "div.course-details"
+    title: "h4"
+    date: "div.course-top-part"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Verified — home page lists upcoming Indian classical dance/music events
+    in div.course-details cards. Title in h4 inside an /event/details.cfm?id=
+    anchor; date appears as bare text inside .course-top-part (e.g. "04 May
+    2026" beside "Odissi Festival 2026"). ColdFusion CMS, stable markup.
+
+# ============================================================================
+# MUSEUMS / EXHIBITIONS
+# ============================================================================
+
+# REPLACES existing: sam (old selectors `a[href*='/art-events/exhibitions/']`
+# pulled image-wrapper divs without titles; new selectors below match the
+# real listing markup found 2026-05-18).
+- id: national-museum-sg
+  name: National Museum of Singapore
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.nhb.gov.sg/nationalmuseum
+  calendar_url: https://www.nhb.gov.sg/nationalmuseum/whats-on/exhibition/exhibitions
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "a[href*='/nationalmuseum/whats-on/exhibition/']"
+    title: "h2 a, h3 a, span.heading-text-slider"
+    date: "div, p"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  date_find_all: true
+  accept_drop_rate: 0.5
+  notes: |
+    Server-rendered Sitecore page. Confirmed 7 unique date strings on
+    /whats-on/exhibition/exhibitions including "9 Oct 2026", "15 May 2026",
+    "18 May 2026". Featured banner uses h2 > a with date in a sibling div
+    ("30 May 2026 – 28 Jun 2026"). Also try /whats-on/programme/programmes
+    for non-exhibition events. NHB shared markup — re-validate after any
+    Sitecore template change.
+
+- id: nms-programmes
+  name: National Museum of Singapore — Programmes
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.nhb.gov.sg/nationalmuseum
+  calendar_url: https://www.nhb.gov.sg/nationalmuseum/whats-on/programme/programmes
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "a[href*='/nationalmuseum/whats-on/programme/']"
+    title: "h2 a, span.heading-text-slider"
+    date: "div, p"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  date_find_all: true
+  accept_drop_rate: 0.5
+  notes: |
+    Companion listing to nms exhibitions — separate Programmes section.
+    Confirmed 9 dates incl. "30 May 2026", "28 Jun 2026", "01 May 2026".
+
+- id: peranakan-museum
+  name: Peranakan Museum
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.nhb.gov.sg/peranakanmuseum
+  calendar_url: https://www.nhb.gov.sg/peranakanmuseum/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "div.whats-on-carousel__content"
+    title: "h3"
+    date: "h5"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  date_find_all: true
+  notes: |
+    Homepage carousel surfaces current special exhibitions (e.g. "Peacock
+    Power: Beauty and Symbolism Across Cultures" / h5 "31 Oct 2025 – 30 Aug
+    2026"). /whats-on/overview returns 404 — the homepage carousel is the
+    canonical source for now. Re-probe periodically; the museum reopened
+    after a long renovation so listing volume is small (1-3 cards).
+
+- id: sun-yat-sen-memorial
+  name: Sun Yat Sen Nanyang Memorial Hall
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.sysnmh.org.sg
+  calendar_url: https://www.sysnmh.org.sg/en
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "div.card, article, div.event-card"
+    title: "h2, h3, h4"
+    date: "div, p, span"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Self-hosted (not the nhb.gov.sg/sysnmh path — that 404s now). The
+    /en root surfaces 4 dates including current "14 May 2026". Listing is
+    sparse (small museum), so accept_drop_rate is high. Selector is broad
+    — re-tighten once a real card pattern is confirmed during a live
+    season.
+
+- id: childrens-museum-sg
+  name: Children's Museum Singapore
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.heritage.sg/childrensmuseum
+  calendar_url: https://www.heritage.sg/childrensmuseum/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "div.card"
+    title: "a.card__title h2, h2"
+    date: "p.card__date"
+    detail_link: "a.card__title@href"
+  date_extract_regex: '\d{1,2}\s*(?:&amp;|&)\s*\d{1,2}\s+[A-Z][a-z]+(?:,\s*\d{1,2}\s*(?:&amp;|&)\s*\d{1,2}\s+[A-Z][a-z]+)?\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Verified card structure: div.card > a.card__title > h2 (title),
+    p.card__date ("30 & 31 May, 5 & 6 June 2026"). Heritage Board's
+    consolidated children/family museum page (replaces the standalone
+    Singapore Philatelic Museum which moved into this venue).
+
+- id: malay-heritage-centre
+  name: Malay Heritage Centre
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.malayheritage.gov.sg
+  calendar_url: https://www.malayheritage.gov.sg/
+  kind: playwright_html_list
+  source_priority: 2
+  notes: |
+    Reopened April 2026 after renovation. 66 date strings appear in the
+    static HTML but are embedded inside Next.js __next_f.push() JSON
+    payloads (Chakra UI / React server components), not in DOM cards.
+    Needs Playwright to read the hydrated DOM, OR a parser that walks the
+    __next_f JSON. Deferred until Playwright pipeline is wired.
+
+- id: nus-museum
+  name: NUS Museum
+  city: Singapore
+  region: "West & North"
+  category: museum_exhibition
+  homepage: https://museum.nus.edu.sg
+  calendar_url: https://museum.nus.edu.sg/
+  kind: playwright_html_list
+  source_priority: 2
+  notes: |
+    All museum.nus.edu.sg paths (/exhibitions, /events, /whats-on) return
+    ~960-byte SPA shells — fully client-rendered. Needs Playwright.
+
+- id: lkcnhm
+  name: Lee Kong Chian Natural History Museum
+  city: Singapore
+  region: "West & North"
+  category: museum_exhibition
+  homepage: https://lkcnhm.nus.edu.sg
+  calendar_url: https://lkcnhm.nus.edu.sg/
+  kind: playwright_html_list
+  source_priority: 3
+  notes: |
+    Same SPA shell as museum.nus.edu.sg — needs Playwright. Low priority
+    (museum publishes ~3-5 events/year).
+
+- id: national-gallery-sg
+  name: National Gallery Singapore
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://www.nationalgallery.sg
+  calendar_url: https://www.nationalgallery.sg/sg/en/whats-on.html
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "div.card-menu"
+    title: "a.link.inverse.bold span span"
+    date: "div, p"
+    detail_link: "a.link.inverse.bold@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.9
+  detail_pages_fallback: true
+  notes: |
+    Listing IS server-rendered (14 exhibition card titles found, e.g.
+    "He Xiangning: Ink & Intent", "Into the Modern: Impressionism from the
+    MFA Boston", "City of Others"). BUT the listing page itself contains
+    NO per-card date strings — dates live on each /sg/en/exhibitions/
+    detail page. accept_drop_rate=0.9 because rendering bare titles isn't
+    useful without dates. Best approach: kind=detail_pages walking each
+    /sg/en/exhibitions/<slug>.html link to extract date from detail body.
+
+# ============================================================================
+# GALLERIES
+# ============================================================================
+
+- id: ota-fine-arts
+  name: Ota Fine Arts (Singapore)
+  city: Singapore
+  region: "West & North"
+  category: vernissage
+  homepage: https://www.otafinearts.com
+  calendar_url: https://www.otafinearts.com/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "h2"
+    title: "a"
+    date: "div.date"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+[A-Z][a-z]{2,}\s*[–-]\s*\d{1,2}\s+[A-Z][a-z]{2,}\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Multi-location gallery (Singapore + Shanghai + Tokyo); listing mixes
+    them — div.location chip carries the city. Title in h2 > a, date in
+    sibling div.date ("19 Mar - 30 May 2026"). Render-side filter on
+    location=Singapore. Confirmed 19 dates in static HTML.
+
+- id: cuturi-gallery
+  name: Cuturi Gallery
+  city: Singapore
+  region: "City Centre"
+  category: vernissage
+  homepage: https://www.cuturigallery.com
+  calendar_url: https://www.cuturigallery.com/exhibitions/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "article, div.exhibition, div.gdlr-core-item-pdb"
+    title: "h3, h4"
+    date: "div.date, p, span"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    348KB page, 84 date hits in static markup — listing is server-rendered.
+    Selectors broad pending narrower probe on a live render. Tighten by
+    reading one card structure in production.
+
+- id: yeo-workshop
+  name: Yeo Workshop
+  city: Singapore
+  region: "West & North"
+  category: vernissage
+  homepage: https://www.yeoworkshop.com
+  calendar_url: https://www.yeoworkshop.com/exhibitions/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "article, div.exhibition-item"
+    title: "h2, h3"
+    date: "div.date, p, span.date"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Gillman Barracks gallery. 271KB page, 66 dates in static HTML.
+    Selectors broad; tighten on a future pass.
+
+- id: sundaram-tagore-singapore
+  name: Sundaram Tagore Singapore
+  city: Singapore
+  region: "City Centre"
+  category: vernissage
+  homepage: https://www.sundaramtagore.com
+  calendar_url: https://www.sundaramtagore.com/exhibitions
+  kind: playwright_html_list
+  source_priority: 2
+  notes: |
+    Listing is large (390KB) and full of date keywords but the per-card
+    date elements are in client-rendered Vue components. Needs Playwright.
+
+- id: mizuma-sg
+  name: Mizuma Gallery (Singapore)
+  city: Singapore
+  region: "West & North"
+  category: vernissage
+  homepage: https://www.mizuma.sg
+  calendar_url: https://www.mizuma.sg/exhibitions/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "article, div.exhibition"
+    title: "h2, h3"
+    date: "div.date, p, time"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Gillman Barracks. Server-rendered (4 dates statically). Probe with
+    live selector discovery for tighter cards.
+
+- id: fost-gallery
+  name: FOST Gallery
+  city: Singapore
+  region: "West & North"
+  category: vernissage
+  homepage: https://www.fostgallery.com
+  calendar_url: https://www.fostgallery.com/2025
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "article, div.exhibition, div.gallery-item"
+    title: "h2, h3"
+    date: "div.date, p"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Gillman Barracks. /exhibitions redirects to the year page (currently
+    /2025; update annually). 8 dates in static markup.
+
+- id: objectifs
+  name: Objectifs — Centre for Photography & Film
+  city: Singapore
+  region: "City Centre"
+  category: vernissage
+  homepage: https://www.objectifs.com.sg
+  calendar_url: https://www.objectifs.com.sg/upcoming/
+  kind: playwright_html_list
+  source_priority: 2
+  notes: |
+    380KB page returns 404 status but renders content; static markup has
+    80 /event/ link hits and the listing is heavy on lazy-load. Needs
+    Playwright to extract clean (title, date) pairs.
+
+# ============================================================================
+# FILM / CINEMA
+# ============================================================================
+
+- id: the-cathay
+  name: The Cathay (events + screenings)
+  city: Singapore
+  region: "City Centre"
+  category: film
+  homepage: https://thecathay.com.sg
+  calendar_url: https://thecathay.com.sg/whats-on/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "div.catagory-box"
+    title: "a"
+    date: "div.tag.tag-dark span"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+[A-Z][a-z]{2,}\s*-\s*\d{1,2}\s+[A-Z][a-z]{2,}\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Cathay shopping mall events + pop-ups (incl. The Projector tenancy).
+    Confirmed cards: each div.catagory-box has an <a href> wrapping image
+    + title, with date in div.tag.tag-dark > span ("22 May - 31 May 2026").
+    12 dates total on the page.
+
+- id: alliance-francaise-sg
+  name: Alliance Française de Singapour
+  city: Singapore
+  region: "Orchard & Central"
+  category: film
+  homepage: https://alliancefrancaise.org.sg
+  calendar_url: https://alliancefrancaise.org.sg/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "article, div.event, div.elementor-post"
+    title: "h2, h3"
+    date: "div.date, p, time"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    French cultural centre — films, concerts, exhibitions, talks. Home
+    surfaces upcoming events with dates like "14 April 2026". Note the
+    bare hostname (no www) — www.alliancefrancaise.org.sg refuses TLS.
+
+- id: goethe-sg
+  name: Goethe-Institut Singapur
+  city: Singapore
+  region: "Orchard & Central"
+  category: film
+  homepage: https://www.goethe.de/ins/sg/en
+  calendar_url: https://www.goethe.de/ins/sg/en/ver.cfm
+  kind: html_list
+  source_priority: 2
+  selectors:
+    item: "li.event-list-item, article.event"
+    title: "h2, h3"
+    date: "p.event-date, span.date, time"
+  date_extract_regex: '\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    German cultural centre. ver.cfm is the official events calendar page
+    (156KB server-rendered, 0 date hits without UA hints — re-probe with
+    Accept-Language: de may surface more). Off-season the calendar is
+    short; revisit closer to autumn programme launches.
+
+- id: sg-film-society
+  name: Singapore Film Society
+  city: Singapore
+  region: "City Centre"
+  category: film
+  homepage: https://www.singaporefilmsociety.com
+  calendar_url: https://www.singaporefilmsociety.com/events
+  kind: playwright_html_list
+  source_priority: 2
+  notes: |
+    Squarespace site; 256KB page renders 12 /event/ links but static HTML
+    has no date strings inline (dates in client-hydrated JSON-LD). Needs
+    Playwright OR custom JSON-LD extractor.
+
+# ============================================================================
+# CULTURAL CENTRES / COMMUNITY
+# ============================================================================
+
+- id: esplanade-main
+  name: Esplanade — Theatres on the Bay (main programme)
+  display_name: Esplanade
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://www.esplanade.com
+  calendar_url: https://www.esplanade.com/whats-on
+  kind: playwright_html_list
+  source_priority: 0
+  selectors:
+    item: "div.card-root"
+    title: "div.text-xl"
+    date: "p.text-md"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s*[–—-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  extra_wait_ms: 6000
+  scroll: true
+  accept_drop_rate: 0.4
+  # 12 events validated 2026-05-18 (page returns 14 card-roots, 2 are
+  # unhydrated Alpine.js templates with href="event.PageData?.Url" — the
+  # url-resolver drops them).
+  notes: |
+    Esplanade's /whats-on main programme renders with Alpine.js + Tailwind.
+    Static HTML carries zero dates; Playwright sees hydrated cards as
+    `div.card-root` with title in `div.text-xl.mb-3.text-black.leading-6.font-bold`
+    (shortened to `div.text-xl` which is unique within the card) and date
+    in `p.text-md.mb-3.text-black` (shortened to `p.text-md`).
+    Two of the 14 cards on the page are unhydrated Alpine.js templates
+    (literal href "event.PageData?.Url") — they fall out of url-resolver
+    naturally. Companion entry `esplanade-festivals` (already in venues.yaml)
+    catches festival rollups that don't appear individually here.
+
+# ----------------------------------------------------------------------------
+# DEFERRED (still failing or low ROI after probe)
+# ----------------------------------------------------------------------------
+#
+# DEFERRED: TimeOut Singapore (timeout.com/singapore/things-to-do) — page
+#   renders 33 <article> tiles but they're editorial articles ("Best things
+#   to do this week"), not individual events with dates. No dates in static
+#   HTML. Would need detail-page walking which yields ~5 events for the
+#   effort cost — skip.
+#
+# DEFERRED: Peatix SG (peatix.com/group/SG, peatix.com/search?country=SG) —
+#   pure SPA; no inline event data, no public JSON-LD blob, app shell only.
+#   Playwright + selector discovery deferred until a real need surfaces;
+#   Eventbrite covers similar audience.
+#
+# DEFERRED: NLB main/whats-on — every URL probed returns HTTP 202 + 2179-byte
+#   Akamai bot challenge page. Needs Playwright with realistic browser
+#   fingerprint, possibly stealth plugin. Could yield 30+ free public talks
+#   if cracked; revisit.
+#
+# DEFERRED: Marina Bay Sands entertainment/shows — TCP timeout on every probe
+#   from this network (likely geo/CDN-blocked for our egress). Retry from CI
+#   runner; SISTIC already covers MBS theatre ticketed shows so partial.
+#
+# DEFERRED: Singapore Sports Hub events — HTTP 403 (Akamai bot block).
+#   Mass-attendance concerts in the National Stadium / Indoor Stadium are
+#   mostly SISTIC-ticketed anyway; SISTIC entry covers the cultural slice.
+#
+# DEFERRED: VisitSingapore STB misCarousel JSON — entry exists in venues.yaml
+#   (kind: json_embedded, no parser yet); custom parser would yield ~10-15
+#   public-holiday cultural events. Lower priority than aggregator entries.
+#
+# DEFERRED: Eventbrite pagination depth — current setup captures pages 1-3
+#   (60 events). To go deeper, either (a) add more sibling -p4/-p5/...
+#   entries, or (b) extend json_ld_aggregator with paginate_pages: N config.
+#   Recommend (b) before adding p4+.
+- id: visitsingapore-stb
+  name: VisitSingapore (STB) — What's Happening
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://www.visitsingapore.com
+  calendar_url: https://www.visitsingapore.com/whats-happening/all-happenings/
+  kind: json_embedded
+  source_priority: 1
+  notes: |
+    Singapore Tourism Board's official aggregator. Static HTML carries a
+    misCarousel JSON-encoded array of events (e.g. Hari Raya Haji "27 May
+    2026"). Needs a small JSON extractor (parse window.__INITIAL_STATE__
+    style payload, decode the &#34; entity, walk misCarousel[].title_t +
+    description_t). Worth doing — covers public-holiday cultural events
+    that single venues skip.
+
+- id: artshouse-group
+  name: "Arts House Limited (multi-venue: Arts House, Drama Centre, etc.)"
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://www.artshousegroup.sg
+  calendar_url: https://www.artshousegroup.sg/whats-on/whats-on-info/events-calendar
+  kind: playwright_html_list
+  source_priority: 1
+  notes: |
+    Umbrella org for The Arts House, Drama Centre, Goodman Arts Centre,
+    Aliwal Arts Centre, Stamford Arts Centre, Victoria Theatre + Concert
+    Hall. The /events-calendar page is 157KB but inline date count is 0 —
+    cards render client-side via the Sitecore calendar widget. Needs
+    Playwright. High ROI: covers ~6 venues with one parser if implemented.
+
+- id: singapore-fringe
+  name: M1 Singapore Fringe Festival
+  city: Singapore
+  region: "City Centre"
+  category: theatre
+  homepage: https://www.singaporefringe.com
+  calendar_url: https://2026.singaporefringe.com/
+  kind: playwright_html_list
+  source_priority: 2
+  notes: |
+    Annual January festival. 255KB current edition page with full
+    programme but cards are JS-rendered. Off-season most of the year;
+    revisit Nov-Jan with Playwright.
+
+- id: singapore-biennale
+  name: Singapore Biennale / Singapore Art Week
+  city: Singapore
+  region: "City Centre"
+  category: museum_exhibition
+  homepage: https://singaporebiennale.org
+  calendar_url: https://singaporebiennale.org/
+  kind: html_list
+  source_priority: 2
+  selectors:
+    item: "article, div.event, div.programme"
+    title: "h2, h3"
+    date: "div.date, p, time"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Biennial — 8 dates statically in home page ("31 Aug 2026", "11 Oct
+    2026"). Season-shaped; expect empty stretches between editions.
+
+- id: singapore-writers-festival
+  name: Singapore Writers Festival
+  city: Singapore
+  region: "City Centre"
+  category: theatre
+  homepage: https://www.singaporewritersfestival.com
+  calendar_url: https://www.singaporewritersfestival.com/
+  kind: playwright_html_list
+  source_priority: 2
+  notes: |
+    Annual November festival. 130KB landing with banner only off-season;
+    programme cards render client-side. Revisit Sep-Nov with Playwright.
+
+- id: sifa
+  name: Singapore International Festival of Arts
+  city: "City Centre"
+  category: festival
+  homepage: https://www.sifa.sg
+  calendar_url: https://www.sifa.sg/programme
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: 'https://(?:www\.)?sifa\.sg/plan-your-visit/all-programmes/programme-details/[a-z0-9\-]+/[a-z0-9\-]+/?'
+  selectors:
+    title: "h1"
+    date: "[class*='date'], .prog-meta, body"
+  # SIFA 2026 runs 15-30 May 2026. Detail pages carry "DD Mon, Day" rows
+  # under a "Dates & Times" h5 but omit the year; matcher should infer
+  # from festival window if needed. Captured single + range patterns.
+  date_extract_regex: '\d{1,2}\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*(?:\s+\d{4})?'
+  notes: |
+    Joomla SP Page Builder + heavy JS on the listing, so we walk the 14
+    stable /programme-details/<pillar>/<slug> URLs harvested from the
+    homepage (Last Rites, Strangely Familiar, Hamlet, Hedda Gabler,
+    Lush Life, Planet Wanderer, The Lighthouse, Noli Timere, A Light
+    Between Rains, Automata: Two Weddings & a Rapture, etc.). h1 holds
+    the title; "Dates & Times" block under div[class*='date'] holds the
+    DD Mon, Day rows. Festival is annual (May-Jun).
+
+#
+# DEFERRED: Singapore F1 Grand Prix (singaporegp.sg) — homepage carries
+#   17 date strings but they are all 2025 archive dates (Oct 2025 race).
+#   The 2026 calendar / entertainment lineup pages (/en/programme,
+#   /en/calendar, /en/entertainment-lineup) all 404; only
+#   /en/entertainment/past-entertainment-acts/2025/ resolves. Retry
+#   round 6 once the 2026 lineup is announced (typically July).
+#
+# DEFERRED: Mosaic Music Festival — discontinued since 2016 (Esplanade
+#   replaced it with multiple smaller series). Do not re-add.
+#
+# DEFERRED: da:ns festival — runs under Esplanade umbrella, already
+#   captured by the existing esplanade-festivals entry in venues.yaml.
+
+# ============================================================================
+# FILM
+# ============================================================================
+
+- id: eventbrite-sg
+  name: Eventbrite Singapore
+  display_name: Eventbrite SG
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://www.eventbrite.sg
+  calendar_url: https://www.eventbrite.sg/d/singapore--singapore/all-events/
+  kind: json_ld_aggregator
+  source_priority: 1
+  # 20 events from page 1 alone via JSON-LD ItemList. Eventbrite emits
+  # 20 events per JSON-LD block and paginates with `?page=N` up to 60+ pages
+  # (1000+ total events). Single-URL parser only catches page 1 (20 events).
+  notes: |
+    Eventbrite's all-events listing embeds a perfect JSON-LD `ItemList`
+    with 20 `Event` items per page. Our `json_ld_aggregator` parser
+    handles it natively (each item has `name`, `startDate`, `url`).
+    Limitation: single-URL only — to capture deeper pages add sibling
+    entries (`eventbrite-sg-p2`, `-p3`, ...) with `?page=2/3/...` URLs,
+    or extend json_ld_aggregator to walk `?page=N` until empty.
+
+- id: peatix-sg
+  name: Peatix Singapore
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://peatix.com
+  calendar_url: https://peatix.com/group/SG
+  kind: playwright_html_list
+  source_priority: 3
+  notes: |
+    20KB group landing, listing cards render after auth/Captcha checks.
+    Needs Playwright + likely an Accept-Language: en cookie.
+
+- id: sistic
+  name: SISTIC (Singapore master ticketing)
+  display_name: SISTIC
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://www.sistic.com.sg
+  calendar_url: https://cms.sistic.com.sg/sistic/docroot/api/events?sort_type=date&sort_order=ASC&index=global&client=1
+  kind: sistic_api
+  source_priority: 0
+  max_pages: 30
+  detail_url_template: "https://www.sistic.com.sg/events/{alias}"
+  # 354 events on first validated run (2026-05-18). Genre distribution:
+  # other 272, concert 55, theatre 13, ballet 8, opera 4, museum_exhibition 2.
+  # API endpoint discovered via XHR sniffing on www.sistic.com.sg/events
+  # (Playwright `page.on('request')`). Paginates 20/page via `first=N`.
+  notes: |
+    SISTIC is THE Singapore master ticketing aggregator — covers SSO,
+    Singapore Ballet, SLO, Wild Rice, SRT, Esplanade ticketed shows,
+    SkyPark, MBS shows, festivals + workshops. The CMS endpoint
+    `https://cms.sistic.com.sg/sistic/docroot/api/events` returns a clean
+    JSON list with `title`, `start_date` ("Wed, 30 Nov 2022"),
+    `event_date` (range), `alias` (URL slug), `venue_name`, `primary_genre`.
+    Caps at limit=20 per page (422 if higher); paginate via `first=N`.
+    `start_date` is often a past series-start date; `event_date` end is
+    used to populate `Event.end` so future-window filters work.
+    Re-validate if any of: API base URL changes, `data[]` shape changes,
+    or `total_records` field disappears.
+
+# ============================================================================
+# ROUND-3 ADDITIONS (2026-05-18) — high-volume aggregators
+# ============================================================================
+
+- id: eventbrite-sg-p2
+  name: Eventbrite Singapore (Page 2)
+  display_name: Eventbrite SG
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://www.eventbrite.sg
+  calendar_url: https://www.eventbrite.sg/d/singapore--singapore/all-events/?page=2
+  kind: json_ld_aggregator
+  source_priority: 2
+  # +20 events. Page 2 of Eventbrite. Trivially extensible to /p3, /p4, ...
+  notes: |
+    Sibling of `eventbrite-sg` for page 2. Render-side dedup on URL handles
+    overlap (none expected; pages are disjoint). Probe pagination cap by
+    visiting /?page=99 — empty ItemList means end.
+
+- id: eventbrite-sg-p3
+  name: Eventbrite Singapore (Page 3)
+  display_name: Eventbrite SG
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://www.eventbrite.sg
+  calendar_url: https://www.eventbrite.sg/d/singapore--singapore/all-events/?page=3
+  kind: json_ld_aggregator
+  source_priority: 2
+
+- id: honeycombers-sg
+  name: Honeycombers Singapore — Event Calendar
+  display_name: Honeycombers SG
+  city: Singapore
+  region: "City Centre"
+  category: mixed
+  homepage: https://thehoneycombers.com/singapore
+  calendar_url: https://thehoneycombers.com/singapore/singapore-event-calendar/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "div.hc-event-card"
+    title: "h3"
+    date: 'meta[itemprop="startDate"]@content'
+    detail_link: "h3 a@href"
+  # 21 events validated 2026-05-18. Each card carries schema.org Event
+  # microdata (`<meta itemprop="startDate" content="2026-05-15T09:00 am+08:00">`).
+  # The "am/pm" tail makes dateparser choke on the raw value — regex extracts
+  # just the ISO date prefix.
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  notes: |
+    Honeycombers' WordPress events plugin emits schema.org Event microdata
+    on every `div.hc-event-card`. Title in h3 anchor, date in the
+    `meta[itemprop="startDate"]` content attribute. Note the malformed
+    timezone in the meta value ("am+08:00" / "pm+08:00") — strip via
+    date_extract_regex matching just `YYYY-MM-DD`.
+    Earlier note in venues.yaml said honeycombers calendar was retired —
+    that was wrong; the calendar is alive and well-structured at this URL.
+
+# ----------------------------------------------------------------------------
+# ESPLANADE (main programme, Playwright)
+# ----------------------------------------------------------------------------
+
+# ============================================================================
+# ROUND-4 ADDITIONS (2026-05-18) — bottom-up cross-checks vs SISTIC
+# ============================================================================
+
+- id: sso-vch
+  name: Singapore Symphony Orchestra (Victoria Concert Hall)
+  display_name: Singapore Symphony Orchestra
+  city: City Centre
+  category: concert
+  homepage: https://www.sso.org.sg
+  calendar_url: https://www.sso.org.sg/whats-on
+  kind: playwright_html_list
+  source_priority: 1     # SISTIC is primary (50 SSO events); this catches misses
+  selectors:
+    item: "a.card__item"
+    title: "h3"
+    date: "p.fw-semibold"   # first p.fw-semibold inside .card__detail is the date; second is venue
+    detail_link: "@href"
+  # SSO date strings: "Sun / 24 May 26 / 4.00pm", "21 to 22 May 26 / 7.30pm",
+  # "Sat / 30 May 26 / 7.30pm". 2-digit year; ranges use "to". The regex
+  # below greedy-matches the LAST "DD Mon YY" token in the string, which for
+  # ranges like "21 to 22 May 26" lands on "22 May 26" (the end date), and
+  # for singles lands on "24 May 26". Acceptable — multi-day SSO concerts
+  # are typically the same programme repeated.
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4}'
+  extra_wait_ms: 5000
+  scroll: true
+  notes: |
+    SSO website is Bootstrap, server-rendered shell with JS-hydrated card grid.
+    a.card__item -> 13 cards on probe 2026-05-18; each card has <h3> title,
+    .card__category small text, and two <p.fw-semibold> lines (date / venue).
+    Probe validated 4 events (Hans Graf Farewell 21-22 May 26, Prodigious
+    24 May 26, Jubilaum 30 May 26, Sound Making For Babies 31 May 26).
+
+# ============================================================================
+# CONCERT VENUE / ARENA
+# ============================================================================
+
+- id: kallang-sportshub
+  name: The Kallang (Sports Hub) - Singapore Indoor Stadium / National Stadium
+  display_name: The Kallang
+  city: East
+  category: concert
+  homepage: https://www.thekallang.com.sg
+  calendar_url: https://www.thekallang.com.sg/events
+  kind: detail_pages
+  source_priority: 1
+  detail_url_pattern: '/events/[a-z0-9][a-z0-9-]+'
+  selectors:
+    title: "title"
+    date: "body"
+  title_strip_suffixes:
+    - " | The Kallang | Sports, Entertainment, Lifestyle"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Sportshub.com.sg redirects to thekallang.com.sg (renamed 2026). Listing
+    page renders 15 detail URLs in plain HTML (no JS needed for the URL
+    extraction). Detail pages are Drupal-rendered and carry the date inline
+    in body text like "Tue, 19 May 2026". Title is in <title> tag; we strip
+    the " | The Kallang | ..." suffix. Listing covers Singapore Indoor
+    Stadium + National Stadium + OCBC Arena + OCBC Aquatic Centre — same
+    cluster SISTIC tags as "Singapore Indoor Stadium" / "Sports Hub".
+
+# ============================================================================
+# MUSEUM / VISUAL ART
+# ============================================================================
+
+- id: stpi
+  name: Singapore Tyler Print Institute
+  display_name: STPI Creative Workshop & Gallery
+  city: City Centre
+  category: art
+  homepage: https://www.stpi.com.sg
+  calendar_url: https://www.stpi.com.sg/whats-on
+  kind: detail_pages
+  source_priority: 0   # STPI doesn't sell through SISTIC at all
+  detail_url_pattern: '/whats-on/[a-z][a-z0-9-]+'
+  selectors:
+    title: "title"   # <h1> embeds the date span; <title> is clean
+    date: "body"
+  # STPI uses DD.MM.YYYY format ("13.06.2026 / 18.07.2026") plus prose like
+  # "20.06.2026 — 03.08.2026". Match either DD.MM.YYYY or "DD Mon YYYY".
+  date_extract_regex: '\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  skip_if_title_matches:
+    - '^Page \d'   # the "/whats-on/page-17a9..." pagination stub
+  notes: |
+    STPI's listing page exposes 5 upcoming detail URLs in static HTML
+    (validated 2026-05-18: Zarina solo exhibition, Timber Textures workshop,
+    guided tour, Curator's Note opening, From Site to Print class). Detail
+    pages are server-rendered; dates appear as "13.06.2026 / 18.07.2026"
+    (single or range). One non-event URL ("/whats-on/page-...") is filtered
+    via skip_if_title_matches.
+
+- id: gardens-by-the-bay
+  name: Gardens by the Bay
+  display_name: Gardens by the Bay
+  city: City Centre
+  category: art         # mixed: exhibitions + horticulture displays + family
+  homepage: https://www.gardensbythebay.com.sg
+  calendar_url: https://www.gardensbythebay.com.sg/en/things-to-do/calendar-of-events.html
+  kind: playwright_detail_pages
+  source_priority: 0   # GBB doesn't ticket via SISTIC; calendar is unique
+  selectors:
+    item: "a[href*='/calendar-of-events/']"
+    title: "title"
+    # Detail pages have a global "Closure of Flower Dome on 18 May 2026"
+    # banner that would shadow the event date if we scanned the whole body.
+    # The actual event date sits in .icon-text-content under the
+    # "Opening Hours" h6; selector targets that container.
+    date: "div.icon-text-content"
+  detail_url_filter: '/en/things-to-do/calendar-of-events/[a-z0-9-]+\.html$'
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  extra_wait_ms: 4000
+  scroll: true
+  max_details: 30
+  notes: |
+    Listing page is JS-rendered (Vue/Nuxt) — needs Playwright to harvest
+    /calendar-of-events/<slug>.html URLs from .programme-tile anchors. Detail
+    pages are server-rendered (plain requests OK) and embed dates like
+    "Tue, 26 May - Sun, 21 Jun 2026" — regex extracts the last full date.
+    12 detail URLs surfaced during probe 2026-05-18 (Jurassic World at
+    Cloud Forest, MY LITTLE PONY at Floral Fantasy, Botero: Heart of Volume,
+    David Hockney: Bigger & Closer, Blue Beauties, etc.).
+
+# ============================================================================
+# DEFERRED — probed but no working selector/URL combination
+# ============================================================================
+#
+# DEFERRED: Esplanade — already shipped as esplanade-main (12 events). The
+#   /whats-on page caps at 12 div.card-root cards even with aggressive scroll;
+#   server doesn't paginate or load-more. Festival rollups handled by the
+#   separate esplanade-festivals entry. No improvement possible without
+#   per-genre URL walking (/whats-on/festivals-and-series/..., /free-programmes/...).
+#
+# DEFERRED: Marina Bay Sands (Sands Theatre + MBS entertainment) — both
+#   marinabaysands.com URLs return ERR_HTTP2_PROTOCOL_ERROR via Playwright
+#   and 403 via plain requests. CloudFront WAF rejects scripted clients.
+#   SISTIC already covers MBS shows (22 events).
+#
+# DEFERRED: Capitol Theatre — capitoltheatre.sg has invalid SSL cert
+#   (ERR_CERT_COMMON_NAME_INVALID); capitolsingapore.com/whats-on returns 404.
+#   No live calendar page found.
+#
+# DEFERRED: The Theatre at Mediacorp — mediacorp.sg/theatre is 404.
+#   Mediacorp's homepage is news + entertainment content, no theatre calendar.
+#   SISTIC's 5 events cover this venue.
+#
+# DEFERRED: NUS University Cultural Centre — cfa.nus.edu.sg redirects to
+#   osa.nus.edu.sg/experience-communities/performing-arts/ which is a generic
+#   landing page about NUS performing arts groups, not a public events
+#   calendar. NUS CFA's actual calendar is likely behind NUSync (intranet).
+#
+# DEFERRED: Arts House Group umbrella + per-venue (Aliwal, Drama Centre,
+#   Goodman, Stamford, The Arts House, VT/VCH) — the /whats-on/events-at-venue/<code>
+#   URLs all render the same generic 10-16 normal-item carousel that is the
+#   homepage promo strip (Monstrous Fun 2026, Next STAGE, VERSE 2026, etc.),
+#   NOT a venue-filtered listing. The actual per-venue programmes are buried
+#   in JS state. Events Calendar page (/events-calendar) is JS-rendered with
+#   no static markup. Would need API reverse-engineering.
+#
+# DEFERRED: NLB libraries — nlb.gov.sg/main/whats-on/events surface cards
+#   are dynamically rendered with empty title/href text (Vue placeholder).
+#   Akamai serves the shell with no event data inline. Would need their
+#   internal JSON API (probably /api/v2/events or similar) — out of scope.
+#
+- id: singapore-botanic-gardens
+  name: Singapore Botanic Gardens (incl. Shaw Foundation Symphony Stage)
+  display_name: Singapore Botanic Gardens
+  city: "Orchard & Central"
+  category: other
+  homepage: https://www.nparks.gov.sg/sbg
+  calendar_url: https://www.nparks.gov.sg/sbg/whats-happening/calendar-of-events
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "div.events__content"
+    title: "h3"
+    date: "div.events__subsection"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*-\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    NParks SBG calendar (10 events as of 2026-05-18). Covers Shaw Foundation
+    Symphony Stage concerts (SSO in the Park, free Sunday evening series),
+    exhibitions at the Botanical Art Gallery, herbarium showcases, family
+    workshops. Listing URL is /calendar-of-events (NOT /whats-on — that
+    404s). Title in h3, date+venue in div.events__subsection.
+
+#
+# DEFERRED: National Gallery Singapore — nationalgallery.sg/sg/en/see-do.html
+#   redirects to a 404; whats-on.html returns 404 too. Likely behind a date
+#   filter that needs JS. Detail walking each known exhibition slug is
+#   feasible but out of scope for a recon pass.
+#
+# DEFERRED: Mint Museum of Toys (emint.com) — homepage is a static image,
+#   no events page exists. Museum closed for renovation per public notice.
+#
+# DEFERRED: The Star Performing Arts Centre — thestar.sg/whats-on is 404;
+#   no working calendar page found. SISTIC covers 17 events here.
+#
+# DEFERRED: Singapore Conference Hall (non-SCO bookings) — sco.com.sg
+#   already covered by `sco` entry; venue hosts only SCO + occasional
+#   external concerts that are listed on the SCO site.
+
+# ============================================================================
+# ROUND-5 ADDITIONS (2026-05-18) — iconic must-haves (Sentosa, Science Centre, SIFA, Projector, Fort Canning)
+# ============================================================================
+
+- id: sentosa-events
+  name: Sentosa
+  city: "Sentosa & South"
+  category: other
+  homepage: https://www.sentosa.com.sg
+  calendar_url: https://www.sentosa.com.sg/en/things-to-do/events/
+  kind: playwright_html_list
+  source_priority: 0
+  selectors:
+    item: "div[class*='product-card--event']"
+    title: "h3"
+    date: "div[class*='card__date-label'], div[class*='date-label']"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*-\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Styled-components SPA so requires Playwright; static HTML is empty.
+    9 product-card--event cards exposed (Sun Yoga, Movies by the Beach,
+    Live Music at Sensoryscape, etc.). Title in h3, date in
+    card__date-label child like "07 Mar - 23 May 2026".
+
+- id: rws-sentosa
+  name: Resorts World Sentosa
+  city: "Sentosa & South"
+  category: other
+  homepage: https://www.rwsentosa.com
+  calendar_url: https://www.rwsentosa.com/en
+  kind: playwright_html_list
+  source_priority: 1
+  selectors:
+    item: "a.carousel-card[href*='/en/events/'], a.carousel-card[href*='/en/promotions/']"
+    title: "h3, .carousel-card__content__caption h3, .caption__description"
+    date: ".carousel-card__content__caption"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*-\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    RWS homepage hosts 40+ .carousel-card promos; we filter to /en/events/
+    and /en/promotions/ hrefs (Summer of Treasures, Breakfast with the
+    Legends at Adventure Cove, season-pass campaigns, etc.). No dedicated
+    /whats-on listing exists (rwsentosa.com/en/whats-on returns 404).
+    USS, Adventure Cove, S.E.A. Aquarium are inside this group.
+
+#
+# DEFERRED: Universal Studios Singapore individual page — rwsentosa.com
+#   per-attraction URLs surface inside the rws-sentosa carousel above;
+#   no separate /universal-studios-singapore/events feed exists.
+#
+# DEFERRED: Madame Tussauds Singapore — site lives on rwsentosa.com
+#   domain umbrella, no standalone events page.
+
+# ============================================================================
+# SCIENCE / DISCOVERY
+# ============================================================================
+
+- id: science-centre-sg
+  name: Science Centre Singapore
+  city: "West & North"
+  category: other
+  homepage: https://www.science.edu.sg
+  calendar_url: https://www.science.edu.sg/whats-on
+  kind: playwright_html_list
+  source_priority: 0
+  selectors:
+    item: "main a[href*='/whats-on/']"
+    title: "h3"
+    date: "*"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*[–-]\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Next.js SPA — empty static HTML, full content after JS. 10 anchors
+    under main with /whats-on/ in href; each carries h3 title (KidsSTOP
+    School Holiday Programmes, ONE Ocean: Every Action Ripples,
+    JUNEureka 2026, etc.) and a date string like "30 May - 6 Jun 2026"
+    or "Opens 30 May 2026" in surrounding text.
+
+#
+# DEFERRED: Singapore Discovery Centre (sdc.com.sg) — both
+#   www.sdc.com.sg and sdc.com.sg time out via requests and serve a 403
+#   to scripted clients. Likely a CloudFront/WAF gate similar to MBS.
+#
+# DEFERRED: ArtScience Museum (Marina Bay Sands) — marinabaysands.com
+#   /museum/whats-on.html returns HTTP/2 PROTOCOL_ERROR to Playwright
+#   chromium and an Akamai challenge to requests. Same WAF wall round
+#   2 hit. SISTIC covers MBS-ticketed exhibitions.
+
+# ============================================================================
+# LIVE MUSIC / NIGHTLIFE
+# ============================================================================
+#
+# DEFERRED: Capitol Theatre Singapore (capitol-theatre.sg) — homepage is
+#   marketing-only with no upcoming dates; /events/ returns 200 but lists
+#   only 2021 archive shows (Pesta Jazz Oct 2021 etc). No live calendar.
+#   capitolsingapore.com (the mall, not the theatre) carries an Instagram
+#   feed widget but no dated event cards.
+#
+# DEFERRED: Chijmes (chijmes.com.sg) — homepage promo strip has 4
+#   "highlight" tiles (Football Mania, Ladies' Night at Harry's, etc.)
+#   but all are undated evergreen tenants. /events/ and /whats-on/
+#   both 404. No actual calendar.
+#
+# DEFERRED: Aliwal Arts Centre — redirects to artshousegroup.sg/aac;
+#   that landing page is shared promo carousel for the Arts House Group
+#   umbrella, not a venue-filtered listing. Same gap recorded in
+#   venues.yaml round 4 for the wider Arts House family.
+#
+# DEFERRED: Timbre+ (timbreplus.sg) — Elementor homepage, no /events
+#   page (returns 404), live-music schedule only on Instagram.
+#
+# DEFERRED: Blu Jaz Cafe (blujaz.net) — Elementor homepage with no
+#   gigs calendar; bookings handled via Facebook/Instagram only.
+#
+# DEFERRED: Zouk Singapore (zoukgroup.com/singapore/events) — Cloudflare
+#   "Sorry, you have been blocked" page even with browser UA. Bot wall.
+#
+# DEFERRED: Hard Rock Cafe Singapore, Pavilion @ Far East Square, The
+#   Music Parlour, Switch by Timbre, Clarke Quay (clarkequay.com.sg
+#   DNS-fails) — no live calendar surface found.
+
+# ============================================================================
+# HERITAGE / NATIONAL
+# ============================================================================
+
+- id: fort-canning-park
+  name: Fort Canning Park (NParks)
+  city: "City Centre"
+  category: other
+  homepage: https://www.nparks.gov.sg/visit/parks/park-detail/fort-canning-park
+  calendar_url: https://www.nparks.gov.sg/visit/parks/park-detail/fort-canning-park
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "div.event-card"
+    title: "h4, h3, .event-title"
+    date: ".event-card"
+    detail_link: "a@href"
+  date_extract_regex: '(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    NParks park-detail page exposes 3 .event-card tiles for guided tours
+    + forest bathing programmes at Fort Canning ("Trees of the Fort
+    Guided Tour Sat, 23 May 2026", etc.). Detail URLs are
+    /visit/events/event-detail/<code>/<id>_<slug>. Same NParks platform
+    as the SBG entry in venues.yaml so selectors are shared.
+
+#
+# DEFERRED: Singapore Heritage Festival (heritagefestival.gov.sg) — DNS
+#   fails on every variant tried (heritagefestival.gov.sg,
+#   www.heritagefestival.gov.sg). The festival runs May annually and may
+#   be published under nhb.gov.sg/singaporeheritagefest, but nhb.gov.sg
+#   itself read-timed out across the entire probe pass — appears to be
+#   blocking scripted clients aggressively. Retry round 6 with browser
+#   UA + cookie warm-up.
+#
+# DEFERRED: National Heritage Board top-level (nhb.gov.sg/whats-on)
+#   — same nhb.gov.sg read-timeout above. ACM / Peranakan Museum / Sun
+#   Yat Sen / National Museum are already covered individually in
+#   venues.yaml so the umbrella gap is small.
+#
+# DEFERRED: Battlebox (battlebox.com.sg) — official domain unreachable;
+#   only third-party landing pages (e.g. visitkamponggelam.org) cover it
+#   as a static description with no calendar. Tours booked via
+#   Singapore History Consultants only.
+#
+# DEFERRED: Reflections at Bukit Chandu — nhb.gov.sg/reflectionsatbukitchandu
+#   404; falls under NHB umbrella outage above.
+#
+# DEFERRED: Singapore Night Festival (nightfestival.gov.sg) — DNS fails;
+#   site is only live August-only each year. Retry July onward.
+
+# ============================================================================
+# COMMUNITY / SPORT
+# ============================================================================
+#
+# DEFERRED: People's Association (pa.gov.sg) — every events path
+#   (/events, /whats-on, /our-network/events, /whats-happening) returns
+#   a 404 page (still 200 bytes-wise because it's a styled 404 inside
+#   a Vue shell). The actual community-club programmes live behind
+#   onepa.gov.sg booking app, which requires SingPass auth.
+#
+# DEFERRED: ActiveSG / myactivesg.com — activesg.gov.sg/events returns
+#   403 to scripted clients; activesgcircle.gov.sg/things-to-do/events
+#   loads (HTTP 200) but only one card surfaces in static HTML (the rest
+#   are loaded via HubSpot CMS JS calls that need authenticated cookies).
+#   Re-probe with Playwright + scroll behaviour if needed.
+#
+# DEFERRED: Chingay Parade (chingay.gov.sg) — only one event a year
+#   (27-28 February 2026). Static landing page repeats that single date
+#   across multiple hero sections; would yield 1 highlight at most.
+#   Better captured manually in highlights.yaml than via scraper.
+#
+# DEFERRED: Pink Dot SG (pinkdot.sg) — annual single-event (June). No
+#   dated event card on homepage; only post-event recap articles surface.
+#   Treat as a manual highlight near the event.
+
+# ============================================================================
+# CULTURAL INSTITUTES
+# ============================================================================
+#
+# DEFERRED: British Council Singapore (britishcouncil.sg/events) — server
+#   read-timeouts on both requests and Playwright (HTTP/2 PROTOCOL_ERROR).
+#   Akamai shield same as MBS. Retry with cookie warm-up later.
+#
+# DEFERRED: Goethe-Institut Singapore (goethe.de/ins/sg/en/ver.cfm) — JS
+#   calendar that renders a month grid but no listed event cards in DOM
+#   after 6s settle; events live behind a dynamic API call keyed by
+#   month. Would need API reverse-engineering. Same status as round 2.
+#
+# DEFERRED: Japan Creative Centre (sg.emb-japan.go.jp/JCC) — embassy
+#   server returns 403 to scripted clients. (Note: welcome.jcc.sg is a
+#   different organisation: Jurong Christian Church, not the Japanese
+#   embassy — easy to confuse by domain.)
+#
+# DEFERRED: Korean Cultural Centre Singapore
+#   (singapore.korean-culture.org) — connection refused / DNS fail in
+#   probe. Retry from a different region or with VPN.
+#
+# DEFERRED: Alliance Francaise SG (alliancefrancaise.org.sg/events) —
+#   page returns 200 but is an Odoo CMS with all event listings inside
+#   a JS-rendered widget; static HTML only shows the carousel hero. No
+#   stable card class. Detail-page walk would need an /event/ URL pattern
+#   that doesn't appear in the static markup. Already deferred round 2.
+
+# ============================================================================
+# SIGNATURE FESTIVALS
+# ============================================================================
+
+- id: the-projector
+  name: The Projector
+  city: "City Centre"
+  category: film
+  homepage: https://theprojector.sg
+  calendar_url: https://theprojector.sg/filmsandevents/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "div.card.event, div.card.film"
+    title: ".card-title, h2, h3, h4"
+    date: ".card"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    /filmsandevents/ listing has 5 .card.event tiles (themed events like
+    "The Glory Hoes Present: The Rocky Horror Picture Show", HALLOWEENIE
+    season, etc.) plus 28 .card.film tiles for the current cinema slate.
+    We pick up both so the feed surfaces special programming AND the
+    repertory film schedule. Cards link out to category landings; for
+    showtime specifics the user clicks through. (Note: /all-films/ and
+    /whats-on/ both 404 — only /filmsandevents/ works.)
+
+#
+# DEFERRED: Singapore Film Society (singaporefilmsociety.com) — returns
+#   403 on /programmes; homepage is reachable but exposes no static
+#   event cards. Likely Wix-rendered with content in JS state. Retry
+#   with Playwright but the round-2 attempt also failed.
+#
+# DEFERRED: Filmgarde Bugis+ / Shaw / Golden Village — these are
+#   commercial cinema chains whose "events" are normal showtimes (huge
+#   volume, daily), not cultural events. Out of scope for this feed.
+
+# ============================================================================
+# SPORTS
+# ============================================================================
+#
+# DEFERRED: HSBC Singapore Rugby Sevens (singapore7s.org) — single
+#   annual fixture (5-6 April 2026) already in static HTML as one
+#   .event-badge tile. Better captured as a manual highlight than a
+#   scraper entry that returns 1 row.
+#
+# DEFERRED: Standard Chartered Singapore Marathon (singaporemarathon.com)
+#   — single annual event; main domain throws redirect loops and the
+#   shape.sportingrepublic.com promo page DNS-fails. Manual highlight.
+#
+# DEFERRED: Singapore Slingers (basketball, singaporeslingers.com) — TLS
+#   handshake failure, host unreachable from probe network. Retry later.
+#
+# DEFERRED: WTA Finals — no longer hosted in Singapore (moved 2019).
