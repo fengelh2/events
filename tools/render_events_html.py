@@ -727,7 +727,7 @@ def _render_html(
     parts.append(_PAGE_HEAD.format(title=html.escape(title), venue_css=venue_css, city_css=city_css, when_css=when_css, lang=lang, goatcounter_code=goatcounter_code or city_code))
     # City switcher — top bar that lets users jump between events-hk/la/nrw/singa.
     # Stays the same on every city page so it acts as a single global nav.
-    _CITIES = [("hk","🇭🇰","Hong Kong"),("la","🇺🇸","Los Angeles"),
+    _CITIES = [("hk","🇨🇳","Hong Kong"),("la","🇺🇸","Los Angeles"),
                ("nrw","🇩🇪","NRW"),("singa","🇸🇬","Singapore")]
     parts.append('<nav class="city-switcher" aria-label="Switch city">')
     parts.append('  <a class="city-switcher__home" href="../">← All cities</a>')
