@@ -38,13 +38,17 @@ _LOCAL_TZ = ZoneInfo("Asia/Singapore")
 _HK_TZ = _LOCAL_TZ  # back-compat alias used throughout the file
 
 
+_LANGUAGE = "en"  # overridden per-city via configure_locale()
+
+
 def configure_locale(timezone_name: str, date_order: str = "DMY", language: str = "en") -> None:
     """Reconfigure module-level locale globals before scraping a new city.
     Called once per city by the orchestrator (build_all.py)."""
-    global _LOCAL_TZ, _HK_TZ, _DATE_PARSER_BASE_SETTINGS, _DATE_PARSER_KW
+    global _LOCAL_TZ, _HK_TZ, _DATE_PARSER_BASE_SETTINGS, _DATE_PARSER_KW, _LANGUAGE
     _LOCAL_TZ = ZoneInfo(timezone_name)
     _HK_TZ = _LOCAL_TZ
     _DATE_PARSER_BASE_SETTINGS = {"DATE_ORDER": date_order}
+    _LANGUAGE = language
     _DATE_PARSER_KW = {
         "languages": [language],
         "settings": {**_DATE_PARSER_BASE_SETTINGS, "PREFER_DATES_FROM": "future"},
@@ -2139,7 +2143,7 @@ def _date_parser_kw(date_prefer: str = "future") -> dict:
     should set `date_prefer: current_period` in venues.yaml.
     """
     return {
-        "languages": ["en"],
+        "languages": [_LANGUAGE],
         "settings": {**_DATE_PARSER_BASE_SETTINGS, "PREFER_DATES_FROM": date_prefer},
     }
 
