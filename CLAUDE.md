@@ -1,76 +1,137 @@
-# Project: events-singa
+# Project: events
 
-A weekly cultural-events calendar covering Singapore. Aggregates upcoming events from major museums, opera, ballet, classical concerts, theatre, plus Chinese opera + Malay/Indian/Peranakan performance traditions.
+A unified cultural-events calendar covering four cities: Hong Kong, Los Angeles, NRW (Essen + Düsseldorf), and Singapore. One repo, one deployment, four sub-pages — each rebuilt nightly from its own venue list.
 
-Sister project of [events-nrw](https://github.com/fengelh2/events-nrw) (German, Essen + Düsseldorf) and [events-la](https://github.com/fengelh2/events-la) (English, Los Angeles). Codebases are independent so improvements don't ripple between locales — port intentionally when the logic is generic.
+**Live:** https://fengelh2.github.io/events/
 
-## Goal
+## Per-city URLs
 
-A simple, easy-to-read web page rebuilt nightly that lists upcoming cultural events. Filters: **Where** (region) · **What** (category) · **When** (this week / weekend / month / next) · **Venues** (multi-select, click to add). Free-text search + favorites + "NEW since last visit" badges via localStorage. Mobile-first, no JS frameworks, deploys to GitHub Pages.
+| Code | URL | Audience |
+|---|---|---|
+| `hk` | https://fengelh2.github.io/events/hk/ | Sihan |
+| `la` | https://fengelh2.github.io/events/la/ | Vicki |
+| `nrw` | https://fengelh2.github.io/events/nrw/ | Gabi |
+| `singa` | https://fengelh2.github.io/events/singa/ | Carla |
 
-## Inputs
+## Architecture
 
-- `config/venues.yaml` — venue master list.
-- `config/highlights.yaml` — featured-keyword list (HK-relevant: artists, composers, blockbuster productions).
+```
+events/
+├── tools/                              # shared scraper + renderer + orchestrator
+│   ├── scrape_venue_events.py          # parametric scraper (12+ parser kinds)
+│   ├── render_events_html.py           # Apple-agenda HTML + filter panel
+│   ├── rebuild_calendar.py             # per-city builder (reads --site-yaml)
+│   ├── build_all.py                    # orchestrator: rebuilds all cities into dist/
+│   └── parse_ical.py                   # iCal helper
+├── cities/                             # per-city data, fully isolated
+│   ├── hk/
+│   │   ├── site.yaml                   # branding, lang, tz, date_order, GoatCounter
+│   │   ├── config/venues.yaml          # ~30 venues
+│   │   ├── config/highlights.yaml      # featured-keyword list
+│   │   └── data/seen_events.json       # {event_key: first_seen} for "NEW" badges
+│   ├── la/   (same shape, ~32 venues)
+│   ├── nrw/  (same shape, ~67 venues)
+│   └── singa/ (same shape, ~58 venues)
+├── dist/                               # built static HTML, deployed to Pages
+│   ├── index.html                      # city-picker landing
+│   └── {hk,la,nrw,singa}/index.html    # per-city pages
+└── .github/workflows/rebuild.yml       # daily 20:00 UTC cron
+```
 
-## Outputs
+## Per-city `site.yaml` schema
 
-- `.tmp/events.html` — single static page, rebuilt nightly. Deployed to `gh-pages` by GitHub Actions; served at `https://<user>.github.io/events-singa/`.
-
-## Language policy
-
-- **UI: English.** All headings, labels, dates, filter chips.
-- **Event titles + descriptions: as-is from source.** If a venue publishes Chinese-only programmes (e.g. Sunbeam Theatre Cantonese opera), the title stays in Chinese — do NOT translate.
-- **Prefer the English toggle** of bilingual sites (most HK cultural sites have one). Use the Chinese version only when no English exists.
-
-## Canonical Event schema
+Every city is defined by exactly these fields:
 
 ```yaml
-title: str            # English or Chinese, as published
-start: datetime       # ISO 8601, with timezone (Asia/Singapore)
-end: datetime | null
-venue_id: str
-venue_name: str
-city: str             # 'Singapore' (single zone — HK is MTR-compact)
-category: str         # museum_exhibition | opera | ballet | concert | theatre | film | vernissage | other
-url: str
-description: str | null
-audience: str         # general | educational | active | kids
+code: hk                                # subpath in /events/<code>/
+name: Hong Kong                         # human-friendly city name
+flag: "🇨🇳"                              # emoji for landing card + switcher
+title: "What's happening in Sihan's World"   # masthead title
+header_eyebrow: "Culture in Honkers"    # eyebrow above title
+city_identity_word: "Honkers"           # word tinted in eyebrow as logo accent
+lang: en                                # html lang= + dateparser language
+date_order: DMY                         # DMY for HK/SG/NRW, MDY for LA
+timezone: Asia/Hong_Kong                # IANA tz; events stored as wall-clock
+horizon_days: 270                       # drop events beyond this future window
+goatcounter_code: events-hk             # subdomain of *.goatcounter.com
 ```
+
+## How it builds
+
+`tools/build_all.py` discovers every `cities/*/site.yaml`, then for each city:
+
+1. Subprocesses `rebuild_calendar.py --site-yaml cities/<code>/site.yaml --out dist/<code>/index.html`
+2. `rebuild_calendar.py` calls `scrape_venue_events.configure_locale(tz, date_order, lang)` to reset module globals
+3. Iterates every venue in `cities/<code>/config/venues.yaml`, dispatches on `kind:` field
+4. Filters (drop past events, drop future-beyond-horizon except ongoing exhibitions)
+5. Stamps `first_seen` from `cities/<code>/data/seen_events.json` (powers "NEW" badges)
+6. Renders `dist/<code>/index.html` with per-city branding + city-switcher top nav
+7. After all cities: writes `dist/index.html` landing page
+
+Each city is a fresh Python subprocess so locale globals stay isolated.
+
+## Supported parser kinds (`kind:` in venues.yaml)
+
+| Kind | Best for |
+|---|---|
+| `html_list` | Server-rendered card grids — cheapest |
+| `detail_pages` | Listing has stable URLs; selectors live on detail page |
+| `playwright_html_list` | JS-rendered listings (M+, Tai Kwun, Esplanade…) |
+| `playwright_detail_pages` | JS-rendered detail pages (HK Palace Museum, Xiqu…) |
+| `ical` | `.ics` exports (HK Chinese Orchestra) |
+| `json_ld_aggregator` | Sites with `<script type="application/ld+json">` Event arrays (Discover LA) |
+| `tribe_rest` | WordPress + The Events Calendar plugin (Pasadena Playhouse, kultur-in-unna) |
+| `flat_json_feed` | Tessitura, etc. (LA Phil, Hollywood Bowl) |
+| `algolia_calendar` | Algolia-backed search (LA Opera) |
+| `nextjs_contentful` | Contentful API behind Next.js (Academy Museum) |
+| `sistic_api` | SISTIC ticketing CMS — SG ~355 events from one endpoint |
+| `et4_search` | et4 tourism portals (visitessen) |
+| `toubiz_api` | Toubiz tourism CMS (visitduesseldorf) |
+| `static` | Hand-curated `static_events` list |
+| `unknown` | Onboarded but not implemented — skipped silently |
+
+## Adding a venue
+
+1. Edit `cities/<code>/config/venues.yaml`, add a `- id: …` entry with `kind:` + selectors
+2. Validate locally: `python tools/scrape_venue_events.py --venue-id <id> --venues-path cities/<code>/config/venues.yaml`
+3. Commit + push — CI rebuilds + deploys
 
 ## Date conventions
 
-- HK uses **DMY** (DD/MM/YYYY) — same as the UK and events-nrw. Set in `_DATE_PARSER_BASE_SETTINGS` as `DATE_ORDER='DMY'`.
-- All event times are `Asia/Singapore` (UTC+8, no DST). Times stored as wall-clock local — never UTC.
-- Display: 12-hour clock with AM/PM ("7:30 PM"), date as "Sunday, 10 May".
+- **HK / NRW / SG**: DMY (DD/MM/YYYY)
+- **LA**: MDY (MM/DD/YYYY)
+- All times stored as wall-clock local (no UTC shift)
+- `_DATE_PARSER_BASE_SETTINGS.DATE_ORDER` is set per-city by `configure_locale()`
+- `_LANGUAGE` is set per-city (German dates need `lang: de` to parse "5. Juni 2026")
 
-## Geographic scope
+## Geographic scope (district chips)
 
-**Single zone: "Singapore".** HK is compact and MTR-connected (~45 min venue-to-venue), so district-splitting adds friction without value. If later useful, an optional `region` free-text field (Singapore Island / Kowloon / New Territories) can drive secondary filters.
+Each city's renderer dynamically builds **Where** chips from event `city` fields:
+- **HK**: Hong Kong Island / Kowloon / New Territories
+- **LA**: Westside / Central LA / Pasadena & East / Greater LA
+- **NRW**: Essen / Düsseldorf / Köln / etc. (free-text from venue addresses)
+- **SG**: City Centre / Orchard & Central / East / West & North / Sentosa & South
 
-## Scrape landscape (per HK reconnaissance, 2026-05-17)
+Each event's `city` field drives the chip. Aggregators (SISTIC, et4, toubiz, Discover LA) carry per-event city data and emit sub-venue chips per location.
 
-- **Bot walls are the dominant pattern.** M+, Tai Kwun, West Kowloon (westk.hk), HK Palace Museum, Asia Society all 403 unauthenticated requests. Plan for `playwright_html_list` + realistic User-Agent + Accept-Language headers on modern museum/cultural sites.
-- **LCSD aggregator covers 7+ venues** via one parser: HK Cultural Centre, City Hall, Sha Tin Town Hall, Kwai Tsing Theatre, Tsuen Wan Town Hall, Yuen Long Theatre, Tuen Mun Town Hall. Biggest single ROI.
-- **HK Chinese Orchestra exposes per-event .ics** ("Add to Outlook") — clean iCal source.
-- **HK Phil server-renders** a tabular concert list — straightforward html_list.
-- **URBTIX is the ticketing hub** — transaction layer, not a calendar; don't try to parse it for metadata.
-- **Season-shaped sites** (HK Ballet, Opera HK, HK Arts Festival): expect 0 events for months, then a burst. Gate freshness alerts with slow-decay (60+ days).
-- **Cantonese opera (Sunbeam, xiqu troupes)** is Chinese-only by tradition. Accept Chinese titles.
+## Analytics
 
-## Onboarding order (Tier-1)
+Each city page includes a GoatCounter `<script>`:
+```html
+<script data-goatcounter="https://{goatcounter_code}.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+```
+Plus a click-tracker that fires `event-click/<venue>/<title>` whenever a user clicks an event row.
 
-1. **LCSD performing-arts e-Calendar** — `https://www.performing-arts.gov.hk/en/e-calendar.html`. One parser, 7+ venues.
-2. **HK Phil** — `https://www.hkphil.org/concert`. ~80 concerts, server-rendered.
-3. **HK Chinese Orchestra** — `https://www.hkco.org/en/Concerts-Activities/Upcoming-Concerts.html`. Per-event .ics available.
-4. **HK Museum of Art** — `https://hk.art.museum/en/web/ma/exhibitions-and-events.html`. Server-rendered, cleanest of the museums.
+Unified dashboard: https://fengelh2.github.io/events-stats/
 
-Then (Tier-2, needs Playwright): M+, Tai Kwun, West Kowloon Xiqu Centre, HK Palace Museum.
+## Gotchas
 
-## Gotchas / non-obvious notes
+- **Workspace-root tools/** (`c:/Users/asus/Agentic Workflows/tools/`) is **legacy** from the pre-consolidation events-nrw repo. The active scraper is `projects/events/tools/`. Don't edit the workspace-root copy.
+- **DATE_ORDER + language** must both be set correctly per-city — German venues silently drop 100% of items if `lang: de` is missing.
+- **Discover LA timeout**: this aggregator (487 events) takes >20s. `DEFAULT_TIMEOUT` is 45s — don't lower it.
+- **Playwright on Windows** is flaky locally (random EPIPE crashes). Linux CI runner is reliable.
+- **SISTIC chip explosion**: the SG SISTIC parser slugifies `venue_name` into sub-venue chips (Esplanade Concert Hall, Victoria Theatre, MBS, etc.) so the renderer shows real venues instead of one "SISTIC" chip.
 
-- **No JSON-LD on HK sites.** Reconnaissance found zero `@type: Event` blocks. Don't grep for it.
-- **LCSD URL migration in progress.** Old `lcsd.gov.hk/en/{venue}/programmes/currentmonth.html` URLs 302-redirect to `performing-arts.gov.hk` — follow redirects.
-- **HKAPA volume needs filtering.** ~190 paginated pages including student recitals + room hirers; filter to `Academy Production` categories or you'll drown the calendar.
-- **Time zone matters.** All event times are `Asia/Singapore`. Don't UTC-shift.
-- **Don't translate.** Mum / user reads Chinese fine; leave Cantonese-opera and other Chinese-only titles untouched.
+## Sister project
+
+[events-stats](https://github.com/fengelh2/events-stats) — unified analytics dashboard pulling from each city's GoatCounter site.
