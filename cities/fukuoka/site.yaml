@@ -1,0 +1,11 @@
+code: fukuoka
+name: Fukuoka
+flag: "🇯🇵"
+title: "What's happening in A-Aron's World"
+header_eyebrow: "Culture in Hakata"
+city_identity_word: "Hakata"
+lang: en              # UI English; Japanese-script dates handled per-venue via date_format
+date_order: YMD       # Japanese 年月日 + English Year-first preferred
+timezone: Asia/Tokyo
+horizon_days: 270
+goatcounter_code: fengelh

@@ -1,0 +1,403 @@
+# Fukuoka cultural-events venues. Populated by recon agent.
+#
+# Language policy: UI English. Japanese titles kept as-is (HK pattern —
+# don't translate). Prefer the English toggle of bilingual sites; use the
+# Japanese version only when no English exists.
+#
+# Geographic zones (Fukuoka districts):
+#   "Hakata"            — Hakata ward, station area, Canal City
+#   "Tenjin & Daimyō"   — Tenjin shopping/cultural core, Ōhori area
+#   "Momochi & Bayside" — Momochihama (museums, Hawks Town), seaside
+#   "Around Fukuoka"    — Kitakyūshū, Dazaifu, anywhere outside Fukuoka City
+#
+# Date format: ISO YYYY-MM-DD when available (Japanese sites), else M/D.
+# Time zone: Asia/Tokyo (JST, UTC+9, no DST).
+
+# ============================================================================
+# MUSIC / CONCERT / ORCHESTRA
+# ============================================================================
+
+- id: acros-fukuoka
+  name: ACROS Fukuoka Symphony Hall
+  city: Tenjin & Daimyō
+  category: concert
+  homepage: https://www.acros.or.jp
+  calendar_url: https://www.acros.or.jp/events/sponsored.php
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "ul#event_list > li"
+    title: "h2"
+    date: ".text > time"
+    detail_link: "a@href"
+  date_extract_regex: '\d{4}年\d{1,2}月\d{1,2}日'
+  date_format: "%Y年%m月%d日"
+  notes: |
+    Fukuoka's flagship performing-arts complex (Tenjin). Sponsored/co-sponsored
+    series at /events/sponsored.php — server-rendered list. Each card is an
+    <li> under ul#event_list with .text > time (Japanese 年月日 + 曜日 + HH:MM)
+    and <h2> wrapping the production title (with .series prefix). English /en/
+    paths 404; JP page is canonical. Titles stored as-is (Japanese OK per HK
+    pattern). 63 events recon'd 2026-05-21. event_caution paragraphs hold
+    ticket-onsale dates (also in 年月日 form) — date_extract_regex picks the
+    FIRST date match which is the performance time from the leading <time>.
+
+# DEFERRED: kyushu-symphony — 九州交響楽団. /ticket/list.php has clean concert
+# data (5 active concerts as of 2026-05-21) but the DOM is awkward: each
+# concert is an <h3> (title) followed by sibling <div class=article>(date),
+# with no per-concert wrapper element. CSS adjacency selectors can't bridge
+# the gap in the generic html_list parser. Coverage gap is partially mitigated
+# by acros-fukuoka (which hosts most Kyushu Symphony concerts as the venue).
+# Wire a custom adjacency-walk path in v2.
+
+- id: bluenote-fukuoka
+  name: BLUE NOTE Fukuoka (Blue Note Place Fukuoka)
+  city: Tenjin & Daimyō
+  category: concert
+  homepage: https://www.bluenote.co.jp/jp/fukuoka/
+  calendar_url: https://www.bluenote.co.jp/jp/fukuoka/schedule/
+  kind: playwright_html_list
+  source_priority: 1
+  locale: ja-JP
+  wait_for_selector: "a[href*='/artists/']"
+  extra_wait_ms: 3500
+  selectors:
+    item: "li:has(a[href*='/artists/'])"
+    title: "a[href*='/artists/']"
+    date: "strong, .date, time"
+    detail_link: "a[href*='/artists/']@href"
+  date_extract_regex: '\d{4}\s+\d{1,2}\.\d{1,2}(?:\s*[a-z]{3}\.?)?(?:[,，]\s*\d{1,2}\.\d{1,2}(?:\s*[a-z]{3}\.?)?)*'
+  accept_drop_rate: 0.5
+  notes: |
+    Blue Note Japan's Fukuoka outpost (jazz / soul / contemporary). The
+    fukuoka-bluenote.com domain refuses connection; bluenote.co.jp/jp/fukuoka
+    is the working host. Schedule grid is a JS-rendered calendar (only 2 dates
+    in static HTML) — Playwright required. Each show is a <li> with anchor
+    /artists/<slug> and "2026 5.20 wed., 5.21 thu." in a <strong>. Multi-night
+    runs concatenate dates; regex captures them all (parser uses first).
+
+- id: marine-messe-fukuoka
+  name: Marine Messe Fukuoka
+  city: Hakata                        # Okihama, near Hakata Port
+  category: concert                    # arena — mostly large concerts + sports
+  homepage: https://www.marinemesse.or.jp
+  calendar_url: https://www.marinemesse.or.jp/messe/event/
+  kind: playwright_html_list
+  source_priority: 1
+  locale: ja-JP
+  wait_for_selector: "a[href*='/events/detail/']"
+  extra_wait_ms: 4000
+  selectors:
+    item: "li:has(a[href*='/events/detail/'])"
+    title: "h3, .title, img@alt"
+    date: ".date, time, p"
+    detail_link: "a[href*='/events/detail/']@href"
+  date_extract_regex: '\d{4}[./年]\s*\d{1,2}[./月]\s*\d{1,2}日?'
+  accept_drop_rate: 0.5
+  notes: |
+    Major arena complex (Marine Messe A + B + Convention Center). Hosts large
+    touring concerts, idol shows, sports, trade fairs. Static HTML has 0 date
+    strings — listing is JS-rendered, so Playwright. Event rows link to
+    /events/detail/<id>. Mixed types — trade-show entries lack clean dates,
+    hence accept_drop_rate.
+
+# DEFERRED: FFG Hall (Fukuoka Financial Group concert hall) — no public schedule
+# page; programs surface via kyushu-symphony entries and aggregators.
+
+# DEFERRED: Drum Logos / Drum Be-1 / Fukuoka Kokusai Center / IMS Hall —
+# drumlogos.jp + similar live-house circuits refused connection during recon
+# (ECONNREFUSED 2026-05-21). Re-probe later or use Walker Plus as substitute.
+
+# DEFERRED: Sun Palace — Tokyo "Sun Palace Hotel" served instead of the
+# Fukuoka venue (homonym collision). Need direct fukuoka-sunpalace URL.
+
+# ============================================================================
+# THEATRE / PERFORMING ARTS
+# ============================================================================
+
+- id: hakataza
+  name: Hakataza Theatre 博多座
+  city: Hakata
+  category: theatre                   # also kabuki (June + September runs)
+  homepage: https://www.hakataza.co.jp
+  calendar_url: https://www.hakataza.co.jp/lineup/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".showcase__box"
+    title: ".showcase__title"
+    date: ".showcase__schedule"
+    detail_link: "a[href*='/lineup/']@href"
+  date_extract_regex: '\d{4}年\d{1,2}月\d{1,2}日'
+  date_format: "%Y年%m月%d日"
+  accept_drop_rate: 0.2
+  notes: |
+    博多座 — Hakata-za. Kabuki, large-scale musicals (Miss Saigon, Funny Girl,
+    SPY×FAMILY, BOOP!, Charlie & the Chocolate Factory), enka concerts.
+    /lineup/ has 17 .showcase__box cards. .showcase__schedule holds full date
+    range "2026年5月6日(水・振休)～28日(木)"; extracting just the start date
+    (first 年月日). Recurring multi-week runs collapse render-side per global
+    recurrence rules. category_keyword_overrides not needed — kabuki naturally
+    falls under "theatre" bucket in the global classifier.
+
+# DEFERRED: Fukuoka Performing Arts Centre (FPAC) — fpac.or.jp + fpac.fukuoka.jp
+# both refused connection during recon (ECONNREFUSED 2026-05-21).
+# DEFERRED: Fukuoka Civic Hall (市民会館 / f-shimin.jp) — connection refused.
+
+# ============================================================================
+# MUSEUMS / GALLERIES
+# ============================================================================
+
+- id: fukuoka-asian-art-museum
+  name: Fukuoka Asian Art Museum 福岡アジア美術館
+  city: Hakata                        # Riverain building, Nakasu side of Hakata
+  category: museum_exhibition
+  homepage: https://faam.city.fukuoka.lg.jp/en/
+  calendar_url: https://faam.city.fukuoka.lg.jp/en/exhibition-event/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".top-hero-main-content-item"
+    title: ".top-hero-main-content-item__title--sp"
+    date: ".top-hero-main-content-item__date"
+    detail_link: "a.top-hero-main-content-item__inner@href"
+  date_extract_regex: '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s*\d{4}'
+  accept_drop_rate: 0.3
+  notes: |
+    福岡アジア美術館 — Fukuoka Asian Art Museum. Signature contemporary-Asian
+    art venue. English /en/exhibition-event/ — 6 .top-hero-main-content-item
+    cards (swiper carousel, fully server-rendered). The __title--sp variant
+    holds the single-line title; __title--pc has <br>-broken multiline copy.
+    Date span "Apr 18, 2026 - Aug 30, 2026" inside __date — date_find_all
+    captures start+end.
+
+- id: fukuoka-art-museum
+  name: Fukuoka Art Museum 福岡市美術館
+  city: Tenjin & Daimyō               # Ōhori Park
+  category: museum_exhibition
+  homepage: https://www.fukuoka-art-museum.jp/en/
+  calendar_url: https://www.fukuoka-art-museum.jp/en/exhibition/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "article.c-article-contents"
+    title: "h2, h3, .ex_thumb_info h3"
+    date: ".ex_thumb_info p"
+    detail_link: "a@href"
+  date_extract_regex: '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}'
+  accept_drop_rate: 0.4
+  notes: |
+    福岡市美術館 — Fukuoka City Art Museum (Ōhori Park). /en/exhibition/ has
+    article.c-article-contents cards with .ex_thumb_info paragraph holding
+    "Sat. Apr. 18th, 2026 - Sun. Jun. 21st, 2026". date_find_all gets both
+    endpoints. Regex tolerates the weekday + ordinal suffix.
+
+- id: kyushu-national-museum
+  name: Kyushu National Museum 九州国立博物館
+  city: Around Fukuoka                # Dazaifu — 30min from central Fukuoka
+  category: museum_exhibition
+  homepage: https://www.kyuhaku.jp/en/
+  calendar_url: https://www.kyuhaku.jp/en/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".entry.col-md-6"
+    title: "h3, h2, .entry-title"
+    date: ".d-none.d-xl-block, .d-block.d-xl-none, p"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)(?:\s*\([^)]+\))?\s+\d{4}'
+  notes: |
+    Major national museum in Dazaifu (UNESCO area, 30min train from Hakata).
+    /en/ homepage lists exhibitions inside .entry.col-md-6 Bootstrap-card
+    blocks. Native format "21 April (Tue)–14 June (Sun) 2026" — regex strips
+    the weekday parens and dash, capturing just the year-bearing "14 June 2026"
+    or "20 July 2026" end date (date_text re.search picks the LAST match that
+    contains year). Single-day extraction (end-of-range) — long-running
+    exhibitions still appear in calendar through their final date as proxy.
+
+# DEFERRED: Fukuoka City Museum (museum.city.fukuoka.jp) — English page only
+# offers a PDF schedule, no per-event HTML. Coverage via Yokanavi + Fukuoka Now.
+
+# DEFERRED: Hakata Machiya Folk Museum / Fukuoka Prefectural Museum of Art /
+# Fukuoka Tower observation events — not yet probed; v2 expansion candidates.
+
+# ============================================================================
+# FESTIVALS (annual — dates fixed)
+# ============================================================================
+
+- id: hakata-gion-yamakasa
+  name: Hakata Gion Yamakasa 博多祇園山笠
+  city: Hakata
+  category: festival
+  homepage: https://www.hakata-yamakasa.net
+  calendar_url: https://www.hakata-yamakasa.net/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Kazariyama (Decorated Floats) Public Display 飾り山公開"
+      start: 2026-07-01
+      end:   2026-07-14
+      detail_url: "https://www.hakata-yamakasa.net/"
+    - title: "Oshioitori お汐井とり"
+      start: 2026-07-09
+      end:   2026-07-09
+      detail_url: "https://www.hakata-yamakasa.net/"
+    - title: "Nagaregaki 流舁き"
+      start: 2026-07-10
+      end:   2026-07-10
+      detail_url: "https://www.hakata-yamakasa.net/"
+    - title: "Asayama 朝山"
+      start: 2026-07-11
+      end:   2026-07-11
+      detail_url: "https://www.hakata-yamakasa.net/"
+    - title: "Oiyama Narashi 追い山ならし"
+      start: 2026-07-12
+      end:   2026-07-12
+      detail_url: "https://www.hakata-yamakasa.net/"
+    - title: "Shudan Yamamise 集団山見せ"
+      start: 2026-07-13
+      end:   2026-07-13
+      detail_url: "https://www.hakata-yamakasa.net/"
+    - title: "Oiyama (Main Chase) 追い山"
+      start: 2026-07-15
+      end:   2026-07-15
+      detail_url: "https://www.hakata-yamakasa.net/"
+  notes: |
+    博多祇園山笠 — UNESCO-inscribed July festival, Kushida-jinja & Hakata old town.
+    Dates are calendar-fixed every year (Jul 1-15 cycle). Static entries — refresh
+    next May if 2027 wanted. Schedule confirmed via official site recon 2026-05-21.
+
+- id: hakata-dontaku
+  name: Hakata Dontaku 博多どんたく港まつり
+  city: Tenjin & Daimyō               # Meiji-dōri parade route, central
+  category: festival
+  homepage: https://www.dontaku.fukunet.or.jp
+  calendar_url: https://www.dontaku.fukunet.or.jp/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Hakata Dontaku Pre-Festival 前夜祭"
+      start: 2026-05-02
+      end:   2026-05-02
+      detail_url: "https://www.dontaku.fukunet.or.jp/"
+    - title: "Hakata Dontaku Port Festival Day 1 博多どんたく港まつり"
+      start: 2026-05-03
+      end:   2026-05-03
+      detail_url: "https://www.dontaku.fukunet.or.jp/"
+    - title: "Hakata Dontaku Port Festival Day 2 博多どんたく港まつり"
+      start: 2026-05-04
+      end:   2026-05-04
+      detail_url: "https://www.dontaku.fukunet.or.jp/"
+  notes: |
+    May 3-4 (+ pre-festival May 2) every year. Fixed Golden-Week dates.
+    Refresh next April for 2027 if needed.
+
+# ============================================================================
+# FILM
+# ============================================================================
+
+- id: kbc-cinema
+  name: KBC Cinema
+  city: Tenjin & Daimyō
+  category: cinema
+  homepage: https://www.kbc-cinema.com
+  calendar_url: https://www.kbc-cinema.com/
+  kind: playwright_html_list
+  source_priority: 1
+  locale: ja-JP
+  wait_for_selector: "a[href*='/pages/movies/']"
+  extra_wait_ms: 4000
+  selectors:
+    item: "a[href*='/pages/movies/']:has(img)"
+    title: "img@alt"
+    date: "p, span, .date"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}月\d{1,2}日(?:\([日月火水木金土]\))?(?:\s*[～〜~]\s*\d{1,2}月\d{1,2}日(?:\([日月火水木金土]\))?)?'
+  accept_drop_rate: 0.7
+  notes: |
+    Independent cinema in Tenjin (arthouse / international / subtitled).
+    Homepage Shopify-style storefront; static HTML has 0 date strings (dates
+    appear in JS-rendered showtime widgets). Playwright with /pages/movies/
+    anchor scan. High drop_rate — many cards lack explicit start dates
+    (open-ended runs labelled "上映中"). Title in poster <img alt>, dates in
+    "5月22日(金)～5月28日(木)" inline text.
+
+# DEFERRED: T·Joy Hakata / United Cinemas Canal City / Cinepleks Tenjin —
+# fukuoka-tjoy.com refused connection; large chains use SPA showtime pickers
+# that need Playwright + per-date probing. Aggregators (Fukuoka Now, Yokanavi)
+# already index film-festival coverage.
+
+# ============================================================================
+# AGGREGATORS
+# ============================================================================
+
+- id: fukuoka-now
+  name: Fukuoka Now (English magazine — Events)
+  city: Tenjin & Daimyō               # editorial coverage spans whole city
+  category: other
+  homepage: https://www.fukuoka-now.com/en/
+  calendar_url: https://www.fukuoka-now.com/en/event/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "li.c-page-sub__guide-item"
+    title: "h2, h3, .c-event-card__title, a"
+    date: ".c-event-date__start time, .c-event-date time"
+    detail_link: "a[href*='/en/event/']@href"
+  date_extract_regex: '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.\s+\d{1,2}\b'
+  date_format: "%b. %d"
+  accept_drop_rate: 0.4
+  notes: |
+    English-language Fukuoka events magazine — top aggregator for non-Japanese
+    audience. Cards li.c-page-sub__guide-item with .c-event-date__start time
+    holding short "May. 21" or range "May. 30-31". Regex captures FIRST single
+    date "May. 21" (start only). date_format pins parse against current-year
+    template so dateparser doesn't read trailing day-of-month as a year token.
+
+- id: yokanavi-fukuoka
+  name: Yokanavi (Fukuoka City Tourism — events)
+  city: Hakata                        # official tourism site
+  category: other
+  homepage: https://gofukuoka.jp
+  calendar_url: https://gofukuoka.jp/searches?q=&story%5B%5D=event&who%5B%5D=
+  kind: playwright_html_list
+  source_priority: 1
+  locale: ja-JP
+  wait_for_selector: "a[href*='/events/detail/']"
+  extra_wait_ms: 4000
+  selectors:
+    item: "li:has(a[href*='/events/detail/'])"
+    title: "h3, h2, a"
+    date: ".date, p, time"
+    detail_link: "a[href*='/events/detail/']@href"
+  date_extract_regex: '\d{4}[./年]\d{1,2}[./月]\d{1,2}日?(?:\s*[～〜~–-]\s*\d{4}?[./年]?\d{1,2}[./月]\d{1,2}日?)?'
+  accept_drop_rate: 0.5
+  notes: |
+    yokanavi.com/en/event 301-redirects to gofukuoka.jp — Fukuoka City's
+    official tourism portal (rebranded 2026). Listing JS-rendered (0 dates in
+    static HTML) — Playwright required. Events at /events/detail/<id>. Mixed
+    types (exhibitions, festivals, races, marathons) — high drop_rate because
+    list page indexes long-running shows already covered by per-venue scrapers;
+    render-side dedup collapses overlap.
+
+# DEFERRED: TimeOut Fukuoka — TimeOut Japan covers Tokyo/Osaka/Kyoto only;
+# no Fukuoka section exists as of 2026-05-21.
+# DEFERRED: Peatix Japan / Eventbrite Japan / Walker Plus — Peatix shows static
+# nav only (events load via JS); Eventbrite serves wrong-region content for
+# /japan--fukuoka/; Walker Plus needs Playwright. Viable in v2; for now
+# Fukuoka Now + Yokanavi provide adequate aggregator coverage.
+# DEFERRED: Asianbeat / asoview / Klook / e+ / Ticket Pia — ticketing portals,
+# mostly JS-rendered + per-keyword search APIs. Lower priority than editorial
+# aggregators.
+
+# ============================================================================
+# CULTURAL INSTITUTES
+# ============================================================================
+# DEFERRED: Goethe-Institut Fukuoka — does not exist (nearest is Tokyo/Osaka/Kyoto).
+# DEFERRED: Alliance Française Fukuoka — local chapter exists but no public
+# events page; programs rotate through Fukuoka Asian Art Museum / Acros and
+# surface there.
+# DEFERRED: British Council — Tokyo-only physical presence; no Fukuoka office.
+# DEFERRED: Fukuoka City Foundation for Arts and Cultural Promotion (FFAC) —
+# upstream sponsor of Acros + civic-hall programs already captured under those
+# venue entries; no separate event calendar.

@@ -39,18 +39,29 @@ _HK_TZ = _LOCAL_TZ  # back-compat alias used throughout the file
 
 
 _LANGUAGE = "en"  # overridden per-city via configure_locale()
+_LANGUAGES = ["en"]  # full list (may be multi-language for mixed-script cities)
 
 
-def configure_locale(timezone_name: str, date_order: str = "DMY", language: str = "en") -> None:
+def configure_locale(timezone_name: str, date_order: str = "DMY", language="en") -> None:
     """Reconfigure module-level locale globals before scraping a new city.
-    Called once per city by the orchestrator (build_all.py)."""
-    global _LOCAL_TZ, _HK_TZ, _DATE_PARSER_BASE_SETTINGS, _DATE_PARSER_KW, _LANGUAGE
+    Called once per city by the orchestrator (build_all.py).
+
+    `language` may be a single str ("en") or a list (["ja","en"]) when the
+    city mixes scripts (Fukuoka has Japanese + English dates side-by-side).
+    """
+    global _LOCAL_TZ, _HK_TZ, _DATE_PARSER_BASE_SETTINGS, _DATE_PARSER_KW, _LANGUAGE, _LANGUAGES
     _LOCAL_TZ = ZoneInfo(timezone_name)
     _HK_TZ = _LOCAL_TZ
     _DATE_PARSER_BASE_SETTINGS = {"DATE_ORDER": date_order}
-    _LANGUAGE = language
+    if isinstance(language, str):
+        langs = [language]
+        _LANGUAGE = language
+    else:
+        langs = list(language)
+        _LANGUAGE = langs[0] if langs else "en"
+    _LANGUAGES = langs
     _DATE_PARSER_KW = {
-        "languages": [language],
+        "languages": langs,
         "settings": {**_DATE_PARSER_BASE_SETTINGS, "PREFER_DATES_FROM": "future"},
     }
 from bs4 import BeautifulSoup
@@ -2143,7 +2154,7 @@ def _date_parser_kw(date_prefer: str = "future") -> dict:
     should set `date_prefer: current_period` in venues.yaml.
     """
     return {
-        "languages": [_LANGUAGE],
+        "languages": list(_LANGUAGES),
         "settings": {**_DATE_PARSER_BASE_SETTINGS, "PREFER_DATES_FROM": date_prefer},
     }
 
@@ -2201,6 +2212,15 @@ def _parse_one(text: str, explicit_format: Optional[str] = None,
     if explicit_format:
         try:
             dt = datetime.strptime(text, explicit_format)
+            # When the format lacks a year token, strptime defaults to 1900.
+            # Substitute the current year and roll forward one if the resulting
+            # date is already in the past (matching PREFER_DATES_FROM=future).
+            if "%Y" not in explicit_format and "%y" not in explicit_format:
+                today = datetime.now(_HK_TZ)
+                candidate = dt.replace(year=today.year, tzinfo=_HK_TZ)
+                if date_prefer == "future" and candidate.date() < today.date():
+                    candidate = candidate.replace(year=today.year + 1)
+                return candidate
             return dt.replace(tzinfo=_HK_TZ)
         except ValueError:
             pass
