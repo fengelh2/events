@@ -569,18 +569,19 @@
 - id: kbc-cinema-static
   name: KBC Cinema (homepage — static)
   city: Tenjin & Daimyō
-  category: cinema
+  category: film
   homepage: https://www.kbc-cinema.com
   calendar_url: https://www.kbc-cinema.com/
-  kind: html_list
-  source_priority: 1                    # secondary to playwright entry above; remove once verified
+  kind: detail_pages
+  source_priority: 1
+  detail_url_pattern: '/pages/movies/[a-z0-9-]+'
   selectors:
-    item: "a[href*='/pages/movies/']:has(img)"
-    title: "img@alt"
-    date: "p, span"
-    detail_link: "@href"
+    title: "title"
+    date: "body"
   date_extract_regex: '\d{1,2}月\d{1,2}日(?:\([日月火水木金土]\))?(?:\s*[～〜~]\s*\d{1,2}月\d{1,2}日(?:\([日月火水木金土]\))?)?'
-  accept_drop_rate: 0.5
+  title_strip_suffixes:
+    - "– KBCシネマ1・2"
+    - "- KBCシネマ1・2"
   notes: |
     Static-HTML re-probe of KBC Cinema (Round-2 2026-05-21). Round-1 assumed
     JS-rendered showtime widget; actual homepage is Shopify-style storefront
@@ -661,20 +662,18 @@
   name: Hakata Machiya Folk Museum 博多町家ふるさと館
   city: Hakata
   category: museum_exhibition
-  homepage: https://www.hakatamachiya.com
-  calendar_url: https://www.hakatamachiya.com/event/
-  kind: html_list
-  source_priority: 1                  # low-volume venue (1-2 active events at a time)
+  homepage: https://hakatamachiya.com
+  calendar_url: https://hakatamachiya.com/event/
+  kind: detail_pages
+  source_priority: 1
+  detail_url_pattern: 'https?://(?:www\.)?hakatamachiya\.com/event/\d+/'
   selectors:
-    item: "li:has(a[href*='/event/'])"
-    title: "h3, h2, a"
-    date: "p, time, span"
-    detail_link: "a[href*='/event/']@href"
-  date_extract_regex: '\d{4}/\d{1,2}/\d{1,2}\s*[〜～~–-]\s*(?:\d{4}/)?\d{1,2}/\d{1,2}'
+    title: "h1"
+    date: "body"
+  date_extract_regex: '\d{4}/\d{1,2}/\d{1,2}(?:\s*[〜～~–-]\s*(?:\d{4}/)?\d{1,2}/\d{1,2})?'
   date_format: "%Y/%m/%d"
-  accept_drop_rate: 0.7               # most rows are 【終了】 archived events
   skip_if_title_matches:
-    - '【終了】'
+    - '^【終了】'
   notes: |
     博多町家ふるさと館 — preserved Meiji/Taisho merchant house museum near
     Kushida Shrine. Low-volume: only 1 active special exhibition at recon

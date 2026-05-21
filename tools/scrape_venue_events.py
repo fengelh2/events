@@ -213,8 +213,8 @@ def _scrape_detail_pages(venue_row: dict, session=None) -> list[Event]:
                 break
         if not title:
             continue
-        start = _parse_one(date_text, venue_row.get("date_format"),
-                           date_prefer=venue_row.get("date_prefer", "future"))
+        start, end = _parse_date_range(date_text, venue_row.get("date_format"),
+                                       date_prefer=venue_row.get("date_prefer", "future"))
         if start is None:
             log.debug("  %s: failed to parse date %r", url, date_text)
             continue
@@ -222,7 +222,7 @@ def _scrape_detail_pages(venue_row: dict, session=None) -> list[Event]:
             Event(
                 title=title,
                 start=start,
-                end=None,
+                end=end,
                 venue_id=venue_row["id"],
                 venue_name=venue_row.get("display_name") or venue_row["name"],
                 city=venue_row.get("city", ""),
@@ -2181,14 +2181,28 @@ def _parse_date_range(text: str, explicit_format: Optional[str] = None,
         return (None, None)
     text = text.strip()
 
-    # Range patterns — try a few separators
-    for sep in [" – ", " — ", " - ", "–", "—", " bis ", " – bis "]:
+    # Range patterns — try a few separators. JP variants ～〜 added (Fukuoka).
+    for sep in [" – ", " — ", " - ", "–", "—", "～", "〜", " bis ", " – bis "]:
         if sep in text:
             left, right = text.split(sep, 1)
             l = _parse_one(left.strip(), explicit_format, date_prefer=date_prefer)
             r = _parse_one(right.strip(), explicit_format, date_prefer=date_prefer)
             if l and r:
                 return (l, r)
+            # If only LEFT parses (e.g. "2026/5/13～6/19" — right side has no year),
+            # extend year+month from left if right is just M/D.
+            if l and not r:
+                right_s = right.strip()
+                # Year-less right side: 6/19 → 2026/6/19 ; 11月3日 → 2026年11月3日
+                if re.fullmatch(r"\d{1,2}/\d{1,2}", right_s):
+                    r = _parse_one(f"{l.year}/{right_s}", explicit_format, date_prefer=date_prefer)
+                elif re.fullmatch(r"\d{1,2}月\d{1,2}日(?:\([^)]+\))?", right_s):
+                    r = _parse_one(f"{l.year}年{right_s}", explicit_format, date_prefer=date_prefer)
+                if r:
+                    return (l, r)
+                return (l, None)
+            if l:
+                return (l, None)
 
     # Compact range "14.05.–30.06.2026" (no spaces, en-dash with year only on right)
     m = re.match(r"^(\d{1,2}\.\d{1,2}\.)[–—-](\d{1,2}\.\d{1,2}\.\d{4})$", text)
@@ -2245,6 +2259,13 @@ def _parse_one(text: str, explicit_format: Optional[str] = None,
     for prefix in ("through ", "thru ", "until ", "starting ", "from ", "ends "):
         if text.lower().startswith(prefix):
             text = text[len(prefix):]
+
+    # Japanese M月D日 with no 年 → dateparser's ja-locale misinterprets the
+    # leading digit as a Reiwa-era year (e.g. "5月22日" → 2122-05-21). Prepend
+    # current year so it parses as a normal calendar date.
+    if "ja" in _LANGUAGES and re.fullmatch(r"\s*\d{1,2}月\d{1,2}日(?:\([^)]+\))?\s*", text):
+        today = datetime.now(_HK_TZ)
+        text = f"{today.year}年{text.strip()}"
 
     parsed = dateparser.parse(text, **_date_parser_kw(date_prefer))
     if parsed is None:
