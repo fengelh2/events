@@ -235,7 +235,10 @@
   title_field: programTitle
   start_field: activeStartDate
   end_field: activeEndDate
-  url_pattern: https://www.academymuseum.org/en/program/{slug}
+  # 2026-05 site redesign: /en/program/<slug> all 404. New URL pattern is
+  # client-side-routed; without a stable mapping, fall back to the calendar
+  # landing so users at least land on the venue's events page.
+  url_pattern: https://www.academymuseum.org/en/calendar
   notes: |
     Mid-Wilshire museum of cinema (Saban Building, ex-May Co.). Built on
     Next.js + Contentful. The /en/calendar page embeds a rotating buildId;

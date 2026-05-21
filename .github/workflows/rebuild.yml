@@ -40,6 +40,9 @@ jobs:
       - run: python -m playwright install --with-deps chromium
       - name: Rebuild all cities
         run: python tools/build_all.py --verbose
+      - name: Audit event links (non-fatal)
+        run: python tools/check_links.py
+        continue-on-error: true
       - name: Commit seen-events state
         run: |
           git config user.name  "github-actions[bot]"
