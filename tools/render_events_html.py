@@ -1048,7 +1048,7 @@ def _render_html(
     parts.append('    var venue=a.getAttribute("data-venue")||"unknown";')
     parts.append('    var t=(a.querySelector(".row-title, .fc-title")||{}).textContent||"";')
     parts.append('    t=t.replace(/^NEW/,"").trim().slice(0,80);')
-    parts.append('    window.goatcounter.count({path:"event-click/"+venue+"/"+t,title:"event-click "+t,event:true});')
+    parts.append(f'    window.goatcounter.count({{path:"event-click/{city_code}/"+venue+"/"+t,title:"event-click "+t,event:true}});')
     parts.append('  });')
     parts.append('})();')
     parts.append('</script>')

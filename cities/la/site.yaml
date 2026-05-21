@@ -8,4 +8,4 @@ lang: en
 date_order: MDY
 timezone: America/Los_Angeles
 horizon_days: 270
-goatcounter_code: events-la
+goatcounter_code: events

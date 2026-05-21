@@ -8,4 +8,4 @@ lang: en
 date_order: DMY
 timezone: Asia/Hong_Kong
 horizon_days: 270
-goatcounter_code: events-hk
+goatcounter_code: events

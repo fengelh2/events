@@ -8,4 +8,4 @@ lang: de
 date_order: DMY
 timezone: Europe/Berlin
 horizon_days: 270
-goatcounter_code: events-nrw
+goatcounter_code: events
