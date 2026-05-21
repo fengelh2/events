@@ -1,0 +1,178 @@
+# Shenzhen cultural-events venues. Populated by recon agent 2026-05-21.
+#
+# Language policy: UI English. Chinese titles kept as-is (HK pattern —
+# don't translate). Prefer the English toggle of bilingual sites; use the
+# Chinese version only when no English exists.
+#
+# Geographic zones (Shenzhen districts):
+#   "Futian"            — Futian CBD, government, Civic Center, central museums
+#   "Luohu"             — Old town, Dongmen, original concert halls + theatres
+#   "Nanshan & OCT"     — Nanshan tech belt, OCT-LOFT arts cluster, Shekou
+#   "Longgang & East"   — Longgang (Universiade Center, MIXC Shenzhen Bay area)
+#   "Bao'an & Outer"    — Bao'an, Longhua, Pingshan, airport area
+#
+# Date format: ISO YYYY-MM-DD or 年月日 (zh). Time zone: Asia/Shanghai (CST, UTC+8).
+#
+# ============================================================================
+# IMPORTANT — GREAT FIREWALL REVERSE-BLOCK FINDING (2026-05-21 recon)
+# ============================================================================
+# Recon attempted 30+ Shenzhen-specific .cn / .com.cn / mainland-hosted
+# domains from this network. The result:
+#
+#   ECONNREFUSED (TCP RST from CN edge): sso.org.cn, polysztheatre.com,
+#     hxnart.com, ocat.org.cn, szam.org, gsyart.com, hua-art.com,
+#     bc-sz.com, bcube.com.cn, timeoutshenzhen.com, visitshenzhen.com,
+#     seaworldculture.com, shenzhenparty.com (301→nowshenzhen),
+#     shenzhen-standard.com (301→nowshenzhen), szdaily.com,
+#     shenzhenpages.com, szwindow.com, mocape.com (empty body)
+#   Timeout/empty body (JS-rendered + WAF): shenzhenconcerthall.com,
+#     shenzhenmuseum.com, eyeshenzhen.com event listing pages
+#   Cert expired: damai.cn  |  500/404: maoyan/showstart probes
+#
+# This is structural — CN sites geo-filter/RST non-CN egress IPs at the
+# TCP layer. Not fixable in YAML. Two mitigations exist but neither was
+# in scope for this onboarding pass:
+#   1. Move scraper egress to a Chinese-egress runner (VPS in HK/CN)
+#   2. Use Playwright with residential proxy (cost + maintenance)
+#
+# WHAT THIS YAML SHIPS: the ~3 sources that DID respond cleanly from
+# this network, with selectors verified by WebFetch + at least one real
+# (title, date) pair extracted. Plus a small static-events seed of major
+# multi-month exhibitions discovered via eyeshenzhen.com that anchor
+# the calendar until the live sources are unblocked.
+#
+# DEFERRED (GFW-blocked, re-probe from CN egress):
+#   sso, polysztheatre, hxnart, ocat, szam, gsyart, hua-art, bc-sz,
+#   bcube/B10 Live, timeoutshenzhen, visitshenzhen, seaworldculture,
+#   shenzhenmuseum, shenzhenconcerthall, mocape, damai, maoyan,
+#   showstart, taopiaopiao, yongle/piao.youku, shenzhen.gov.cn,
+#   szdaily, eyeshenzhen full events catalog
+# ============================================================================
+
+# ============================================================================
+# AGGREGATORS (the only working live source from this network)
+# ============================================================================
+
+- id: songkick-shenzhen
+  name: Songkick Shenzhen (concerts aggregator)
+  city: Futian                   # aggregator — per-event venue not yet parsed; default to city core
+  category: concert
+  homepage: https://www.songkick.com
+  calendar_url: https://www.songkick.com/search?utf8=%E2%9C%93&type=upcoming&query=shenzhen
+  kind: detail_pages
+  source_priority: 1
+  detail_url_pattern: '/concerts/\d+-[a-z0-9-]+'
+  selectors:
+    title: "h1"
+    date: "body"
+  date_extract_regex: '(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  accept_drop_rate: 0.5
+  notes: |
+    Songkick search/?query=shenzhen is the ONLY non-GFW-blocked live
+    concert source verified from this network. Recon 2026-05-21 confirmed
+    5 real upcoming entries:
+      - YUUF — Saturday 23 May 2026 — Hou Live
+      - Cagoules et Décalcomanies — Friday 22 May 2026
+      - STORM Festival 2026 (Marshmello) — Jun 13-14 2026
+      - Piergiorgio Corallo — Friday 14 Aug 2026 — B10 Live
+      - The Omnific — Sunday 27 Sep 2026 — Bo Live
+    Detail URLs follow /concerts/<id>-<slug>. Festival URLs use a
+    different /festivals/<id>/id/<id>-<slug> pattern not currently in
+    detail_url_pattern — single-day concerts only this pass. Date in
+    body prose, format "Saturday 23 May 2026". accept_drop_rate covers
+    the festival-pattern URLs that won't match the concert filter.
+
+    LIMITATION: aggregator is biased toward Western touring acts +
+    livehouse circuit (Hou Live, B10, Bo Live). Misses Chinese
+    domestic acts who only list on Damai/Maoyan (GFW-blocked above).
+
+# ============================================================================
+# STATIC SEED EXHIBITIONS (verified via eyeshenzhen.com homepage 2026-05-21)
+# ============================================================================
+# Live scrapers for these venues are GFW-blocked. Manual seed anchors
+# the calendar with real multi-month exhibitions until a CN-egress
+# runner is available. Refresh quarterly.
+
+- id: shenzhen-major-exhibitions
+  name: Shenzhen Major Exhibitions (curated seed)
+  city: Nanshan & OCT
+  category: museum_exhibition
+  homepage: https://www.eyeshenzhen.com
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Shen Yuan Solo Exhibition 沈远个展"
+      start: 2026-03-23
+      end:   2026-07-21
+      detail_url: "https://www.eyeshenzhen.com/"
+      # Venue: Sea World Culture and Arts Center (V&A), Nanshan
+    - title: "Pioneering — Human's Tech-Driven Future"
+      start: 2025-10-01
+      end:   2026-03-01
+      detail_url: "https://www.eyeshenzhen.com/"
+      # Venue: Sea World Culture and Arts Center, Main Hall, Nanshan
+    - title: "Ordos Bronze Exhibition — Steppe Culture in Shenzhen"
+      start: 2025-10-17
+      end:   2026-01-04
+      detail_url: "https://www.eyeshenzhen.com/"
+      # Venue: Nanshan Museum
+    - title: "Step Into the World of Impressionist Artworks"
+      start: 2025-10-01
+      end:   2026-01-31
+      detail_url: "https://www.eyeshenzhen.com/"
+      # Venue: MArtchall, Longhua
+  notes: |
+    Hand-curated from eyeshenzhen.com (official English-language city
+    portal) recon 2026-05-21. Used as a static seed because the
+    individual museum websites (Sea World Culture & Arts Center, Nanshan
+    Museum, MArtchall) are GFW-blocked from this network — see header
+    comment for the full deferred list.
+
+    These are real multi-month exhibitions confirmed via the
+    amazingshenzhen.com.cn/eyeshenzhen.com portal which DID respond
+    (its English homepage serves inline exhibition copy, but the
+    /node_400949.htm events catalog is JS-rendered with loading-only
+    placeholders — Playwright would be needed to enumerate the full
+    list, deferred).
+
+    Refresh: re-run eyeshenzhen.com WebFetch quarterly to roll forward.
+    First eligible refresh: 2026-08-21. When new exhibitions appear,
+    append here; archive expired ones into a comment block.
+
+# ============================================================================
+# DEFERRED — known live sources, GFW-blocked or JS-rendered from this network
+# ============================================================================
+# See header comment for the full list and rationale. Brief notes on
+# the most promising re-probe candidates once a CN-egress runner exists:
+#
+# Tier A (single venue, well-defined URL, will work from CN egress):
+#   - shenzhenconcerthall.com  — Shenzhen Concert Hall, Futian
+#   - sso.org.cn               — Shenzhen Symphony Orchestra
+#   - shenzhenmuseum.com       — Shenzhen Museum, Futian (Civic Center)
+#   - hxnart.com               — He Xiangning Art Museum, OCT
+#   - ocat.org.cn              — OCAT Shenzhen, OCT-LOFT
+#   - szam.org                 — Shenzhen Art Museum
+#   - mocape.com               — Contemporary Art & Urban Planning Museum
+#   - hua-art.com              — Hua Art Museum, OCT
+#   - gsyart.com               — Guan Shanyue Art Museum
+#   - seaworldculture.com      — Sea World Culture & Arts Center (V&A)
+#   - bc-sz.com                — Broadway Cinematheque B+
+#   - bcube.com.cn             — B10 Live (livehouse)
+#   - polysztheatre.com        — Shenzhen Poly Theatre
+#
+# Tier B (aggregators — bigger ROI per onboarding hour from CN egress):
+#   - damai.cn (cityId=82 = Shenzhen filter)
+#   - maoyan.com
+#   - showstart.com
+#   - taopiaopiao.com
+#   - piao.youku.com (Yongle)
+#   - eyeshenzhen.com node_400949 (Playwright)
+#
+# Tier C (Western/HK aggregators worth one more probe round, low-priority):
+#   - bandsintown.com (403 with current UA — try realistic browser UA)
+#   - songkick festivals/<id>/id/<id> (extend detail_url_pattern)
+#   - klook.com Shenzhen activities (404 on the city slug URL guessed)
+#
+# Cross-border:
+#   - Hong Kong–Shenzhen cross-border festivals — covered by the HK
+#     calendar's HK Arts Festival + LCSD entries when they tour SZ.

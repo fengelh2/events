@@ -729,7 +729,7 @@ def _render_html(
     # Stays the same on every city page so it acts as a single global nav.
     _CITIES = [("hk","🇨🇳","Hong Kong"),("la","🇺🇸","Los Angeles"),
                ("nrw","🇩🇪","NRW"),("singa","🇸🇬","Singapore"),
-               ("fukuoka","🇯🇵","Fukuoka")]
+               ("fukuoka","🇯🇵","Fukuoka"),("shenzhen","🇨🇳","Shenzhen")]
     parts.append('<nav class="city-switcher" aria-label="Switch city">')
     parts.append('  <a class="city-switcher__home" href="../">← All cities</a>')
     parts.append('  <div class="city-switcher__chips">')
