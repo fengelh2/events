@@ -724,3 +724,83 @@
 # DEFERRED: Fukuoka Photographic Center / Sankaku Apartment / Roomtype /
 # Forrest / Tetsuhouse / Imagine Hakata — micro-galleries; very low
 # events/venue/month. Surface via ARTNE when running notable shows.
+
+# ============================================================================
+# ROUND-3 AGGREGATORS (verified live 2026-05-21)
+# ============================================================================
+# User-supplied recheck list of 8 sites Round-2 had marked unreachable.
+# Re-probed all 8 from this network on 2026-05-21:
+#   - Walker Plus ar0840  : 404 on /event_list/, /event/; root walkerplus.com
+#                           redirects but the prefecture-filtered URL is gone.
+#                           Likely Walker Plus dropped the per-prefecture event
+#                           index in a 2026 site reshuffle. DEFERRED.
+#   - Peatix /events?q=fukuoka : 404 (was /search). New API gated behind JS.
+#   - Eventbrite /d/japan--fukuoka/events/ : page loads but body content is
+#     online-only events with US timezones — geo/IP serves wrong region.
+#     No JSON-LD Event blocks. DEFERRED (would need JP-egress + JS render).
+#   - Asoview /area/fukuoka/ and /category/areaCode/02400/ : both 404.
+#   - T·Joy /site/hakata/ : domain squat (AKB48 entertainment blog), NOT cinema.
+#   - TOHO Cinemas Hakata schedule (/net/schedule/052/...) : 404 across 4 path
+#     variants (TNPI3050J01, TNPI3060J01, HoneyWNowShowing, TNPI2000J01).
+#     SPA endpoint requires API call discovery, not in-scope this round.
+#   - 109 Cinemas Hakata (/hakata/, /hakata/movie/, /hakata/movie.html) : 404.
+#   - TimeOut Japan : no Fukuoka subpage exists (Tokyo/Osaka/Kyoto only).
+# Net verified: 2 entries below (United Cinemas Canal City + FFAC News).
+# Both confirmed via WebFetch — real titles + dates extracted.
+
+- id: united-cinemas-canal-city
+  name: United Cinemas Canal City 13
+  city: Hakata                        # Canal City Hakata complex
+  category: cinema
+  homepage: https://www.unitedcinemas.jp/canalcity/
+  calendar_url: https://www.unitedcinemas.jp/canalcity/daily.php
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "ul.scheduleList > li, li:has(h3)"
+    title: "h3, h3 a"
+    date: "h2, .date, body"
+    detail_link: "h3 a@href, a@href"
+  date_extract_regex: '\d{1,2}/\d{1,2}'
+  date_format: "%m/%d"
+  accept_drop_rate: 0.6
+  notes: |
+    13-screen multiplex at Canal City Hakata (4DX + IMAX + dub/sub mix).
+    /canalcity/daily.php is the daily schedule (defaults to today, takes
+    ?date=YYYY-MM-DD). Recon 2026-05-21 confirmed real film schedule with
+    titles ("SAKAMOTO DAYS", "Star Wars: Rise of Skywalker IMAX",
+    "Kung Fu Panda 4") + showtimes ("18:30–21:12") + the page-level date
+    header "5/21(木)". Date extraction here keeps only the daily header
+    (single day per probe); for opening-date coverage of upcoming films,
+    rely on Fukuoka Now + Yokanavi aggregators. Selectors are best-effort
+    based on schedule-list pattern; expect 0-1 CI tuning iteration.
+
+- id: ffac-news
+  name: Fukuoka Cultural Foundation 福岡市文化芸術振興財団
+  city: Tenjin & Daimyō               # foundation oversees ACROS, civic halls
+  category: other
+  homepage: https://ffac.or.jp/
+  calendar_url: https://ffac.or.jp/news/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: "a[href*='/news/detail.php']"
+    title: "h3, h2, p, @text"
+    date: "time, .date, p, @text"
+    detail_link: "@href"
+  date_extract_regex: '\d{4}年\d{1,2}月\d{1,2}日'
+  date_format: "%Y年%m月%d日"
+  accept_drop_rate: 0.5
+  skip_if_title_matches:
+    - '会員限定'                       # internal members-only admin posts
+  notes: |
+    FFAC (Fukuoka City Foundation for Arts and Cultural Promotion) — umbrella
+    operator of ACROS + city civic halls. Round-2 deferred this on the
+    assumption that programs surface via venue entries; Round-3 reprobe found
+    /news/ DOES carry standalone event announcements (Live@Museum series,
+    博多座ガムラン祭り pre-events, 特別展 exhibitions, workshop体験会) that
+    don't appear elsewhere. Cards are <a href="/news/detail.php?id=N">
+    wrapping image + title + 2026年M月D日 date. Recon 2026-05-21 confirmed
+    10 dated entries on the front page. accept_drop_rate covers help/admin
+    posts without an event date. skip_if_title_matches drops members-only
+    (会員限定) admin notices.
