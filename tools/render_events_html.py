@@ -1607,6 +1607,16 @@ _PAGE_HEAD = """<!DOCTYPE html>
     @media (prefers-color-scheme: dark) {{
       .count-bubble {{ background: rgba(255,255,255,0.12); color: #ddd; }}
     }}
+    /* When a category/city/when filter is active the count bubble shows the
+       unfiltered total which is misleading. Hide bubble + arrows in that state. */
+    body:has(input[name="catfilter"]:checked:not(#f-all)) .count-bubble,
+    body:has(input[name="cityfilter"]:checked:not(#c-all)) .count-bubble,
+    body:has(input[name="whenfilter"]:checked:not(#w-all)) .count-bubble,
+    body:has(input[name="catfilter"]:checked:not(#f-all)) .carousel-arrow,
+    body:has(input[name="cityfilter"]:checked:not(#c-all)) .carousel-arrow,
+    body:has(input[name="whenfilter"]:checked:not(#w-all)) .carousel-arrow {{
+      display: none !important;
+    }}
     .featured-card {{
       display: block;
       position: relative;
