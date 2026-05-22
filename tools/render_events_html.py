@@ -854,23 +854,31 @@ def _render_html(
     parts.append('  </div>')
     parts.append('  </div>')  # close .filter-panel
 
-    # Featured / "Don't Miss" — horizontal slider, count bubble in heading
+    # Featured / "Don't Miss" — carousel (hidden scrollbar, arrows, wiggle hint)
     if feat_events:
         parts.append('  <section class="featured">')
         parts.append(f'    <h2 class="featured-heading"><span class="star">★</span> Don\'t Miss <span class="count-bubble">{len(feat_events)}</span></h2>')
-        parts.append('    <div class="featured-grid featured-scroller">')
+        parts.append('    <div class="carousel-wrap">')
+        parts.append('      <button class="carousel-arrow carousel-arrow--prev" aria-label="Scroll left" type="button">‹</button>')
+        parts.append('      <div class="featured-grid featured-scroller wiggle-hint">')
         for ev in feat_events:
             parts.append(_render_featured_card(ev, now, fresh_keys=fresh_keys))
+        parts.append('      </div>')
+        parts.append('      <button class="carousel-arrow carousel-arrow--next" aria-label="Scroll right" type="button">›</button>')
         parts.append('    </div>')
         parts.append('  </section>')
 
-    # "Recently Added" — same slider treatment.
+    # "Recently Added" — same carousel treatment.
     if new_events:
         parts.append('  <section class="new-strip featured">')
         parts.append(f'    <h2 class="featured-heading"><span class="new-star">✨</span> Recently Added <span class="count-bubble">{len(new_events) + new_overflow}</span></h2>')
-        parts.append('    <div class="featured-grid featured-scroller">')
+        parts.append('    <div class="carousel-wrap">')
+        parts.append('      <button class="carousel-arrow carousel-arrow--prev" aria-label="Scroll left" type="button">‹</button>')
+        parts.append('      <div class="featured-grid featured-scroller wiggle-hint">')
         for ev in new_events:
             parts.append(_render_featured_card(ev, now, fresh_keys=fresh_keys))
+        parts.append('      </div>')
+        parts.append('      <button class="carousel-arrow carousel-arrow--next" aria-label="Scroll right" type="button">›</button>')
         parts.append('    </div>')
         if new_overflow > 0:
             parts.append(
@@ -1049,6 +1057,25 @@ def _render_html(
     parts.append('    var t=(a.querySelector(".row-title, .fc-title")||{}).textContent||"";')
     parts.append('    t=t.replace(/^NEW/,"").trim().slice(0,80);')
     parts.append(f'    window.goatcounter.count({{path:"event-click/{city_code}/"+venue+"/"+t,title:"event-click "+t,event:true}});')
+    parts.append('  });')
+    parts.append('})();')
+    # Carousel arrows — scroll by ~1 card width, gray out at ends
+    parts.append('(function(){')
+    parts.append('  document.querySelectorAll(".carousel-wrap").forEach(function(wrap){')
+    parts.append('    var sc=wrap.querySelector(".featured-scroller");')
+    parts.append('    var prev=wrap.querySelector(".carousel-arrow--prev");')
+    parts.append('    var next=wrap.querySelector(".carousel-arrow--next");')
+    parts.append('    if(!sc||!prev||!next) return;')
+    parts.append('    function step(){var c=sc.querySelector(".featured-card"); return (c?c.getBoundingClientRect().width:280)+12;}')
+    parts.append('    function update(){')
+    parts.append('      prev.classList.toggle("is-disabled", sc.scrollLeft<=2);')
+    parts.append('      next.classList.toggle("is-disabled", sc.scrollLeft+sc.clientWidth>=sc.scrollWidth-2);')
+    parts.append('    }')
+    parts.append('    prev.addEventListener("click",function(){sc.scrollBy({left:-step(),behavior:"smooth"});});')
+    parts.append('    next.addEventListener("click",function(){sc.scrollBy({left:step(),behavior:"smooth"});});')
+    parts.append('    sc.addEventListener("scroll",update,{passive:true});')
+    parts.append('    window.addEventListener("resize",update);')
+    parts.append('    update();')
     parts.append('  });')
     parts.append('})();')
     parts.append('</script>')
@@ -1498,21 +1525,73 @@ _PAGE_HEAD = """<!DOCTYPE html>
       grid-template-columns: repeat(2, 1fr);
       gap: 14px;
     }}
-    /* Slider variant — horizontal scroll, saves vertical space */
+    /* Carousel — horizontal scroll with hidden scrollbar, fade edges, arrows */
+    .carousel-wrap {{
+      position: relative;
+      /* Fade out left + right edges so cards don't hard-cut */
+      mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+    }}
     .featured-scroller {{
       display: flex; flex-direction: row;
       gap: 12px;
       overflow-x: auto; overflow-y: hidden;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
-      padding-bottom: 8px;
-      /* hide scrollbar but keep functional */
-      scrollbar-width: thin;
+      scroll-behavior: smooth;
+      padding: 4px 8px 10px;
+      /* Hide scrollbar entirely */
+      scrollbar-width: none;
     }}
+    .featured-scroller::-webkit-scrollbar {{ display: none; }}
     .featured-scroller > .featured-card {{
-      flex: 0 0 280px;          /* fixed card width */
+      flex: 0 0 280px;
       scroll-snap-align: start;
     }}
+    /* Arrow buttons — overlay, rounded, semi-transparent */
+    .carousel-arrow {{
+      position: absolute; top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.92);
+      color: #181818;
+      font-size: 22px; line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.15s, opacity 0.2s;
+      opacity: 0;
+      padding-bottom: 3px;     /* optical centering of › */
+    }}
+    .carousel-wrap:hover .carousel-arrow {{ opacity: 1; }}
+    .carousel-arrow:hover {{ background: #fff; transform: translateY(-50%) scale(1.08); }}
+    .carousel-arrow--prev {{ left: 4px; }}
+    .carousel-arrow--next {{ right: 4px; padding-left: 2px; }}
+    .carousel-arrow.is-disabled {{ opacity: 0 !important; pointer-events: none; }}
+    @media (prefers-color-scheme: dark) {{
+      .carousel-arrow {{ background: rgba(40,40,40,0.92); color: #f5f5f5; box-shadow: 0 2px 10px rgba(0,0,0,0.6); }}
+      .carousel-arrow:hover {{ background: #2a2a2a; }}
+    }}
+    /* On touch devices arrows are useless; keep them hidden, mask + swipe is enough */
+    @media (hover: none) {{ .carousel-arrow {{ display: none; }} }}
+
+    /* Wiggle hint — one-shot animation on first paint so the user notices it scrolls */
+    @keyframes carousel-wiggle {{
+      0%   {{ transform: translateX(0); }}
+      18%  {{ transform: translateX(28px); }}
+      36%  {{ transform: translateX(-12px); }}
+      55%  {{ transform: translateX(8px); }}
+      78%  {{ transform: translateX(-2px); }}
+      100% {{ transform: translateX(0); }}
+    }}
+    .wiggle-hint {{
+      animation: carousel-wiggle 1.4s ease-in-out 0.8s 1;
+    }}
+    @media (prefers-reduced-motion: reduce) {{ .wiggle-hint {{ animation: none; }} }}
+
     /* Count bubble in heading */
     .count-bubble {{
       display: inline-block;
