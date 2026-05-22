@@ -47,9 +47,9 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet cities/*/data/seen_events.json; then
-            git add cities/*/data/seen_events.json
-            git commit -m "auto: update seen_events.json"
+          if ! git diff --quiet cities/*/data/seen_events.json cities/*/data/events_cache.json; then
+            git add cities/*/data/seen_events.json cities/*/data/events_cache.json
+            git commit -m "auto: update seen_events + scrape cache"
             for i in 1 2 3; do
               if git push origin main; then break; fi
               git pull --rebase -X ours origin main || true

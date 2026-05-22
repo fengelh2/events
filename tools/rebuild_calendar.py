@@ -39,6 +39,75 @@ SEEN_FRESH_DAYS = 14
 SEEN_BOOTSTRAP_OFFSET_DAYS = 30
 
 
+def _config_hash(venues_path: str, site: dict) -> str:
+    """Hash that changes when scrape output should change: venues.yaml content,
+    site locale config, parser code. Cache built under one hash is reusable
+    when the hash matches."""
+    import hashlib
+    h = hashlib.sha256()
+    h.update(Path(venues_path).read_bytes())
+    h.update(str(sorted((site or {}).items())).encode("utf-8"))
+    # Include the parser file mtime so a code-level fix invalidates the cache
+    scraper = Path(__file__).parent / "scrape_venue_events.py"
+    if scraper.exists():
+        h.update(str(int(scraper.stat().st_mtime)).encode("utf-8"))
+    return h.hexdigest()
+
+
+def _scraper_newer_than_cache(cache_path: Path) -> bool:
+    """True when the scraper code has been edited since the cache was written."""
+    scraper = Path(__file__).parent / "scrape_venue_events.py"
+    if not cache_path.exists() or not scraper.exists():
+        return True
+    return scraper.stat().st_mtime > cache_path.stat().st_mtime
+
+
+def _save_cache(cache_path: Path, events: list, config_hash: str) -> None:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    import json
+    from dataclasses import asdict, is_dataclass
+    payload = {
+        "config_hash": config_hash,
+        "saved_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "events": [
+            {**asdict(e), "start": _iso(e.start), "end": _iso(getattr(e, "end", None))}
+            if is_dataclass(e) else {**e, "start": _iso(e["start"]), "end": _iso(e.get("end"))}
+            for e in events
+        ],
+    }
+    cache_path.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+def _load_cache(cache_path: Path, config_hash: str) -> list | None:
+    if not cache_path.exists():
+        return None
+    import json
+    try:
+        data = json.loads(cache_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if data.get("config_hash") != config_hash:
+        log.info("cache config hash mismatch — will re-scrape")
+        return None
+    from datetime import datetime as _dt
+    Event = scrape_venue_events.Event
+    out = []
+    for d in data.get("events", []):
+        d = dict(d)
+        d["start"] = _dt.fromisoformat(d["start"]) if d.get("start") else None
+        d["end"]   = _dt.fromisoformat(d["end"])   if d.get("end") else None
+        try:
+            out.append(Event(**d))
+        except TypeError:
+            # Schema drift between cache and current Event dataclass — bail
+            return None
+    return out
+
+
+def _iso(v):
+    return v.isoformat() if v else None
+
+
 def _event_seen_key(ev) -> str:
     """Stable cross-rebuild identity: venue + normalised title + start date."""
     title = (ev.title or "").lower().strip()
@@ -104,6 +173,10 @@ def main() -> int:
     p.add_argument("--out", default=None)
     p.add_argument("--only-city", default=None, help="Limit to one city/neighborhood")
     p.add_argument("--horizon-days", type=int, default=None)
+    p.add_argument("--from-cache", action="store_true",
+                   help="Skip scrape: load events from cities/<code>/.cache/events.json")
+    p.add_argument("--no-cache", action="store_true",
+                   help="Force re-scrape even if cache is fresh")
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args()
 
@@ -141,32 +214,47 @@ def main() -> int:
     if args.only_city:
         venues = [v for v in venues if v.get("city") == args.only_city]
 
-    # Reuse one HTTP session across all venues for connection pooling
-    session = requests.Session()
-    session.headers.update(scrape_venue_events.DEFAULT_HEADERS)
+    # ─── Cache decision ──────────────────────────────────────────────────
+    # Cache file lives next to data/seen_events.json. Cache is valid when
+    # its config-hash matches the current scraper + venues + city tz/lang.
+    # On a render-only push (tools/render_events_html.py changed but venues
+    # didn't), the cache hash matches → skip scrape (saves ~20 min).
+    cache_path = Path(args.seen).parent / "events_cache.json"
+    config_hash = _config_hash(args.venues, site)
+    cached_events = _load_cache(cache_path, config_hash) if not args.no_cache else None
+    use_cache = cached_events is not None and (args.from_cache or args.no_cache is False and not _scraper_newer_than_cache(cache_path))
 
-    all_events = []
     failed: list[tuple[str, str]] = []
     ok = 0
     skipped = 0
-    for v in venues:
-        if v.get("kind") == "unknown":
-            skipped += 1
-            continue
-        try:
-            evs = scrape_venue_events.scrape(v, session=session)
-        except Exception as exc:  # belt-and-braces; scrape() already isolates
-            log.error("scrape() raised for %s: %s", v["id"], exc)
-            failed.append((v["id"], str(exc)))
-            continue
-        if not evs:
-            failed.append((v["id"], "no events returned"))
-        else:
-            all_events.extend(evs)
-            ok += 1
+    if use_cache:
+        all_events = cached_events
+        log.info("LOADED %d events from cache (config hash matched)", len(all_events))
+    else:
+        # Reuse one HTTP session across all venues for connection pooling
+        session = requests.Session()
+        session.headers.update(scrape_venue_events.DEFAULT_HEADERS)
+        all_events = []
+        for v in venues:
+            if v.get("kind") == "unknown":
+                skipped += 1
+                continue
+            try:
+                evs = scrape_venue_events.scrape(v, session=session)
+            except Exception as exc:
+                log.error("scrape() raised for %s: %s", v["id"], exc)
+                failed.append((v["id"], str(exc)))
+                continue
+            if not evs:
+                failed.append((v["id"], "no events returned"))
+            else:
+                all_events.extend(evs)
+                ok += 1
 
-    log.info("scraped %d venues OK, %d failed, %d skipped (kind=unknown)", ok, len(failed), skipped)
-    log.info("raw events: %d", len(all_events))
+        log.info("scraped %d venues OK, %d failed, %d skipped (kind=unknown)", ok, len(failed), skipped)
+        log.info("raw events: %d", len(all_events))
+        # Persist scrape to cache for the next render-only build
+        _save_cache(cache_path, all_events, config_hash)
 
     # Mark featured events using highlights config
     featured = _compute_featured_set(all_events, highlights)
