@@ -854,22 +854,21 @@ def _render_html(
     parts.append('  </div>')
     parts.append('  </div>')  # close .filter-panel
 
-    # Featured / "Don't Miss"
+    # Featured / "Don't Miss" — horizontal slider, count bubble in heading
     if feat_events:
         parts.append('  <section class="featured">')
-        parts.append('    <h2 class="featured-heading"><span class="star">★</span> Don\'t Miss</h2>')
-        parts.append('    <div class="featured-grid">')
+        parts.append(f'    <h2 class="featured-heading"><span class="star">★</span> Don\'t Miss <span class="count-bubble">{len(feat_events)}</span></h2>')
+        parts.append('    <div class="featured-grid featured-scroller">')
         for ev in feat_events:
             parts.append(_render_featured_card(ev, now, fresh_keys=fresh_keys))
         parts.append('    </div>')
         parts.append('  </section>')
 
-    # "Recently Added" — events with first_seen in last NEW_FRESH_DAYS that
-    # aren't already in Don't Miss. Same card layout, teal accent.
+    # "Recently Added" — same slider treatment.
     if new_events:
         parts.append('  <section class="new-strip featured">')
-        parts.append('    <h2 class="featured-heading"><span class="new-star">✨</span> Recently Added</h2>')
-        parts.append('    <div class="featured-grid">')
+        parts.append(f'    <h2 class="featured-heading"><span class="new-star">✨</span> Recently Added <span class="count-bubble">{len(new_events) + new_overflow}</span></h2>')
+        parts.append('    <div class="featured-grid featured-scroller">')
         for ev in new_events:
             parts.append(_render_featured_card(ev, now, fresh_keys=fresh_keys))
         parts.append('    </div>')
@@ -1499,6 +1498,36 @@ _PAGE_HEAD = """<!DOCTYPE html>
       grid-template-columns: repeat(2, 1fr);
       gap: 14px;
     }}
+    /* Slider variant — horizontal scroll, saves vertical space */
+    .featured-scroller {{
+      display: flex; flex-direction: row;
+      gap: 12px;
+      overflow-x: auto; overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 8px;
+      /* hide scrollbar but keep functional */
+      scrollbar-width: thin;
+    }}
+    .featured-scroller > .featured-card {{
+      flex: 0 0 280px;          /* fixed card width */
+      scroll-snap-align: start;
+    }}
+    /* Count bubble in heading */
+    .count-bubble {{
+      display: inline-block;
+      background: rgba(0,0,0,0.08);
+      color: var(--muted, #666);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 999px;
+      vertical-align: middle;
+      margin-left: 6px;
+    }}
+    @media (prefers-color-scheme: dark) {{
+      .count-bubble {{ background: rgba(255,255,255,0.12); color: #ddd; }}
+    }}
     .featured-card {{
       display: block;
       position: relative;
@@ -1845,6 +1874,8 @@ _PAGE_HEAD = """<!DOCTYPE html>
       .page {{ padding: 20px 16px 60px; }}
       .masthead h1 {{ font-size: 32px; }}
       .featured-grid {{ grid-template-columns: 1fr; }}
+      /* Slider keeps row layout on mobile; just smaller cards */
+      .featured-scroller > .featured-card {{ flex: 0 0 240px; }}
       /* On mobile, drop the pill column from the grid and let it wrap to a new row */
       .row {{ grid-template-columns: 60px 1fr auto 18px; grid-template-rows: auto auto; gap: 10px 12px; padding: 12px 8px; }}
       .row-time {{ grid-column: 1; grid-row: 1; font-size: 16px; }}
