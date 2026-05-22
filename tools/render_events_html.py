@@ -1060,6 +1060,23 @@ def _render_html(
     parts.append('  });')
     parts.append('})();')
     # Carousel arrows — scroll by ~1 card width, gray out at ends
+    # Hide .featured section when its scroller has 0 visible cards (combined-
+    # filter cases like city+when that CSS-only :has rules don't cover).
+    parts.append('(function(){')
+    parts.append('  function syncEmpty(){')
+    parts.append('    document.querySelectorAll(".featured").forEach(function(sec){')
+    parts.append('      var cards=sec.querySelectorAll(".featured-card");')
+    parts.append('      if(cards.length===0) return;')
+    parts.append('      var any=false;')
+    parts.append('      cards.forEach(function(c){ if(c.offsetParent!==null) any=true; });')
+    parts.append('      sec.style.display = any ? "" : "none";')
+    parts.append('    });')
+    parts.append('  }')
+    parts.append('  document.addEventListener("change", function(e){')
+    parts.append('    if(e.target && e.target.classList && e.target.classList.contains("filter-input")) setTimeout(syncEmpty,0);')
+    parts.append('  });')
+    parts.append('  setTimeout(syncEmpty,0);')
+    parts.append('})();')
     parts.append('(function(){')
     parts.append('  document.querySelectorAll(".carousel-wrap").forEach(function(wrap){')
     parts.append('    var sc=wrap.querySelector(".featured-scroller");')
