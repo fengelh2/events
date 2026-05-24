@@ -9,10 +9,46 @@ date_order: DMY
 timezone: Asia/Hong_Kong
 horizon_days: 270
 goatcounter_code: fengelh
-# Audience inversion: ONLY include events where audience == "kids" OR title
-# matches the broader kids_keywords list below. Inverse of the default
-# behaviour (which de-emphasizes kids events on adult-focused calendars).
+# Audience inversion: keep events that EITHER match the broad kids_keywords
+# below, OR come from a venue explicitly listed as kid-relevant (the venue
+# itself vouches for the events). The second rule lets us include Kadoorie's
+# "Plant Walk" or HKPL "Book Display" which wouldn't match keyword alone.
 audience_filter: kids
+always_include_venues:
+  # Static kids venues (added in round 1)
+  - hk-disneyland-events
+  - ocean-park-events
+  - hk-science-museum-kids
+  - noahs-ark-hk
+  - hk-rugby-sevens
+  - hk-public-libraries-kids
+  - hk-park-events
+  - hk-arcades-kid-friendly
+  # Round 2 additions
+  - the-mills
+  - hk-fringe-workshops
+  - harbour-city
+  - hkcec
+  - hk-marathon-youth-run
+  - hkfc-youth-10s
+  - hkrfu-fixtures
+  # Round 3 deep dive
+  - kfbg
+  - hkpl-events
+  - wetland-park
+  - hkrugby-asia-championship-2026
+  - hkfa-fixtures-2026
+  - hk-sevens-2027
+  - hk-book-fair-2026
+  - hktdc-toy-fair-2027
+  # Round 3 rescue
+  - tennis-hk
+  - esf-explore-camps
+  - activekids-hk
+  - timeout-hk-month
+  - new-town-plaza
+  - ocean-park-whatson
+  - hkfc-rugby-fixtures
 # Extra title keywords that promote an event into the kids calendar even if
 # the global _AUDIENCE_KEYWORDS didn't flag it as kids.
 kids_keywords:

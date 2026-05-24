@@ -257,15 +257,20 @@ def main() -> int:
         _save_cache(cache_path, all_events, config_hash)
 
     # Audience filter — `audience_filter: kids` in site.yaml keeps only events
-    # whose audience is "kids" OR whose title matches site's `kids_keywords`.
+    # whose audience is "kids" OR title matches site's `kids_keywords` OR the
+    # event's source/venue_id is in `always_include_venues` (venues explicitly
+    # tagged as kid-relevant get to bypass keyword matching).
     af = (site.get("audience_filter") or "").lower()
     if af == "kids":
         import re as _re
         kw = [k.lower() for k in (site.get("kids_keywords") or [])]
         pat = _re.compile("|".join(_re.escape(k) for k in kw), _re.IGNORECASE) if kw else None
+        always = set(site.get("always_include_venues") or [])
         before = len(all_events)
         all_events = [e for e in all_events
-                      if getattr(e, "audience", "general") == "kids"
+                      if getattr(e, "source", "") in always
+                      or getattr(e, "venue_id", "") in always
+                      or getattr(e, "audience", "general") == "kids"
                       or (pat and pat.search(getattr(e, "title", "") or ""))]
         log.info("audience_filter=kids: kept %d / %d events", len(all_events), before)
 
