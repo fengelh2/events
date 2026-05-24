@@ -256,6 +256,19 @@ def main() -> int:
         # Persist scrape to cache for the next render-only build
         _save_cache(cache_path, all_events, config_hash)
 
+    # Audience filter — `audience_filter: kids` in site.yaml keeps only events
+    # whose audience is "kids" OR whose title matches site's `kids_keywords`.
+    af = (site.get("audience_filter") or "").lower()
+    if af == "kids":
+        import re as _re
+        kw = [k.lower() for k in (site.get("kids_keywords") or [])]
+        pat = _re.compile("|".join(_re.escape(k) for k in kw), _re.IGNORECASE) if kw else None
+        before = len(all_events)
+        all_events = [e for e in all_events
+                      if getattr(e, "audience", "general") == "kids"
+                      or (pat and pat.search(getattr(e, "title", "") or ""))]
+        log.info("audience_filter=kids: kept %d / %d events", len(all_events), before)
+
     # Mark featured events using highlights config
     featured = _compute_featured_set(all_events, highlights)
     log.info("flagged %d events as featured", len(featured))

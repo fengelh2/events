@@ -1,0 +1,66 @@
+code: hk-kids
+name: HK Kids
+flag: "👶"
+title: "What's happening in Theo's World"
+header_eyebrow: "Kids in Honkers"
+city_identity_word: "Honkers"
+lang: en
+date_order: DMY
+timezone: Asia/Hong_Kong
+horizon_days: 270
+goatcounter_code: fengelh
+# Audience inversion: ONLY include events where audience == "kids" OR title
+# matches the broader kids_keywords list below. Inverse of the default
+# behaviour (which de-emphasizes kids events on adult-focused calendars).
+audience_filter: kids
+# Extra title keywords that promote an event into the kids calendar even if
+# the global _AUDIENCE_KEYWORDS didn't flag it as kids.
+kids_keywords:
+  - kid
+  - kids
+  - child
+  - children
+  - family
+  - families
+  - puppet
+  - storytelling
+  - story time
+  - fairy
+  - LEGO
+  - lego
+  - magic
+  - magic show
+  - parent
+  - mom
+  - dad
+  - school holiday
+  - holiday camp
+  - junior
+  - youth
+  - young
+  - playground
+  - workshop          # craft/cooking workshops typically family-friendly
+  - rugby
+  - football camp
+  - sport
+  - sports
+  - carnival
+  - fair
+  - parade
+  - festival
+  - circus
+  - balloon
+  - puppet
+  - mascot
+  - hatch
+  - hatchimal
+  - disney
+  - pixar
+  - peppa
+  - moomin
+  - hello kitty
+  - paw patrol
+  - bluey
+  - panda
+  - snoopy
+  - musical          # most touring musicals are family-friendly

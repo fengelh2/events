@@ -1,0 +1,1026 @@
+# Hong Kong cultural-events venues.
+#
+# Geographic zones (3): "Hong Kong Island" / "Kowloon" / "New Territories".
+# Each venue gets the city field set to its primary location. Multi-venue
+# aggregators (LCSD when onboarded) will need per-event zone mapping.
+#
+# Onboarding philosophy: aggregators first (LCSD covers 7+ government venues
+# at once), then high-volume single-venue sources, then museums.
+# `kind: unknown` means a venue is on the radar but not yet wired to a
+# scraper — the rebuild orchestrator skips them with a count warning.
+#
+# Bilingual sites: always use the /en/ endpoint. Chinese-only sites
+# (Sunbeam Theatre, some xiqu troupes) are accepted as-is — do NOT
+# translate; the user reads Chinese.
+
+# ============================================================================
+# CLASSICAL / ORCHESTRAL
+# ============================================================================
+
+- id: hk-phil
+  name: Hong Kong Philharmonic Orchestra
+  city: Kowloon                  # primary venue is HK Cultural Centre, TST
+  category: concert
+  homepage: https://www.hkphil.org
+  calendar_url: https://www.hkphil.org/concert
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".new-hl-event__wrapper"
+    title: ".new-hl-event__title"
+    date: ".new-hl-event__date"
+    detail_link: "a@href"
+  # Multi-night runs concatenate dates in one cell ("12 JUN 2026 (Fri) 7:30pm
+  # 13 JUN 2026 (Sat) 5:00pm"). Take the first date+time; render-side
+  # recurrence collapse shows the rest under the same card.
+  date_extract_regex: '\d{1,2}\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s*\([^)]+\)\s*\d{1,2}:\d{2}(?:am|pm)'
+  # HK Phil sometimes performs ballet music in concert form (orchestra only,
+  # no dancers). Without override, the global ballet keywords (Nutcracker,
+  # Sleeping Beauty, Swan Lake, etc.) push these into the ballet bucket.
+  # First override: if the title mentions an HK Ballet collaboration,
+  # KEEP as ballet. Second: otherwise, any concert-form-only ballet-music
+  # title goes to concert. (Python+yaml preserves dict insertion order.)
+  category_keyword_overrides:
+    ballet:
+      - hong kong ballet
+      - hkb on world tour
+    concert:
+      - nutcracker
+      - sleeping beauty
+      - swan lake
+      - giselle
+      - romeo and juliet
+      - carmen
+  notes: |
+    Server-rendered concert list. Page contains both upcoming + past;
+    render-side future-only filter drops past events automatically.
+    Date format: "18 MAY 2026 (Mon) 7:30pm" — DMY with month name.
+
+- id: hk-chinese-orchestra
+  name: Hong Kong Chinese Orchestra
+  city: Kowloon
+  category: concert
+  homepage: https://www.hkco.org
+  calendar_url: https://www.hkco.org/en/Concerts/Events.html
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".list-item-row .item-title"
+  extra_wait_ms: 3000
+  selectors:
+    item: ".list-item-row"
+    title: ".item-title"
+    date: ".item-venue"
+    detail_link: "a@href"
+  # ".item-venue" returns "2 May 2026 (Wed) 3:00PM / 8:00PM\nVenue name..."
+  # Extract just the date+time portion.
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Direct fetches of /en/Concerts-Activities/Upcoming-Concerts.html
+    redirect to /en/index.html (SPA routing). The actual concert
+    schedule lives at /en/Concerts/Events.html — server-rendered list
+    of .list-item-row entries. Each row has item-title + item-venue
+    with date prefix + Chinese hall name appended.
+
+- id: hk-sinfonietta
+  name: Hong Kong Sinfonietta
+  city: Hong Kong Island
+  category: concert
+  homepage: https://hksl.org
+  calendar_url: https://hksl.org/
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: 'https://hksl\.org/concert/[a-z0-9%-]+/'
+  selectors:
+    title: "h1"
+    date: "body"
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  accept_drop_rate: 0.3
+  notes: |
+    Orchestra moved domain: hksinfonietta.org → hksl.org. The homepage
+    lists ~40 /concert/<slug>/ URLs. Each detail page exposes h1 +
+    "DD Month YYYY" date in prose. detail_pages parser walks them.
+
+# ============================================================================
+# OPERA / BALLET / DANCE
+# ============================================================================
+
+- id: hk-ballet
+  name: Hong Kong Ballet
+  city: Kowloon                  # primary stages at HK Cultural Centre
+  category: ballet
+  homepage: https://www.hkballet.com
+  calendar_url: https://www.hkballet.com/en/see-hkb
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: "a[href*='/production/'] h1"
+  extra_wait_ms: 2500
+  selectors:
+    item: "a[href*='/production/']"
+    title: "h1 em"                     # h1 has <small>presenter</small><em>Title</em>
+    date: "label"
+    detail_link: "@href"
+  # Date formats: "30 APR – 31 MAY 2026" or "JUL 2025 - 2026" (month-only).
+  date_extract_regex: '\d{1,2}\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+\d{4}'
+  accept_drop_rate: 0.5
+  notes: |
+    /en/see-hkb listing. Each production anchor wraps an h1 with two
+    children: <small>presenter</small> + <em>title</em>. The em selector
+    gives just the production name; the label gives the date range.
+    Productions occasionally lack an <em> (announcement card without
+    title) — accept_drop_rate covers that.
+
+- id: opera-hk
+  name: Opera Hong Kong
+  city: Kowloon                  # primary stages at HK Cultural Centre
+  category: opera
+  homepage: https://operahongkong.org
+  # Use the WordPress sitemap as the listing source — pattern below
+  # filters to per-production pages whose slug carries a year suffix
+  # (e.g. /carmen2026/). Productions without a year suffix in the
+  # slug are archive pages we don't want.
+  calendar_url: https://operahongkong.org/wp-sitemap-posts-page-1.xml
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: 'https://operahongkong\.org/[a-z][a-z0-9-]*20(?:2[5-9]|3\d)/'
+  selectors:
+    title: "h1"
+    date: "body"               # scoped via date_extract_regex below
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}'
+  notes: |
+    Earlier probe missed this: /upcoming-productions/ is an empty
+    landing shell (Playwright body = 491 chars), but per-production
+    pages DO exist as standalone WordPress posts. Sitemap exposes
+    them at the same listing index that hides the live calendar.
+    Filter to year-suffix slugs (carmen2026, aida2025, etc.) since
+    title-only slugs (/aida/, /tosca/) are old archive pages.
+    Date is buried in a prose paragraph ("from 7 to 10 May 2026") —
+    regex picks the first DD-Month-YYYY token.
+
+# ============================================================================
+# MUSEUMS / EXHIBITIONS
+# ============================================================================
+
+- id: hk-museum-of-art
+  name: Hong Kong Museum of Art
+  city: Kowloon                  # Tsim Sha Tsui waterfront
+  category: museum_exhibition
+  homepage: https://hk.art.museum
+  calendar_url: https://hk.art.museum/en/web/ma/exhibitions-and-events.html
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "li.event-item"
+    title: ".h3"
+    date_start: "@data-start"      # data-start attribute on the item li itself
+    date_end: "@data-end"
+    detail_link: "a@href"
+  notes: |
+    LCSD-run flagship art museum. Server-rendered. Date is stamped on
+    each li via data-start / data-end attributes (ISO YYYY-MM-DD) —
+    use @attr-selector syntax. data-category distinguishes Exhibition
+    from Event programmes.
+
+- id: hku-museum
+  name: HKU Museum (University Museum and Art Gallery)
+  city: Hong Kong Island          # Pokfulam
+  category: museum_exhibition
+  homepage: https://umag.hku.hk
+  calendar_url: https://umag.hku.hk
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".home-exhibitions .he-link"
+    title: "h2"
+    date: ".he-date"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*-\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  date_find_all: true
+  notes: |
+    Homepage's .home-exhibitions block has current onsite exhibitions
+    with clean h2 + .he-date structure. /whats-on/exhibitions/ existed
+    in earlier probes but had no structured listing; homepage is more
+    reliable. Detail links are JS onclick (not <a>) so we don't extract
+    them — events default to the homepage URL.
+
+- id: hk-space-museum
+  name: Hong Kong Space Museum
+  city: Kowloon                  # Tsim Sha Tsui
+  category: museum_exhibition
+  homepage: https://hk.space.museum
+  calendar_url: https://hk.space.museum/en/web/spm/exhibitions.html
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".card"
+    title: ".card-title"
+    date: ".card-actions-meta dd"  # first dd is the date, e.g. "19 November 2025 - 6 July 2026"
+    detail_link: ".img-holder@href"
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  date_find_all: true               # range — pull start + end
+  notes: |
+    LCSD-run, server-rendered. Each special exhibition is a .card with
+    .card-title + a meta block holding date / venue / price. Date format
+    "19 November 2025 - 6 July 2026" (DD Month YYYY range).
+
+- id: cuhk-art-museum
+  name: CUHK Art Museum
+  city: New Territories          # Sha Tin (CUHK campus)
+  category: museum_exhibition
+  homepage: https://www.artmuseum.cuhk.edu.hk
+  calendar_url: https://www.artmuseum.cuhk.edu.hk/en/exhibition/current/
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "Celebrating the Year of the Horse"
+      start: 2026-01-23
+      end:   2026-05-24
+      detail_url: "https://www.artmuseum.cuhk.edu.hk/en/exhibition/current/"
+  notes: |
+    CUHK's art museum. Listing page is JS-rendered with no per-item
+    structure; only one current exhibition is visible in static HTML
+    ("Celebrating the Year of the Horse, 23 Jan – 24 May 2026"). For
+    now hand-curated; update when a new exhibition opens.
+
+- id: hk-palace-museum-events
+  name: Hong Kong Palace Museum (Events Programme)
+  display_name: HK Palace Museum (Events)
+  city: Kowloon                  # West Kowloon Cultural District
+  category: other
+  homepage: https://www.hkpm.org.hk
+  calendar_url: https://www.hkpm.org.hk/en/event
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: "a[href*='/en/event/']"
+  extra_wait_ms: 4000
+  selectors:
+    item: ".hkpm_discover_slide_text"
+    title: "h3"
+    date: "p.grey"                  # "Talk<br>05.06.2026"
+    detail_link: "a[href*='/en/event/']@href"
+  date_extract_regex: '\d{1,2}\.\d{1,2}\.\d{4}\s*[-–—]\s*\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\.\d{1,2}\.\d{4}'
+  date_format: "%d.%m.%Y"
+  notes: |
+    Separate from hk-palace-museum (which scrapes /en/exhibition).
+    /en/event lists 16+ talks/workshops/symposiums/film-screenings
+    in .hkpm_discover_slide_text cards. h3 = title, p.grey = "<type>
+    <br><date>" (date DD.MM.YYYY). date_format avoids DMY parsing the
+    leading "05" of "05.06.2026" as day-5 confused with year.
+
+- id: tai-kwun
+  name: Tai Kwun (Centre for Heritage and Arts)
+  city: Hong Kong Island          # Central
+  category: museum_exhibition
+  homepage: https://www.taikwun.hk
+  calendar_url: https://www.taikwun.hk/en/programme
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "a.programme-block"
+    title: "h2"
+    date: "span.programme-property.time"
+    detail_link: "@href"           # item itself IS the <a>
+  date_find_all: true              # date text "1 Oct 2025 - 31 Dec 2030" — pull start+end
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.45           # many cards are TBA / season placeholders
+  notes: |
+    Old Central Police Station compound, now arts centre. Mix of
+    exhibitions + performing-arts + heritage talks; render-side
+    audience inference dims kids stuff. Date text often a range
+    ("1 Oct 2025 - 31 Dec 2030") — date_find_all extracts start + end.
+
+- id: m-plus-museum
+  name: M+ Museum
+  city: Kowloon                  # West Kowloon Cultural District
+  category: museum_exhibition
+  homepage: https://www.mplus.org.hk
+  calendar_url: https://www.mplus.org.hk/en/exhibitions
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: "a[href*='/en/exhibitions/'] h3.CommonExhibitionsItem-bodyTitle"
+  extra_wait_ms: 3500
+  selectors:
+    item: "a[href*='/en/exhibitions/']"
+    title: "h3.CommonExhibitionsItem-bodyTitle"
+    date: ".CommonTitleColors-title"     # "14 Mar 2026 9 Aug 2026"
+    detail_link: "@href"
+  # Pull the first DD MMM YYYY for start; render-side will use it
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Earlier probe (commit 296671d) thought /en/whats-on was the only URL
+    and it returns a 12-char Nuxt shell. The actual listing lives at
+    /en/exhibitions (body=3279 chars, fully populated). Each exhibition
+    is an anchor with structured children: h3.CommonExhibitionsItem-
+    bodyTitle for the title, .CommonTitleColors-title for the start+end
+    dates (e.g. "14 Mar 2026 9 Aug 2026"). regex pulls the start.
+
+- id: hk-palace-museum
+  name: Hong Kong Palace Museum
+  city: Kowloon                  # West Kowloon Cultural District
+  category: museum_exhibition
+  homepage: https://www.hkpm.org.hk
+  calendar_url: https://www.hkpm.org.hk/en/exhibition
+  kind: playwright_detail_pages
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: "a[href*='/exhibition/']"
+  extra_wait_ms: 4000
+  detail_via_playwright: true     # detail pages are also JS-rendered
+  detail_extra_wait_ms: 3000
+  max_details: 12
+  detail_url_filter: "/en/exhibition/[a-z0-9-]+"  # filter out hub/list paths
+  selectors:
+    item: "a[href*='/exhibition/']"
+    title: "h2"                     # h1 carries "Hong Kong Palace Museum | …" prefix; h2 is the real title
+    date: "[class*=accordion]"      # rotation periods or single exhibition period
+  # First date in the accordion text ("20 March, 2026 – 15 June 2026")
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}\s*[–—-]\s*\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}'
+  notes: |
+    JS-rendered both at list and detail. New playwright_detail_pages
+    parser shares one Playwright session across the listing render
+    (to harvest /en/exhibition/<slug> URLs) and each detail render
+    (to extract h2 title + accordion-header date range). Exhibitions
+    with multi-rotation periods give the first range as start/end.
+
+- id: asia-society-hk
+  name: Asia Society Hong Kong
+  city: Hong Kong Island          # Admiralty
+  category: other
+  homepage: https://asiasociety.org/hong-kong
+  calendar_url: https://asiasociety.org/hong-kong/events
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".node--type-event .card-title"
+  extra_wait_ms: 3500
+  selectors:
+    item: ".node.node--type-event"
+    title: ".card-title a span"
+    date: ".datetime"
+    detail_link: ".card-title a@href"
+  date_extract_regex: '(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  notes: |
+    Drupal events feed at /hong-kong/events. Each event is a
+    .node--type-event row with .card-title (h4 with span) + .datetime.
+    Date format "Thursday 21 May 2026" — DMY with weekday prefix.
+    Direct requests sometimes inconsistent (0 items) — Playwright
+    render forces a consistent fetch.
+
+- id: hk-heritage-museum
+  name: Hong Kong Heritage Museum
+  city: New Territories           # Sha Tin
+  category: museum_exhibition
+  homepage: https://www.heritagemuseum.gov.hk
+  calendar_url: https://www.heritagemuseum.gov.hk/en/exhibitions.html
+  kind: playwright_detail_pages
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: "a[href*='/en/exhibitions/']"
+  extra_wait_ms: 4000
+  detail_via_playwright: true
+  detail_extra_wait_ms: 3000
+  max_details: 20
+  detail_url_filter: '/en/exhibitions/[a-z0-9_]+\.html$'
+  selectors:
+    item: "a[href*='/en/exhibitions/']"
+    title: "h1"                    # h1 = real exhibition title; h2s are nav menus
+    date: ".exhibition-info"      # 'Exhibition Period\nUntil 27 July 2026'
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  accept_drop_rate: 0.5
+  notes: |
+    Direct HTTP returns 403; Playwright bypasses the gate. Listing
+    /en/exhibitions.html exposes /en/exhibitions/<slug>.html URLs
+    per exhibition. Detail pages also need Playwright. Date scoped
+    to .exhibition-info section ("Exhibition Period / Until DD
+    Month YYYY") so the regex doesn't catch random body numbers.
+
+- id: hk-history-museum
+  name: Hong Kong Museum of History
+  city: Kowloon                  # Tsim Sha Tsui East
+  category: museum_exhibition
+  homepage: https://hk.history.museum
+  calendar_url: https://hk.history.museum/en/web/mh/index.html
+  kind: static
+  source_priority: 0
+  static_events:
+    # Permanent ongoing exhibitions — site has no dated events programme.
+    - title: "Sui-Tang: From Cosmopolitan Empires to Maritime Asia"
+      start: 2025-12-17
+      end:   2027-03-08
+      detail_url: "https://hk.history.museum/en/web/mh/exhibition/Sui-Tang-Exhibition.html"
+    - title: "Multifaceted Hong Kong Exhibition Series"
+      start: 2024-07-03
+      end:   2027-06-30
+      detail_url: "https://hk.history.museum/en/web/mh/exhibition/Multifaceted-Hong-Kong-Exhibition-Series.html"
+  notes: |
+    LCSD museum; detail pages exist but contain no machine-readable
+    dates. The major exhibitions are multi-year, so hand-curate as
+    static entries. Refresh annually or when a new special exhibition
+    opens. Hong Kong Story permanent gallery is closed for renovation
+    until 2027 — not listed.
+
+# ============================================================================
+# PERFORMING ARTS VENUES + AGGREGATOR
+# ============================================================================
+
+# ----- LCSD Performing Arts e-Calendar (7 government venues) -----
+# Shared backend: performing-arts.gov.hk e-calendar with ?subscribe_code=XXX
+# pre-filters to a specific hall. The default page (no code) is empty until
+# you trigger a search interaction we haven't reverse-engineered yet — but
+# the legacy lcsd.gov.hk/{venue}/programmes/currentmonth.html URLs all 302
+# to e-calendar.html?subscribe_code=XXX, so each hall is its own valid URL.
+#
+# Rendered DOM after JS load: each event row is a `.program-pc-view` inside
+# `.search-result-list`. Currently ~11 events/venue (first page); pagination
+# exists via .search-program-pager — TODO add multi-page walk.
+
+- id: lcsd-hkcc
+  name: Hong Kong Cultural Centre
+  city: Kowloon                  # Tsim Sha Tsui waterfront
+  category: mixed
+  homepage: https://www.performing-arts.gov.hk
+  calendar_url: https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=HKCC
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".search-result-list .program-pc-view"
+  extra_wait_ms: 3000
+  selectors:
+    item: ".search-result-list .program-pc-view"
+    title: ".program-title .h7"
+    date: ".program-date.p1"
+    detail_link: "@href"          # no detail link in row; falls back to calendar_url
+  # Date formats vary: "18/05/2026 (Mon) 20:00" or "06.05.2026 (Wed) 19:30"
+  # plus multi-date concatenations. Pull just the first.
+  date_extract_regex: '\d{1,2}[./]\d{1,2}[./]\d{4}\s*\([^)]+\)\s*\d{1,2}:\d{2}'
+  notes: |
+    Primary venue for HK Phil, HK Sinfonietta, major touring acts.
+    e-calendar's subscribe_code=HKCC URL pre-applies the venue filter
+    so events render on initial page load (no Search-button click).
+
+- id: lcsd-hkch
+  name: Hong Kong City Hall
+  city: Hong Kong Island          # Central
+  category: mixed
+  homepage: https://www.performing-arts.gov.hk
+  calendar_url: https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=HKCH
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".search-result-list .program-pc-view"
+  extra_wait_ms: 3000
+  selectors:
+    item: ".search-result-list .program-pc-view"
+    title: ".program-title .h7"
+    date: ".program-date.p1"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}[./]\d{1,2}[./]\d{4}\s*\([^)]+\)\s*\d{1,2}:\d{2}'
+  notes: Concert Hall + Theatre + Recital Hall. City Hall is the home base of HKCO + Opera HK.
+
+- id: lcsd-stth
+  name: Sha Tin Town Hall
+  city: New Territories
+  category: mixed
+  homepage: https://www.performing-arts.gov.hk
+  calendar_url: https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=STTH
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".search-result-list .program-pc-view"
+  extra_wait_ms: 3000
+  selectors:
+    item: ".search-result-list .program-pc-view"
+    title: ".program-title .h7"
+    date: ".program-date.p1"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}[./]\d{1,2}[./]\d{4}\s*\([^)]+\)\s*\d{1,2}:\d{2}'
+
+- id: lcsd-ktt
+  name: Kwai Tsing Theatre
+  city: New Territories
+  category: mixed
+  homepage: https://www.performing-arts.gov.hk
+  calendar_url: https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=KTT
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".search-result-list .program-pc-view"
+  extra_wait_ms: 3000
+  selectors:
+    item: ".search-result-list .program-pc-view"
+    title: ".program-title .h7"
+    date: ".program-date.p1"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}[./]\d{1,2}[./]\d{4}\s*\([^)]+\)\s*\d{1,2}:\d{2}'
+
+- id: lcsd-twth
+  name: Tsuen Wan Town Hall
+  city: New Territories
+  category: mixed
+  homepage: https://www.performing-arts.gov.hk
+  calendar_url: https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=TWTH
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".search-result-list .program-pc-view"
+  extra_wait_ms: 3000
+  selectors:
+    item: ".search-result-list .program-pc-view"
+    title: ".program-title .h7"
+    date: ".program-date.p1"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}[./]\d{1,2}[./]\d{4}\s*\([^)]+\)\s*\d{1,2}:\d{2}'
+
+- id: lcsd-ylt
+  name: Yuen Long Theatre
+  city: New Territories
+  category: mixed
+  homepage: https://www.performing-arts.gov.hk
+  calendar_url: https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=YLT
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".search-result-list .program-pc-view"
+  extra_wait_ms: 3000
+  selectors:
+    item: ".search-result-list .program-pc-view"
+    title: ".program-title .h7"
+    date: ".program-date.p1"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}[./]\d{1,2}[./]\d{4}\s*\([^)]+\)\s*\d{1,2}:\d{2}'
+
+- id: lcsd-tmth
+  name: Tuen Mun Town Hall
+  city: New Territories
+  category: mixed
+  homepage: https://www.performing-arts.gov.hk
+  calendar_url: https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=TMTH
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".search-result-list .program-pc-view"
+  extra_wait_ms: 3000
+  selectors:
+    item: ".search-result-list .program-pc-view"
+    title: ".program-title .h7"
+    date: ".program-date.p1"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}[./]\d{1,2}[./]\d{4}\s*\([^)]+\)\s*\d{1,2}:\d{2}'
+
+- id: xiqu-centre
+  name: Xiqu Centre (West Kowloon Cultural District)
+  city: Kowloon
+  category: mixed              # primarily xiqu/Cantonese opera but also hosts musicals (CATS), cabaret, theatre
+  category_keyword_overrides:
+    theatre:
+      - musical
+      - musicalcon
+      - cabaret
+      - cats
+    opera:
+      - xiqu
+      - cantonese opera
+  homepage: https://www.westk.hk
+  calendar_url: https://www.westk.hk/en/venue/xiqu-centre
+  kind: playwright_detail_pages
+  source_priority: 0
+  locale: en-US
+  detail_via_playwright: true
+  use_stealth: true               # bypass Cloudflare Turnstile on detail pages
+  detail_extra_wait_ms: 15000     # Cloudflare auto-resolve takes ~10-15s
+  max_details: 30
+  # Listing page (/en/venue/xiqu-centre) hits a Cloudflare-Turnstile
+  # CAPTCHA that even playwright-stealth doesn't auto-solve. Detail
+  # pages (/en/event/<slug>) pass the lighter "managed" challenge with
+  # stealth + realistic UA. So we hand-seed event URLs (found via
+  # DuckDuckGo `site:westk.hk /en/event/` searches) and let the parser
+  # fetch each detail page with stealth-Playwright.
+  detail_urls:
+    - https://www.westk.hk/en/event/trump-twins-president-5   # Cantonese opera
+    - https://www.westk.hk/en/event/cats-musical              # CATS musical, Aug 2026
+    - https://www.westk.hk/en/event/cabaret-festival
+    - https://www.westk.hk/en/event/hong-kong-musicalcon-2026
+    - https://www.westk.hk/en/event/spring-presents
+    - https://www.westk.hk/en/event/likes-lies
+    - https://www.westk.hk/en/event/2026-coffee-hong-kong
+    - https://www.westk.hk/en/event/funfest
+  selectors:
+    title: "h1"
+    date: "body"
+  date_extract_regex: '\d{1,2}[/\.-]\d{1,2}[/\.-]\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Cantonese opera + xiqu programmes at West Kowloon Cultural District.
+
+    *** FRAGILE / EXPERIMENTAL — bypass works only on first request ***
+
+    westk.hk uses Cloudflare Turnstile. With playwright-stealth +
+    --disable-blink-features=AutomationControlled, the FIRST request
+    from a fresh IP loads the full event detail page. From the 2nd
+    request onward, Cloudflare flags the IP and returns the
+    "Performing security verification" interstitial that even stealth
+    can't auto-resolve.
+
+    Configured here with 8 hand-seeded event URLs (found via
+    DuckDuckGo `site:westk.hk /en/event/` searches; rotate as new
+    events appear). The GitHub Actions runner has a different IP than
+    my local box, so CI may catch 1-2 events per rebuild before
+    being flagged.
+
+    For reliable Xiqu coverage, build a Timable HK parser (Timable
+    aggregates westk.hk events without going through Cloudflare).
+
+- id: hkapa
+  name: Hong Kong Academy for Performing Arts
+  city: Hong Kong Island          # Wanchai
+  category: mixed
+  homepage: https://www.hkapa.edu
+  calendar_url: https://www.hkapa.edu/event?type=academy
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".events__linkw"
+    title: ".events__title"
+    date: ".events__info-val"      # first one is the date; second is venue
+    detail_link: "a@href"
+  # Date format "29 May (Fri) - 30 May (Sat)" — no year, future-bias infers.
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\([^)]+\)\s*-\s*\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\([^)]+\)|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\([^)]+\)'
+  notes: |
+    Filtered to ?type=academy — "Academy Production" only, skipping
+    hirer events and student recitals. .events__linkw is the card
+    wrapper. Mainstage school productions across Music / Dance / Drama
+    / Chinese Opera departments.
+
+# ============================================================================
+# CONTEMPORARY ART / ALTERNATIVE SPACES
+# ============================================================================
+
+- id: hk-arts-centre
+  name: Hong Kong Arts Centre
+  city: Hong Kong Island          # Wan Chai
+  category: mixed
+  homepage: https://www.hkac.org.hk
+  calendar_url: https://www.hkac.org.hk/en/calendar/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".calendar-event-item"
+    title: ".calendar-event-item-title"
+    date: ".calendar-event-item-locdate:not(.location)"
+    detail_link: "a@href"
+  date_extract_regex: '\d{4}\.\d{1,2}\.\d{1,2}\s*[-–—]\s*\d{4}\.\d{1,2}\.\d{1,2}|\d{4}\.\d{1,2}\.\d{1,2}'
+  date_format: "%Y.%m.%d"        # YYYY.MM.DD — DMY-mode dateparser otherwise treats 2026 as day
+  notes: |
+    Major HK Island arts centre in Wan Chai. Houses Pao Galleries +
+    Shouson Theatre + Agnès B. Cinema + McAulay Studio. Date format
+    "2026.05.23 - 2026.06.14" (YYYY.MM.DD range) — explicit strptime
+    pattern handles it (DMY-mode dateparser parses 2026 as "day 2026"
+    and fails). Categories in .calendar-event-item-cat (Exhibition /
+    Performance / Film / Talk / Workshop).
+
+- id: hk-maritime-museum
+  name: Hong Kong Maritime Museum
+  city: Hong Kong Island          # Central, Pier 8
+  category: museum_exhibition
+  homepage: https://www.hkmaritimemuseum.org
+  calendar_url: https://www.hkmaritimemuseum.org/all-exhibitions-and-events
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".wixui-repeater__item a[href*='/event-details/']"
+  extra_wait_ms: 5000
+  selectors:
+    item: ".wixui-repeater__item:has(a[href*='/event-details/'])"
+    title: "h2.wixui-rich-text__text"
+    date: "p.wixui-rich-text__text"
+    detail_link: "a[href*='/event-details/']@href"
+  date_extract_regex: '\d{1,2}/\d{1,2}/\d{2,4}'
+  date_format: "%d/%m/%y"          # DD/MM/YY
+  accept_drop_rate: 0.4
+  notes: |
+    Wix site — auto-generated class names everywhere, but the
+    wixui-* utility classes are stable. :has() filter scopes the
+    repeater items to those with an event-details anchor (skips
+    Coming Soon placeholders). Date format DD/MM/YY ("04/07/26").
+
+- id: para-site
+  name: Para Site
+  city: Hong Kong Island          # Quarry Bay
+  category: museum_exhibition
+  homepage: https://www.para-site.art
+  calendar_url: https://www.para-site.art/exhibitions/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: "article.exhibition.grid-item"
+    title: ".grid-item-title"
+    date: ".grid-item-date"
+    detail_link: "a@href"
+  # Date "Mar 14 – Jun 14 On View" — pull just the range; year is implicit.
+  # The "On View" / "Coming Soon" / "Closed" labels are intentionally
+  # stripped so dateparser sees only the date itself.
+  date_extract_regex: '[A-Z][a-z]{2}\s+\d{1,2}\s*[–—-]\s*[A-Z][a-z]{2}\s+\d{1,2}|[A-Z][a-z]{2}\s+\d{1,2}'
+  notes: |
+    HK's longest-running independent contemporary art space. Date text
+    has no year — dateparser PREFER_DATES_FROM=future infers correctly
+    for most rows. 16 exhibitions on the listing (mix of current /
+    upcoming / past — render-side future filter handles).
+
+# ============================================================================
+# THEATRE
+# ============================================================================
+
+- id: hk-rep
+  name: Hong Kong Repertory Theatre
+  city: Hong Kong Island          # Sheung Wan HQ; performs widely
+  category: theatre
+  homepage: https://www.hkrep.com
+  calendar_url: https://www.hkrep.com/en/Season-Programme/Main-Stage-Productions.html
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: "a[href*='/Main-Stage-Productions/'] h3.lineh3"
+  extra_wait_ms: 2500
+  selectors:
+    item: "a[href*='/Main-Stage-Productions/']"
+    title: "h3.lineh3"
+    date: "ul.pro-detail"          # contains venue + "22.05.2026 - 07.06.2026"
+    detail_link: "@href"
+  date_extract_regex: '\d{1,2}\.\d{1,2}\.\d{4}\s*-\s*\d{1,2}\.\d{1,2}\.\d{4}'
+  date_find_all: true              # range — pull both endpoints
+  notes: |
+    Static HTML returns empty content; site is JS-rendered. Once
+    Playwright loads, each production is a top-level <a> with h3
+    title + ul.pro-detail listing venue + date range (DMY).
+    The Programme-Archive anchor matches the same selector but lacks
+    h3.lineh3 — it's silently dropped by the assembler's no-title path.
+
+- id: chung-ying
+  name: Chung Ying Theatre Company
+  city: Hong Kong Island
+  category: theatre
+  homepage: https://www.chungying.com
+  calendar_url: https://www.chungying.com/en/production-list/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".program-item"
+    title: ".font-black"             # "47th Season: Whispering Glimmers"
+    date: ".date-grid-container"     # raw date text within program-item
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}[\s/.-]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s/.-]+\d{2,4}|\d{1,2}/\d{1,2}/\d{2,4}|\d{4}[/.-]\d{1,2}[/.-]\d{1,2}'
+  accept_drop_rate: 0.65           # many programs are season banners / TBA / past
+  notes: |
+    Tailwind-styled site, ~20 productions. Date container has icon SVG
+    + text — regex extracts the first plausible date. May need tuning;
+    monitor DROP warning after first rebuild.
+
+# ============================================================================
+# FESTIVALS (seasonal — guard with date range, expect 0 events off-season)
+# ============================================================================
+
+- id: hk-arts-festival
+  name: Hong Kong Arts Festival
+  city: Kowloon                  # primary venue HK Cultural Centre; performs across zones
+  category: mixed
+  homepage: https://www.hk.artsfestival.org
+  calendar_url: https://www.hk.artsfestival.org/en/programme
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".styled__ProgrammeCardContainer-sc-uiqggj-1"
+    title: ".styled__Title2Typography-sc-uiqggj-6"
+    date: ".styled__VenueTypeItem-sc-uiqggj-9"
+    detail_link: ".styled__LinkA-sc-uiqggj-12@href"
+  # Date format on cards is "2026.03.30" (YYYY.MM.DD). dateparser handles
+  # the YYYY-first form regardless of DATE_ORDER setting. Sometimes
+  # multiple dates concatenate — extract just the first.
+  date_extract_regex: '\d{4}\.\d{1,2}\.\d{1,2}'
+  accept_drop_rate: 0.7            # many cards display venue+genre only, no date until ticketing opens
+  notes: |
+    Annual Feb–Mar festival. 100+ events during season, ~0 off-season.
+    Server-rendered MUI (Material-UI) cards; selectors use emotion CSS
+    hashes — re-probe selectors annually as the bundle may rename them.
+
+# ============================================================================
+# FILM
+# ============================================================================
+
+- id: mplus-cinema
+  name: M+ Cinema
+  display_name: M+ Cinema
+  city: Kowloon
+  category: film
+  homepage: https://www.mplus.org.hk
+  calendar_url: https://www.mplus.org.hk/en/cinema/
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/en/cinema/[a-z][a-z0-9-]+/'
+  selectors:
+    title: "h1"
+    date: "body"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    M+ runs a curated cinema programme (retrospectives + festivals + first-runs).
+    Detail pages /en/cinema/{slug}/ server-render h1 (English + Chinese) and a
+    schedule block whose earliest "DD Mon YYYY" date marks the first screening.
+
+- id: hkiff
+  name: Hong Kong International Film Festival (HKIFF / Cine Fan)
+  city: Kowloon                  # screenings city-wide; primarily Cultural Centre + Science Museum
+  category: film
+  homepage: https://www.hkiff.org.hk
+  calendar_url: https://www.hkiff.org.hk/film/list
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/film/getdetail\?fid=\d+'
+  selectors:
+    title: "h1"
+    date: ".date"                # ".date" contains "DD/MM (DOW)" — first screening
+  date_extract_regex: '\d{1,2}/\d{1,2}'
+  skip_if_title_matches:
+    - '^Programme Update'           # placeholder rows for unannounced films
+    - '^TBC'
+  accept_drop_rate: 0.3
+  notes: |
+    HKIFF Society runs the annual HKIFF (Mar-Apr) plus Cine Fan
+    Summer IFF (Aug). /film/list exposes /film/getdetail?fid=NNNN
+    URLs per film. Detail page h1 = film title, .date = screening
+    date (DD/MM with implicit current-festival year). Year-less dates
+    rely on dateparser PREFER_DATES_FROM=future to pick the right
+    edition. Outside festival windows the listing may be near-empty.
+
+- id: french-may
+  name: Le French May
+  city: Hong Kong Island          # mostly Alliance Française, various venues
+  category: mixed
+  homepage: https://www.frenchmay.com
+  calendar_url: https://www.frenchmay.com/en/programmes/
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/en/programmes/[a-z][a-z0-9-]+/[a-z0-9-]+/'
+  selectors:
+    title: "h1"
+    date: "body"
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  notes: |
+    Annual French-culture festival, primary season May-Jun. Listing
+    at /en/programmes/ has 9 .post-list-card tiles but no date on the
+    tile — date is on each detail page. detail_pages parser follows
+    /en/programmes/CATEGORY/SLUG/ pattern URLs and pulls h1 + first
+    DD-Month-YYYY date from body text.
+
+# ============================================================================
+# KIDS-SPECIFIC VENUES (added for hk-kids site)
+# ============================================================================
+
+- id: hk-disneyland-events
+  name: Hong Kong Disneyland (special events + seasonal)
+  display_name: HK Disneyland
+  city: Lantau
+  category: other
+  homepage: https://www.hongkongdisneyland.com
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "Disneyland — daily parades, character meet & greet"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.hongkongdisneyland.com/calendar/"
+    - title: "Disney Halloween Time"
+      start: 2026-09-19
+      end:   2026-10-31
+      detail_url: "https://www.hongkongdisneyland.com/halloween/"
+    - title: "A Disney Christmas"
+      start: 2026-11-14
+      end:   2026-12-31
+      detail_url: "https://www.hongkongdisneyland.com/christmas/"
+  notes: |
+    Static placeholder; the Disney site is heavily JS + blocks bots.
+    Refresh seasonally with the published Disney calendar.
+
+- id: ocean-park-events
+  name: Ocean Park (rides + animal exhibits + events)
+  display_name: Ocean Park
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.oceanpark.com.hk
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "Ocean Park — open daily, family rides + Grand Aquarium"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.oceanpark.com.hk/en"
+    - title: "Halloween Fest"
+      start: 2026-09-26
+      end:   2026-10-31
+      detail_url: "https://www.oceanpark.com.hk/en/halloween-fest"
+
+- id: hk-science-museum-kids
+  name: HK Science Museum (kids programs)
+  display_name: HK Science Museum
+  city: Kowloon
+  category: museum_exhibition
+  homepage: https://hk.science.museum
+  calendar_url: https://hk.science.museum/en/web/scm/exhibition.html
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".content_box"
+    title: "h2, h3, .title"
+    date: ".date, p"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Tsim Sha Tsui science museum. Tier-2 — selectors not pixel-verified
+    against current HTML; should produce SOME events. Refine after first build.
+
+- id: noahs-ark-hk
+  name: Noah's Ark Hong Kong (family attraction, Ma Wan)
+  city: New Territories
+  category: other
+  homepage: https://www.noahsark.com.hk
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "Noah's Ark — family attraction, Ma Wan (open daily)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.noahsark.com.hk/eng/"
+
+- id: hk-rugby-sevens
+  name: Hong Kong Rugby Sevens (annual, kid zone + family carnival)
+  display_name: HK Rugby Sevens
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hksevens.com
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "Hong Kong Sevens — family carnival, kid zone (annual)"
+      start: 2027-03-27
+      end:   2027-03-29
+      detail_url: "https://www.hksevens.com/"
+  notes: |
+    Rugby Sevens 2026 already happened. Static placeholder for 2027 dates;
+    refresh once HK Sevens publishes official 2027 dates.
+
+- id: hk-public-libraries-kids
+  name: HK Public Libraries (kids storytime + workshops)
+  display_name: HK Public Library kids
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hkpl.gov.hk
+  calendar_url: https://www.hkpl.gov.hk/en/event-and-news/programme/index.html
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: ".event-item, .programme-item, article"
+    title: "h2, h3, .title, a"
+    date: ".date, time, p"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    HKPL runs constant family storytime + workshops across 80+ branches.
+    Tier-2 selectors; refine after first build.
+
+- id: hk-park-events
+  name: Hong Kong Park (Edward Youde Aviary + sports + carnivals)
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.lcsd.gov.hk/en/parks/hkp/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "HK Park — Edward Youde Aviary + Tai Chi Garden (open daily)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.lcsd.gov.hk/en/parks/hkp/"
+
+- id: hk-arcades-kid-friendly
+  name: Kid-friendly video arcades + indoor playgrounds (curated)
+  display_name: Indoor playgrounds + arcades
+  city: Hong Kong Island
+  category: other
+  homepage: "#"
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Kids' Gallery — open play sessions (Central)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://kidsgallery.com/"
+    - title: "Cool Zone Indoor Playground (Cityplaza, Taikoo Shing)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.facebook.com/CoolZoneHK/"
+    - title: "Round 1 Spo-Cha + arcade (Mong Kok)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.round1usa.com/store-locator"
+    - title: "Snoopy World (Sha Tin New Town Plaza)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.newtownplaza.com.hk/en/snoopy-world"
