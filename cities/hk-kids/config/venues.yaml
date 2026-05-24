@@ -1258,3 +1258,521 @@
 #   names on <tr> rows; would need a custom table-row parser kind.
 # DEFERRED: HKFC Youth Rugby /festivalstours.html — 404; site domain
 #   rebranded to hkfcyouth10s.com (added above as static).
+
+# ============================================================================
+# ROUND-3 DEEP DIVE (2026-05-24)
+# ============================================================================
+# Probed ~30 URLs across nature/library/sport/mall/festival/performing-arts.
+# Most mall + sport-federation sites turned out to be either 404, JS-only
+# SPA shells, or 403/Cloudflare-walled. Two huge wins (KFBG + HKPL) plus
+# several smaller but verified entries. Per CLAUDE.md honesty rule, only
+# entries that returned real (title, date) pairs at probe time are wired;
+# the rest are documented as DEFERRED with reason.
+
+# ----- NATURE -----
+
+# Kadoorie Farm & Botanic Garden — 48 events visible in static HTML.
+# Detail-pages parser walks /en/events/<slug> URLs.
+- id: kfbg
+  name: Kadoorie Farm and Botanic Garden
+  display_name: Kadoorie Farm
+  city: New Territories            # Tai Po, Lam Kam Road
+  category: other
+  homepage: https://www.kfbg.org
+  calendar_url: https://www.kfbg.org/en/event-calendar
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/en/events/[a-z0-9-]+'
+  selectors:
+    title: "title"                 # detail pages have no h1/h2 for event title; <title> carries it
+    date: "body"
+  title_strip_suffixes:
+    - "::Kadoorie Farm and Botanic Garden"
+  # Detail page prose: "Date: 30 May 2026 (Sat)" or ranges like
+  # "23 Mar - 31 May 2026". Pull either form; the parser uses the
+  # first hit. Single-month ranges ("21, 23, 25 Jul 2026") parse to
+  # the first DD.
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.55           # ~half are group-application / open-ended ("Mon-Sat") with no specific dates
+  notes: |
+    Verified 2026-05-24: 48 detail URLs in static HTML at /en/event-calendar.
+    Each detail page exposes h1 title + prose paragraph with
+    "Date: DD MMM YYYY (Dow)" pattern. Major nature + family
+    programmes: summer camps for children, parent-child puppet
+    theatre, World Otter Day, Plant/Animal/Night Walk Encounters.
+    Many open-ended group-application programmes have no specific
+    date — accept_drop_rate=0.55 covers these.
+
+# Hong Kong Wetland Park — small but high-signal news/event posts.
+- id: wetland-park
+  name: Hong Kong Wetland Park
+  city: New Territories            # Tin Shui Wai
+  category: other
+  homepage: https://www.wetlandpark.gov.hk
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "Free Admission on Environment Day (Wetland Park)"
+      start: 2026-06-05
+      end:   2026-06-05
+      detail_url: "https://www.wetlandpark.gov.hk/en/whatsnew/1873"
+    - title: "Hong Kong Wetland Park — open daily, mangrove + reedbed + birding"
+      start: 2026-05-24
+      end:   2027-05-24
+      detail_url: "https://www.wetlandpark.gov.hk/en/"
+  notes: |
+    Verified 2026-05-24: site lives but the events feed is sparse
+    (1 news post for Env Day + closure notice). Static seed for the
+    one confirmed family-friendly date; permanent-attraction row
+    keeps the venue chip alive year-round.
+
+# ----- LIBRARIES / KIDS PROGRAMMES -----
+
+# HK Public Libraries — 17 events per page in static HTML (this-month).
+# `td.date_de.detail` carries "2026/5/16 (Saturday) to 2026/5/31 (Sunday)".
+- id: hkpl-events
+  name: Hong Kong Public Libraries (kids + family programmes)
+  display_name: HK Public Libraries
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hkpl.gov.hk
+  calendar_url: https://www.hkpl.gov.hk/en/extension-activities/all-events/this-month
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/en/extension-activities/event-detail/\d+/[a-z0-9-]+'
+  selectors:
+    title: "h2.content_title"      # h1 is "All Events" page header; h2.content_title is real event title
+    date: "td.date_de"             # "2026/5/16 (Saturday) to 2026/5/31 (Sunday)"
+  date_extract_regex: '\d{4}/\d{1,2}/\d{1,2}'
+  date_format: "%Y/%m/%d"
+  accept_drop_rate: 0.2
+  notes: |
+    Verified 2026-05-24: 17 event detail URLs in static HTML at
+    /this-month. Each detail page exposes h2.content_title + table
+    row with td.date_de containing date range "YYYY/MM/DD (Dow) to
+    YYYY/MM/DD (Dow)". The first match is the start date — runs as
+    a multi-day event, which the renderer collapses anyway.
+    Strong kids-signal source: many "Children's Book Display" +
+    "Family Storytime" programmes across 80+ branches.
+
+# ----- RUGBY / SPORT FEDERATIONS -----
+
+# Hong Kong Rugby Union — Asia Rugby Emirates Men's Championship 2026
+# confirmed via WebFetch. Site is JS-rendered with no stable selectors;
+# update static entry seasonally.
+- id: hkrugby-asia-championship-2026
+  name: HKRU Asia Rugby Emirates Championship 2026 (HK matches)
+  display_name: HKRU Asia Rugby 2026
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hkrugby.com
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Asia Rugby Emirates Men's Championship — HK vs Sri Lanka"
+      start: 2026-05-24
+      end:   2026-05-24
+      detail_url: "https://www.hkrugby.com/match-centre/calendar"
+    - title: "Asia Rugby Emirates Women's Championship Round 2 — Japan vs HKC"
+      start: 2026-05-05
+      end:   2026-05-05
+      detail_url: "https://www.hkrugby.com/match-centre/calendar"
+    - title: "Asia Rugby Emirates Women's Championship Round 3 — Kazakhstan vs HKC"
+      start: 2026-05-10
+      end:   2026-05-10
+      detail_url: "https://www.hkrugby.com/match-centre/calendar"
+  notes: |
+    Verified 2026-05-24 via WebFetch — three fixtures confirmed.
+    The /match-centre/calendar React component has no stable class
+    names in initial HTML, so static is the honest path. Refresh
+    seasonally as new Asia Rugby rounds publish.
+
+# Hong Kong Football Association — homepage shows match cards but the
+# /en/competitions/fixtures page is a Nuxt SPA returning a 404 shell.
+# Static seed for the HK Premier League May 2026 matches confirmed via
+# WebFetch.
+- id: hkfa-fixtures-2026
+  name: HKFA Hong Kong Premier League (selected May 2026 matches)
+  display_name: HKFA Premier League
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hkfa.com
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "BOC Life HKPL: Golik North District vs Lee Man"
+      start: 2026-05-10
+      end:   2026-05-10
+      detail_url: "https://www.hkfa.com/en/"
+    - title: "BOC Life HKPL: Eastern District vs BC Rangers"
+      start: 2026-05-16
+      end:   2026-05-16
+      detail_url: "https://www.hkfa.com/en/"
+    - title: "BOC Life HKPL: Kowloon City vs HKFC"
+      start: 2026-05-16
+      end:   2026-05-16
+      detail_url: "https://www.hkfa.com/en/"
+    - title: "BOC Life HKPL: Lee Man vs Tai Po"
+      start: 2026-05-17
+      end:   2026-05-17
+      detail_url: "https://www.hkfa.com/en/"
+    - title: "BOC Life HKPL: Kitchee vs Eastern"
+      start: 2026-05-17
+      end:   2026-05-17
+      detail_url: "https://www.hkfa.com/en/"
+  notes: |
+    Verified 2026-05-24 via WebFetch — homepage carousel showed 5
+    upcoming Premier League fixtures. The Nuxt SPA at
+    /en/competitions/fixtures returns a 404 to direct fetch. Static
+    seed for current-season fixtures; refresh monthly via homepage
+    scrape until a stable API endpoint is found.
+
+# ----- FESTIVALS / ANNUAL EVENTS -----
+
+# Hong Kong Sevens 2026 happened in April — register-for-2027 CTA is
+# live but no 2027 dates published yet on hksevens.com. The historical
+# pattern is always early April, so a placeholder is the honest call.
+- id: hk-sevens-2027
+  name: Cathay/HSBC Hong Kong Sevens 2027 (placeholder)
+  display_name: HK Sevens 2027
+  city: Kowloon                    # Kai Tak Sports Park
+  category: other
+  homepage: https://www.hksevens.com
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Cathay/HSBC Hong Kong Sevens 2027 (dates TBC, typically early April)"
+      start: 2027-04-02
+      end:   2027-04-04
+      detail_url: "https://www.hksevens.com/"
+  notes: |
+    Verified 2026-05-24: 2026 Sevens (17-19 Apr 2026) is past;
+    site shows "Register for 2027" CTA but no published 2027 dates.
+    Placeholder dates based on historical first-weekend-of-April
+    pattern — refresh once official 2027 dates appear.
+
+# HK Book Fair — Wikipedia historical pattern is mid-July annually.
+# The hkbookfair.hktdc.com landing page exists but didn't surface
+# dates in WebFetch; HKCEC parser (already onboarded) catches the
+# fair from the venue calendar side.
+- id: hk-book-fair-2026
+  name: Hong Kong Book Fair 2026 (HKTDC, mid-July annual)
+  display_name: HK Book Fair
+  city: Hong Kong Island           # HKCEC, Wan Chai
+  category: other
+  homepage: https://www.hkbookfair.hktdc.com
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Hong Kong Book Fair 2026 (HKTDC, dates TBC mid-July)"
+      start: 2026-07-15
+      end:   2026-07-21
+      detail_url: "https://www.hkbookfair.hktdc.com/en/"
+  notes: |
+    Verified 2026-05-24: Wikipedia pattern shows fair annually
+    mid-to-late July (2019: 17-23 Jul; 2018: 18-24 Jul; 2017:
+    19-25 Jul). HKTDC site didn't expose 2026 dates in WebFetch.
+    Placeholder; HKCEC parser already onboarded should catch the
+    fair from the venue side once HKTDC books it. Refresh when
+    official dates publish.
+
+# HKTDC Toys & Games Fair — Pop & Play sub-event spotted Jan 10-13
+# in the page navigation; main fair typically same week.
+- id: hktdc-toy-fair-2027
+  name: HKTDC Hong Kong Toys & Games Fair 2027 (annual early January)
+  display_name: HKTDC Toy Fair
+  city: Hong Kong Island           # HKCEC
+  category: other
+  homepage: https://www.hktdc.com/event/hktoyfair/en
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "HKTDC Hong Kong Toys & Games Fair 2027 (early January, Pop & Play kid zone)"
+      start: 2027-01-11
+      end:   2027-01-14
+      detail_url: "https://www.hktdc.com/event/hktoyfair/en"
+  notes: |
+    Verified 2026-05-24: HKTDC page nav mentions "Pop & Play
+    (10-13 Jan)" sub-event for the 2026 edition. The fair has a
+    consumer-facing "Pop & Play" kid zone every year. Placeholder
+    for the 2027 edition; HKCEC parser should also surface it from
+    the venue calendar once booked.
+
+# ============================================================================
+# ROUND-3 DEFERRED VENUES (probed but did not yield real selectors)
+# ============================================================================
+# DEFERRED: AFCD Country Parks events — /english/country/cou_lea/cou_lea_act/
+#   returns the AFCD 404 page; site reorganised. Country & Marine Parks
+#   activities now redirect users to LCSD/government one-stop pages without
+#   a single consolidated event listing.
+# DEFERRED: HK Geopark /en_news.htm — page returns a loading shell only;
+#   real content is behind JS that even Playwright would have to chase.
+# DEFERRED: Disneyland HK /en/calendar — ECONNREFUSED; site blocks
+#   non-browser TLS handshakes. Existing static hk-disneyland-events entry
+#   above already covers Halloween + Christmas seasonals.
+# DEFERRED: Ocean Park /whats-on/calendar — events listed without dates
+#   ("Marine Wonders" etc.); date lookup needs per-event click-through.
+#   Existing static ocean-park-events entry covers the major seasonals.
+# DEFERRED: M+ /en/families/ and /en/learn/ — both 404 (site reorg). Family
+#   Day events DO happen; need to find the new families landing URL.
+# DEFERRED: K11 Musea, ELEMENTS, IFC Mall — all 404 on probed /whats-on
+#   variants. K11 Musea uses /happenings/ but the static HTML was empty
+#   on probe; would need Playwright + correct path discovery.
+# DEFERRED: Harbour City /en/event_type/promotion/ — page exists (59KB
+#   HTML) but no .feature-list-block cards visible in static HTML at
+#   probe time; the existing harbour-city entry above (event_type/event/)
+#   is the working path.
+# DEFERRED: HK Chinese Orchestra /en/Education/Activities-Calendar.html —
+#   404. The HKCO main concert listing (already onboarded as
+#   hk-chinese-orchestra) does include some Family Concert programming
+#   that the audience filter picks up.
+# DEFERRED: HK Children's Choir /en/concerts — 404. Site rebranded;
+#   needs fresh URL discovery.
+# DEFERRED: westk.hk /en/whats-on — 403 (Cloudflare). Existing xiqu-centre
+#   stealth-Playwright path already harvests West Kowloon Cultural District
+#   events.
+# DEFERRED: timable.com — 403 to WebFetch (likely Cloudflare bot challenge).
+#   Could be valuable as an aggregator but needs a stealth-Playwright path
+#   plus discovery of stable category URLs.
+# DEFERRED: SCMP family things-to-do — 403. Editorial roundups anyway;
+#   same double-counting risk as Little Steps / Time Out HK.
+
+# ============================================================================
+# ROUND-3 RESCUE — formerly deferred sources, now working (2026-05-24)
+# ============================================================================
+# Re-probed 12 previously-deferred URLs. 8 now wired with verified selectors,
+# 4 stay deferred with NEW evidence (genuinely empty or hard-blocked). Each
+# verified entry produced >=1 real (title, date) pair against the live site
+# via the parser before commit.
+
+# ----- Tennis HK — flat JSON via the theme's own AJAX endpoint -----
+- id: tennis-hk
+  name: Hong Kong Tennis Association — Tournament Calendar
+  display_name: HK Tennis Tournaments
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.tennishk.org
+  # The /en/tournament/tournament-calendar/ page is a thin React shell, but
+  # its JS hits this WordPress theme template that returns the full JSON
+  # array of tournaments. No auth, no params. ~5MB response, hundreds of
+  # tournaments incl. junior + adult categories.
+  calendar_url: https://www.tennishk.org/wp-content/themes/hkta/template/hkta-api/tournament-calendar.php
+  kind: flat_json_feed
+  source_priority: 1
+  title_path: tournament_name_en
+  start_path: start_date
+  end_path: end_date
+  venue_path: event_venue
+  notes: |
+    Verified 2026-05-24: feed returns ISO start_date/end_date already
+    (e.g. "2026-06-06"). Includes age_group field (U6..Adult) — render
+    side audience inference catches "U18", "Junior", "youth" tags. Some
+    tournaments have empty start_date (TBA) and get dropped silently.
+    The /find/ fallback on hkta.tournamentsoftware.com is a JS shell with
+    no static data; this WP-theme endpoint is the only reliable source.
+
+# ----- ESF Explore camps — date-band block (static) -----
+# The summer-camp / spring-camp / full-day-summer-camp pages all describe
+# a fixed multi-week date band ("29 Jun – 19 Aug 2026") with per-week
+# program cards underneath. There's no per-event listing structure
+# (no <li> per week with stable selectors), so a static camp-window entry
+# is the honest representation. Refresh annually.
+- id: esf-explore-camps
+  name: ESF Explore (Summer + Spring camps)
+  display_name: ESF Explore Camps
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.esfexplore.org.hk
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "ESF Explore — Summer Camps 2026 (Full + Half Day, Ages 5–14)"
+      start: 2026-06-29
+      end:   2026-08-19
+      detail_url: "https://www.esfexplore.org.hk/summer-camp/"
+      audience: kids
+    - title: "ESF Explore — Summer Academy 2026 (Ages 12–14)"
+      start: 2026-06-29
+      end:   2026-08-19
+      detail_url: "https://www.esfexplore.org.hk/summer-camp/"
+      audience: kids
+  notes: |
+    Verified 2026-05-24: /summer-camp/, /full-day-summer-camp/ and
+    /spring-camp/ landing pages confirm the eight-week window
+    (Week 1: 29 Jun-3 Jul ... Week 8: 17-19 Aug). Per-program cards
+    (Eager Explorers Expedition, MakeCode Arcade, Junior Tech Heroes
+    etc.) share that window — listing them individually would multiply
+    the same date by ~25. One umbrella card is cleaner. Includes the
+    former /esf.org.hk/camps/sportscamps/Multi-Sports-Camp.html
+    redirect (now broken — domain rotted to esfexplore.org.hkcamps/).
+    Refresh once 2027 camp dates are published.
+
+# ----- ActiveKids HK Summer Camps 2026 -----
+- id: activekids-hk
+  name: ActiveKids HK (Summer + Holiday Camps)
+  display_name: ActiveKids HK
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.activekidshk.com
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "ActiveKids Summer Camps 2026 — Science / Chess / Cooking / Code / Art"
+      start: 2026-06-01
+      end:   2026-08-31
+      detail_url: "https://www.activekidshk.com/summer-camps-2026"
+      audience: kids
+  notes: |
+    Verified 2026-05-24: /summer-camps-2026 lists 8 themed camps (Science
+    Adventures, The Chess Academy, Stormy Chefs, Robocode, ArtCrafters,
+    Mission Runway, Ivy Camps, AI Beings) with detailed-schedule links —
+    but the schedule pages themselves are JS-rendered Wix pages with no
+    machine-readable dates in static HTML (date_find returned []). The
+    summary "June - August 2026" is the only confirmable window, so we
+    ship one umbrella entry. Refresh annually.
+
+# ----- Time Out HK — monthly editorial roundup with <time> microdata -----
+- id: timeout-hk-month
+  name: Time Out Hong Kong (monthly events roundup)
+  display_name: Time Out HK
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.timeout.com/hong-kong
+  # The /things-to-do article URL rotates monthly; this one auto-updates
+  # to "this month's events". Cards expose <time datetime="..."> microdata
+  # so we don't need to parse English date strings.
+  calendar_url: https://www.timeout.com/hong-kong/things-to-do/things-to-do-hong-kong-may-events-festivals
+  kind: html_list
+  source_priority: 2
+  selectors:
+    item: "article"
+    title: "h3"
+    date: "time@datetime"
+    detail_link: "a@href"
+  accept_drop_rate: 0.5
+  notes: |
+    Verified 2026-05-24: 14 events extracted with clean ISO datetimes
+    (Hedwig and the Angry Inch / 2026-05-31, Bruce Lee: Homecoming /
+    2026-05-31, Lee Bul exhibition / 2026-08-09, etc.). The <time>
+    element's datetime attribute is the "until" date for ongoing shows
+    and the start date for one-shots — render-side future filter handles
+    both. URL is the May-events page; rotate the slug when the monthly
+    listing rolls over (e.g. ...-hong-kong-jun-events-festivals).
+    Some article entries are evergreen guides ("Best things to do in
+    Hong Kong 2025") that lack a <time> element and get dropped silently;
+    accept_drop_rate=0.5 covers them.
+
+# ----- New Town Plaza — mall happenings via detail-page walk -----
+- id: new-town-plaza
+  name: New Town Plaza (Sha Tin — mall happenings + Snoopy World tie-ins)
+  display_name: New Town Plaza
+  city: New Territories
+  category: other
+  homepage: https://www.newtownplaza.com.hk
+  calendar_url: https://www.newtownplaza.com.hk/en/whats-on/event
+  kind: detail_pages
+  source_priority: 1
+  # Listing page exposes /happenings/<slug>/ links but no dates inline.
+  # Each detail page carries DD/MM/YYYY date(s) in the prose body.
+  detail_url_pattern: 'https://www\.newtownplaza\.com\.hk/happenings/[a-z0-9\-]+/'
+  selectors:
+    title: "h1.happening-post_title"
+    date: "body"
+  date_extract_regex: '\d{1,2}/\d{1,2}/\d{4}'
+  date_format: "%d/%m/%Y"
+  accept_drop_rate: 0.7
+  notes: |
+    Verified 2026-05-24: listing /en/whats-on/event surfaces 6 happenings
+    anchors; 2 detail pages carry a concrete DD/MM/YYYY date in body text
+    (Chill and Dine e-Stamp Rewards 04/05/2026, Spending Reward 1/5/2026).
+    Remaining 4 are evergreen promos without dates → silently dropped.
+    Includes Snoopy World tie-in events when published. accept_drop_rate
+    high because most mall promos are dateless.
+
+# ----- Ocean Park /whats-on — detail page walk -----
+- id: ocean-park-whatson
+  name: Ocean Park (current shows + collaborations)
+  display_name: Ocean Park Shows
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.oceanpark.com.hk
+  calendar_url: https://www.oceanpark.com.hk/en/whats-on
+  kind: detail_pages
+  source_priority: 1
+  detail_url_pattern: '/en/park-experience/[a-z0-9\-]+'
+  selectors:
+    title: "h1"
+    date: "body"
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Verified 2026-05-24: /en/whats-on listing exposes 32
+    /en/park-experience/<slug> anchors. Detail pages render the full
+    "DD Month YYYY" run dates in prose ("AXA Sanrio Marine Wonders —
+    28 March 2026 ... 31 June 2026"). Render-side future filter drops
+    the legacy past-event pages still linked from the navigation.
+    Complements the existing static ocean-park-events entry (which
+    covers seasonal Halloween/Christmas) — this one catches the
+    rotating collaborations + giant-panda programmes.
+
+# ----- HKFC Rugby — table-row fixture listing -----
+- id: hkfc-rugby-fixtures
+  name: HKFC Rugby (men + women + youth fixtures)
+  display_name: HKFC Rugby
+  city: Hong Kong Island
+  category: other
+  homepage: https://hkfcrugby.com
+  calendar_url: https://hkfcrugby.com/fixtures/
+  kind: html_list
+  source_priority: 1
+  # Class-less <table> with <tbody><tr><td>...</td></tr></tbody> rows.
+  # Columns: 1=Date(YYYY-MM-DD HH:MM:SS + verbose), 2=Game, 3=Time/Results,
+  # 4=League, 5=Venue. The first column's machine-readable ISO at the
+  # head is what we extract.
+  selectors:
+    item: "tbody tr"
+    title: "td:nth-of-type(2)"
+    date: "td:nth-of-type(1)"
+  date_extract_regex: '\d{4}-\d{1,2}-\d{1,2}'
+  date_format: "%Y-%m-%d"
+  accept_drop_rate: 0.4
+  notes: |
+    Verified 2026-05-24: 93 fixtures extracted in the test run (mix of
+    past + upcoming; render-side future filter keeps the live ones).
+    Includes Men's Premiership, Women's Premiership, Championship League
+    1, plus age-group fixtures (U14/U16/U18) when published. Date column
+    leads with ISO YYYY-MM-DD HH:MM:SS then a verbose copy — the regex
+    grabs just the ISO head so dateparser doesn't get confused by the
+    duplicate. accept_drop_rate=0.4 covers TBC / bye-week rows.
+
+# ============================================================================
+# ROUND-3 STILL-DEFERRED (re-probed 2026-05-24 with fresh evidence)
+# ============================================================================
+# DEFERRED: AsiaWorld-Expo /upcoming-events/ — static HTML (when accessed
+#   from my laptop browser-IP) has 529 .event-filter-tab cards with clean
+#   title (.event-filter-desp h3), date (.event-filter-tab-date), and
+#   detail URL — BUT every cloud-IP request (Playwright fresh context +
+#   plain requests with the project's UA string) returns HTTP 500
+#   "URL Rewrite Module Error" / 5836-byte error page. Sitecore + an
+#   IP-allowlist policy together hard-block bots. Skip until we either
+#   route through a residential proxy or get the venue to whitelist our
+#   build runner's IP. (Selectors documented above for when access is
+#   restored.)
+# DEFERRED: LCSD SmartPLAY 7-day programmes — listing URL 302's to a
+#   Vue SPA shell; the underlying GET endpoint requires a CSRF token
+#   harvested from the SPA's session storage. Reverse-engineering the
+#   token flow is the right next step but out of scope for this rescue.
+# DEFERRED: PMQ Programmes & Events / Workshops — page genuinely shows
+#   "No events currently found." on /programmes-events/ AND /workshops/
+#   AND /monthly-calendar/. WordPress backend exists (wp-content/ paths
+#   present) but no wp-json/wp/v2/event endpoint exposed and no Tribe
+#   REST. Recheck quarterly — when content returns, /happenings/<slug>/
+#   detail pages have dates in prose.
+# DEFERRED: Little Steps Asia /events/ + /hong-kong/calendar/ — listing
+#   surfaces ~30 article tiles, but the article cards carry NO date text
+#   (verified: titles + URLs only). Each detail post is an editorial
+#   piece where the date is buried in body prose alongside non-event
+#   paragraphs — would need NLP or per-article hand-tuning to extract
+#   reliably. Same double-counting risk as before: most highlighted
+#   events (musicals, Buddha's Birthday, Charlie & The Chocolate
+#   Factory) are already covered by upstream venues. Skip.
