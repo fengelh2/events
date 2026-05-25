@@ -2544,6 +2544,10 @@ _AUDIENCE_KEYWORDS = {
         "permaculture course", "diploma course", "masterclass",
         "professional development", "advanced course",
         "phd ", "doctoral", "doctorate",
+        # Adult-only fitness / gender-restricted
+        "ladies only", "ladies-only", "women only", "women-only",
+        "men only", "men-only", "ladies night", "ladies' night",
+        "ladies day", "ladies' day",
     ],
 
     # Hidden by default; revealed by the toggle.
