@@ -186,6 +186,14 @@ def _scrape_detail_pages(venue_row: dict, session=None) -> list[Event]:
     detail_urls = sorted({urljoin(listing_url, m) for m in matches})
     log.debug("%s: found %d detail URLs", venue_row["id"], len(detail_urls))
 
+    # Safety cap — without this a sloppy regex (e.g. /event/[a-z0-9-]+) can
+    # match 1000s of historical URLs and hang the entire build sequentially.
+    max_details = int(venue_row.get("max_details", 60))
+    if len(detail_urls) > max_details:
+        log.warning("%s: capping %d detail URLs to %d (set max_details: N to raise)",
+                    venue_row["id"], len(detail_urls), max_details)
+        detail_urls = detail_urls[:max_details]
+
     out: list[Event] = []
     for url in detail_urls:
         try:
