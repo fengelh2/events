@@ -41,25 +41,31 @@ SEEN_BOOTSTRAP_OFFSET_DAYS = 30
 
 def _config_hash(venues_path: str, site: dict) -> str:
     """Hash that changes when scrape output should change: venues.yaml content,
-    site locale config, parser code. Cache built under one hash is reusable
-    when the hash matches."""
+    site locale config (audience filter is excluded since it runs post-scrape),
+    AND the actual content of the scraper code (NOT mtime — mtime resets on
+    every git checkout, which would invalidate every CI cache).
+
+    Cache built under one hash is reusable when the hash matches.
+    """
     import hashlib
     h = hashlib.sha256()
     h.update(Path(venues_path).read_bytes())
-    h.update(str(sorted((site or {}).items())).encode("utf-8"))
-    # Include the parser file mtime so a code-level fix invalidates the cache
-    scraper = Path(__file__).parent / "scrape_venue_events.py"
-    if scraper.exists():
-        h.update(str(int(scraper.stat().st_mtime)).encode("utf-8"))
+    # Only the scrape-affecting site fields — locale changes the parser output;
+    # audience_filter / kids_keywords run post-scrape so don't invalidate cache.
+    scrape_relevant = {k: v for k, v in (site or {}).items()
+                       if k in ("date_order", "timezone", "lang", "horizon_days")}
+    h.update(str(sorted(scrape_relevant.items())).encode("utf-8"))
+    # Parser code CONTENT (not mtime). Stable across CI runs.
+    for sib in ("scrape_venue_events.py", "parse_ical.py"):
+        p = Path(__file__).parent / sib
+        if p.exists():
+            h.update(p.read_bytes())
     return h.hexdigest()
 
 
 def _scraper_newer_than_cache(cache_path: Path) -> bool:
-    """True when the scraper code has been edited since the cache was written."""
-    scraper = Path(__file__).parent / "scrape_venue_events.py"
-    if not cache_path.exists() or not scraper.exists():
-        return True
-    return scraper.stat().st_mtime > cache_path.stat().st_mtime
+    """Deprecated since cache hash now embeds scraper content."""
+    return False
 
 
 def _save_cache(cache_path: Path, events: list, config_hash: str) -> None:

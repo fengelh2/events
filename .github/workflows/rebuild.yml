@@ -38,7 +38,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ steps.pw-version.outputs.version }}-chromium
       - run: python -m playwright install --with-deps chromium
-      - name: Rebuild all cities
+      - name: Rebuild all cities (cache hits skip scrape)
         run: python tools/build_all.py --verbose
       - name: Audit event links (non-fatal)
         run: python tools/check_links.py
