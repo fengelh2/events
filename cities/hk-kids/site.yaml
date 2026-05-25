@@ -68,12 +68,20 @@ kids_keywords:
   - dad and me
   - school holiday
   - holiday camp
+  - summer camp
+  - winter camp
+  - spring camp
+  - autumn camp
   - junior
   - youth
+  - young friends
   - playground
   - kindergarten
   - preschool
   - toddler
+  - baby
+  - babies
+  - infant
   # Kid-specific sport phrasings ONLY (not generic "rugby"/"sport"/"marathon")
   - mini rugby
   - kids rugby
@@ -91,7 +99,18 @@ kids_keywords:
   - carnival
   - parade
   - circus
-  - musical               # touring musicals are family-default
+  # "musical" alone matches too much (Musical Moments, Magic of the Organ).
+  # Use specific patterns instead — kid musicals have one of these in the title.
+  - the musical          # "Operation Oops! - the Musical" / "Cats the Musical"
+  - broadway musical
+  - kids musical
+  - family musical
+  - junior musical
+  # Lantern Carnival, family festival patterns
+  - lantern carnival
+  - family festival
+  - kids festival
+  - children's festival
   # Kid characters / brands
   - disney
   - pixar
