@@ -54,6 +54,7 @@ CATEGORY_LABELS = {
     "concert": "Concert",
     "theatre": "Theatre",
     "film": "Film",
+    "sport": "Sport",
     "vernissage": "Opening",
     "other": "Event",
     "mixed": "Event",
@@ -67,14 +68,12 @@ CATEGORY_SLUGS = {
     "concert": "concert",
     "theatre": "theatre",
     "film": "film",
+    "sport": "sport",
     "vernissage": "vern",
     "other": "other",
     "mixed": "other",
 }
 
-# Emoji icons. Render consistently across browsers / phones / OSes; zero
-# fragility vs. inline SVG. Combined with the colored pill background, each
-# category is unambiguous at a glance.
 _CATEGORY_ICONS = {
     "museum_exhibition": "🎨",
     "opera": "🎭",
@@ -82,6 +81,7 @@ _CATEGORY_ICONS = {
     "concert": "🎵",
     "theatre": "🎟️",
     "film": "🎬",
+    "sport": "⚽",
     "vernissage": "🥂",
     "other": "✨",
     "mixed": "✨",
@@ -681,7 +681,7 @@ def _render_html(
     # Plus city × category combined rules — when both filters are active, hide
     # days/weeks that have no row matching BOTH filters. CSS `:has()` checks
     # DOM presence not visibility, so single-dimension rules don't catch this.
-    CATS_FOR_COMBO = ["opera", "concert", "ballet", "theatre", "film", "exh"]
+    CATS_FOR_COMBO = ["opera", "concert", "ballet", "theatre", "film", "sport", "exh"]
     city_css_rules = []
     for cslug, (_name, _n) in cities:
         city_css_rules.append(
@@ -753,6 +753,7 @@ def _render_html(
     parts.append('  <input type="radio" name="catfilter" id="f-ballet" class="filter-input">')
     parts.append('  <input type="radio" name="catfilter" id="f-theatre" class="filter-input">')
     parts.append('  <input type="radio" name="catfilter" id="f-film" class="filter-input">')
+    parts.append('  <input type="radio" name="catfilter" id="f-sport" class="filter-input">')
     parts.append('  <input type="radio" name="catfilter" id="f-exh" class="filter-input">')
     parts.append('  <input type="radio" name="catfilter" id="f-fav" class="filter-input">')
     parts.append('  <input type="radio" name="cityfilter" id="c-all" class="filter-input" checked>')
@@ -823,6 +824,7 @@ def _render_html(
     parts.append('    <label for="f-ballet"  class="filter-chip cat-ballet"><span class="cat-icon">🩰</span><span>Ballet</span></label>')
     parts.append('    <label for="f-theatre" class="filter-chip cat-theatre"><span class="cat-icon">🎟️</span><span>Theatre</span></label>')
     parts.append('    <label for="f-film"    class="filter-chip cat-film"><span class="cat-icon">🎬</span><span>Film</span></label>')
+    parts.append('    <label for="f-sport"   class="filter-chip cat-sport"><span class="cat-icon">⚽</span><span>Sport</span></label>')
     parts.append('    <label for="f-exh"     class="filter-chip cat-exh"><span class="cat-icon">🎨</span><span>Exhibition</span></label>')
     # Spacer pushes the Favoriten chip to the right edge of the Was row
     parts.append('    <span class="filter-bar-spacer" aria-hidden="true"></span>')
@@ -1435,6 +1437,7 @@ _PAGE_HEAD = """<!DOCTYPE html>
     #f-ballet:checked   ~ .filter-panel .filter-bar .filter-chip[for="f-ballet"],
     #f-theatre:checked  ~ .filter-panel .filter-bar .filter-chip[for="f-theatre"],
     #f-film:checked     ~ .filter-panel .filter-bar .filter-chip[for="f-film"],
+    #f-sport:checked    ~ .filter-panel .filter-bar .filter-chip[for="f-sport"],
     #f-exh:checked      ~ .filter-panel .filter-bar .filter-chip[for="f-exh"],
     #c-all:checked      ~ .filter-panel .filter-bar .filter-chip[for="c-all"] {{
       background: var(--ink);
@@ -1507,6 +1510,15 @@ _PAGE_HEAD = """<!DOCTYPE html>
     #f-exh:checked     ~ .agenda:not(:has(.row.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty {{ display: block; }}
     #show-extras:checked ~ #f-exh:checked ~ .agenda .day:has(.row.cat-exh:not(.venue-hidden)),
     #show-extras:checked ~ #f-exh:checked ~ .agenda .week:has(.row.cat-exh:not(.venue-hidden)) {{ display: block !important; }}
+    /* Sport — added 2026-05-25 */
+    #f-sport:checked   ~ .featured .featured-card:not(.cat-sport),
+    #f-sport:checked   ~ .agenda .row:not(.cat-sport),
+    #f-sport:checked   ~ .agenda .day:not(:has(.row.cat-sport:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-sport:checked   ~ .agenda .week:not(:has(.row.cat-sport:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-sport:checked   ~ .featured:not(:has(.featured-card.cat-sport)) {{ display: none; }}
+    #f-sport:checked   ~ .agenda:not(:has(.row.cat-sport:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty {{ display: block; }}
+    #show-extras:checked ~ #f-sport:checked ~ .agenda .day:has(.row.cat-sport:not(.venue-hidden)),
+    #show-extras:checked ~ #f-sport:checked ~ .agenda .week:has(.row.cat-sport:not(.venue-hidden)) {{ display: block !important; }}
     /* When NO category filter is active, still hide days/weeks that contain only
        audience-hidden rows (e.g. a school-concert-only day in default view). */
     .agenda .day:not(:has(.row:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
@@ -1652,6 +1664,7 @@ _PAGE_HEAD = """<!DOCTYPE html>
     .fc-band {{ height: 6px; width: 100%; }}
     .featured-card.cat-exh     .fc-band {{ background: var(--c-exh); }}
     .featured-card.cat-film    .fc-band {{ background: var(--c-film); }}
+    .featured-card.cat-sport   .fc-band {{ background: var(--c-sport); }}
     .featured-card.cat-opera   .fc-band {{ background: var(--c-opera); }}
     .featured-card.cat-ballet  .fc-band {{ background: var(--c-ballet); }}
     .featured-card.cat-concert .fc-band {{ background: var(--c-concert); }}
@@ -1756,6 +1769,7 @@ _PAGE_HEAD = """<!DOCTYPE html>
       --c-concert: #2c4a6b;   /* deep blue */
       --c-theatre: #3d5a3a;   /* forest green */
       --c-vern: #6b3a87;      /* purple */
+      --c-sport: #c25527;     /* sport orange */
       --c-other: #9b9482;     /* muted gray */
     }}
     @media (prefers-color-scheme: dark) {{
@@ -1767,6 +1781,7 @@ _PAGE_HEAD = """<!DOCTYPE html>
         --c-concert: #7da3c8;
         --c-theatre: #88a585;
         --c-vern: #b596d4;
+        --c-sport: #e08358;
         --c-other: #9b9482;
       }}
     }}
@@ -1788,6 +1803,7 @@ _PAGE_HEAD = """<!DOCTYPE html>
     }}
     .cat-pill.cat-exh     {{ background: rgba(184,134,11,0.12);  color: var(--c-exh);     border-color: rgba(184,134,11,0.25); }}
     .cat-pill.cat-film    {{ background: rgba(31,111,139,0.12);  color: var(--c-film);    border-color: rgba(31,111,139,0.25); }}
+    .cat-pill.cat-sport   {{ background: rgba(194,85,39,0.12);   color: var(--c-sport);   border-color: rgba(194,85,39,0.25); }}
     .cat-pill.cat-opera   {{ background: rgba(150,45,62,0.12);   color: var(--c-opera);   border-color: rgba(150,45,62,0.25); }}
     .cat-pill.cat-ballet  {{ background: rgba(184,82,124,0.12);  color: var(--c-ballet);  border-color: rgba(184,82,124,0.25); }}
     .cat-pill.cat-concert {{ background: rgba(44,74,107,0.12);   color: var(--c-concert); border-color: rgba(44,74,107,0.25); }}
@@ -1909,6 +1925,7 @@ _PAGE_HEAD = """<!DOCTYPE html>
     #f-theatre:checked ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-theatre) {{ display: none; }}
     #f-exh:checked     ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-exh)     {{ display: none; }}
     #f-film:checked    ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-film)    {{ display: none; }}
+    #f-sport:checked   ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-sport)   {{ display: none; }}
     /* "Alle" reset button — same chip shape, slightly emphasized on hover */
     /* "Reset" button — `.active` is toggled by JS when no venue chips are
        checked, so it visually reads as the current selection. */

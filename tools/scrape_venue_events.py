@@ -2282,6 +2282,23 @@ def _parse_one(text: str, explicit_format: Optional[str] = None,
 
 _CATEGORY_KEYWORDS = [
     ("vernissage", ["opening reception", "opening night", "vernissage"]),
+    # Sport — added 2026-05-25. Word-boundary match enforced in _infer_category.
+    ("sport", [
+        "rugby", "sevens", "football match", "fixture", "fixtures",
+        "soccer", "premier league", "cricket match", "tennis open",
+        "marathon", "half marathon", "10k", "10 km", "fun run", "trail run",
+        "race", "regatta", "championship", "tournament",
+        "hockey", "basketball game", "volleyball",
+        "swimming meet", "swim meet", "athletics meet",
+        "match", "vs ", " vs.", "vs.", "v.s.",
+        "league", "cup",
+        "yachting", "sailing", "regatta",
+        "golf open", "golf tournament", "junior golf",
+        "karate tournament", "judo championship",
+        "boxing", "mma fight",
+        "f1", "grand prix",
+        "esports",
+    ]),
     # Opera rep — extended 2026-05-11 to match events-nrw' German + rep-heavy
     # list. Word-boundary match enforced in _infer_category so e.g. "Aida"
     # doesn't accidentally trigger inside "Saida" or similar.
@@ -2599,9 +2616,10 @@ def _infer_category(title: str, venue_row: dict, stage_default: Optional[str] = 
     # 3. Title keyword match.
     for cat, kws in _CATEGORY_KEYWORDS:
         for kw in kws:
-            # opera/ballet → word-boundary regex; everything else stays substring
-            # (multi-word phrases like "swan lake" handle their own boundaries).
-            if cat in ("opera", "ballet") and " " not in kw:
+            # opera/ballet/sport → word-boundary regex on single-word keywords
+            # so "rugby" doesn't also match "Rugbymania" etc. Multi-word phrases
+            # like "swan lake" / "rugby match" handle their own boundaries.
+            if cat in ("opera", "ballet", "sport") and " " not in kw:
                 if re.search(rf"\b{re.escape(kw)}\b", t):
                     return cat
             elif kw in t:
