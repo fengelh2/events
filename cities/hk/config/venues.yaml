@@ -1523,3 +1523,28 @@
 #   reliably. Same double-counting risk as before: most highlighted
 #   events (musicals, Buddha's Birthday, Charlie & The Chocolate
 #   Factory) are already covered by upstream venues. Skip.
+
+- id: aia-vitality-hub
+  name: AIA Vitality Hub (Central Harbourfront waterfront events)
+  display_name: AIA Vitality Hub
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.eventbrite.hk/o/aia-vitality-hub-zicket-48357599143
+  calendar_url: https://www.eventbrite.hk/o/aia-vitality-hub-zicket-48357599143
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: 'https?://www\.eventbrite\.hk/e/aia-vitality-hub-[a-z0-9-]+-tickets-\d+'
+  selectors:
+    title: 'meta[property="og:title"]@content'
+    date: 'meta[property="event:start_time"]@content'
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  title_strip_suffixes:
+    - " Tickets, Hong Kong"
+    - " Tickets"
+  notes: |
+    Free wellness + family-friendly fitness sessions at AIA Vitality Park,
+    Central Harbourfront. Rotating weekly: yoga, bootcamp, boxing-core,
+    Rugbytots, kids acro yoga, sound healing. Organizer page lists each
+    week's detail URLs at /e/aia-vitality-hub-<slug>-tickets-<id>. Each
+    detail page exposes JSON-LD with name + startDate; we extract via
+    OpenGraph meta tags as a more robust path.
