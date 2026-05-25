@@ -2548,6 +2548,12 @@ _AUDIENCE_KEYWORDS = {
         "ladies only", "ladies-only", "women only", "women-only",
         "men only", "men-only", "ladies night", "ladies' night",
         "ladies day", "ladies' day",
+        # Adult-targeted pro / open sport (not junior or youth variants)
+        "men's championship", "mens championship",
+        "women's championship", "womens championship",
+        "open championship", "professional league", "premier league",
+        "world championship", "international championship",
+        "elite division", "asia rugby emirates",
     ],
 
     # Hidden by default; revealed by the toggle.
