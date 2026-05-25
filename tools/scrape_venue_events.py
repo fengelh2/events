@@ -755,9 +755,21 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
     else:
         sep = "&" if ("?" in url) else "?"
         page_urls = [f"{url}{sep}{page_param}={p}" for p in range(1, pages + 1)]
+    # Eventbrite blocks our default UA with 405; opt-in browser headers for
+    # anti-bot sites via `browser_headers: true` on the venue row.
+    if venue_row.get("browser_headers"):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+        }
+    else:
+        headers = DEFAULT_HEADERS
     for pu in page_urls:
         try:
-            resp = sess.get(pu, headers=DEFAULT_HEADERS, timeout=DEFAULT_TIMEOUT)
+            resp = sess.get(pu, headers=headers, timeout=DEFAULT_TIMEOUT)
             resp.raise_for_status()
         except requests.RequestException as exc:
             log.warning("%s: page fetch failed (%s): %s", venue_row["id"], pu, exc)

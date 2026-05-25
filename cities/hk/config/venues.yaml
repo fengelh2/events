@@ -2052,6 +2052,7 @@
   source_priority: 1
   pages: 25                         # 23 active + 2 headroom; empties no-op
   page_param: page
+  browser_headers: true             # Eventbrite blocks default UA with 405
   zone_from_address: true           # use JSON-LD addressRegion → zone_map
   default_zone: Hong Kong Island    # most HK events default to HKI
   zone_map:
