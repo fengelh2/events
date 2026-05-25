@@ -2014,3 +2014,75 @@
 # DEFERRED: hkfootballacademy.com — ECONNREFUSED.
 # DEFERRED: hkbasketball.org.hk — ECONNREFUSED.
 # DEFERRED: hkfootball.org — ECONNREFUSED.
+
+# ============================================================================
+# AGGREGATORS (2026-05-25) — push HK from 270 → 1000+ events
+# ============================================================================
+#
+# Eventbrite HK city listing. One JSON-LD ItemList per page, 19 events/page,
+# ~23 active pages = ~369 unique events as of probe 2026-05-25. The existing
+# `json_ld_aggregator` parser was extended with `pages:` + `zone_from_address:`
+# to handle this source (no HTML data-attrs like Discover LA, but JSON-LD
+# carries location.address.addressRegion = HKI/KLN/NT for clean zoning).
+#
+# Probe rules verified empirically:
+#   - 28-page upper bound; pages 24-28 empty. Set pages: 25 (small headroom).
+#   - 369 unique URLs across pages 1-23.
+#   - addressRegion: HKI / KLN / NT → maps cleanly to HK's three zones.
+#   - Some events at locality only ("Hong Kong"/"hong kong") → default zone.
+#   - No category data in JSON-LD; rely on title-keyword inference (`other`
+#     fallback). Title-deny keywords kick in via is_aggregator gate (singles
+#     parties, pet adoptions, summer camps, etc.).
+#
+# Skipped peers (probe 2026-05-25):
+#   - URBTIX (/api, /event/all, /eventCategoryList) → 404 / empty bodies.
+#   - LCSD combined calendar (/CE/CulturalService/Programme/en/calendar/) → 404.
+#   - Timable HK (timable.com/en/category) → 403 Cloudflare.
+#   - Cityline → blank response on /en/events.
+#   - Discover Hong Kong /eng/what-s-new/events.html → server-rendered but
+#     no obvious JSON-LD list or volume; HKTB disclaims event accuracy.
+- id: hk-eventbrite-citywide
+  name: Eventbrite Hong Kong
+  display_name: Eventbrite HK
+  city: __aggregator__              # per-event zone from JSON-LD addressRegion
+  category: other                   # title-keyword inference refines per event
+  homepage: https://www.eventbrite.hk/d/hong-kong/all-events/
+  calendar_url: https://www.eventbrite.hk/d/hong-kong/all-events/
+  kind: json_ld_aggregator
+  source_priority: 1
+  pages: 25                         # 23 active + 2 headroom; empties no-op
+  page_param: page
+  zone_from_address: true           # use JSON-LD addressRegion → zone_map
+  default_zone: Hong Kong Island    # most HK events default to HKI
+  zone_map:
+    HKI: Hong Kong Island
+    KLN: Kowloon
+    NT: New Territories
+    "Hong Kong Island": Hong Kong Island
+    Kowloon: Kowloon
+    "New Territories": New Territories
+    # Common locality strings seen in addressLocality fallback
+    "Hong Kong": Hong Kong Island
+    "hong kong": Hong Kong Island
+    "Central": Hong Kong Island
+    "Wan Chai": Hong Kong Island
+    "Causeway Bay": Hong Kong Island
+    "Sheung Wan": Hong Kong Island
+    "Tsim Sha Tsui": Kowloon
+    "Mong Kok": Kowloon
+    "Kowloon": Kowloon
+    "Sha Tin": New Territories
+    "Tsuen Wan": New Territories
+  # No category data in JSON-LD; aggregator path leaves it as venue default
+  # → "other", then _infer_category() refines via title/venue keywords.
+  notes: |
+    Eventbrite HK city-wide listing. 19 events/page × 23 active pages = ~369
+    unique upcoming events as of 2026-05-25 probe. Parser uses extended
+    `json_ld_aggregator` with `pages: 25` to walk ?page=1..25 and concatenate
+    JSON-LD bodies. Per-event zone from location.address.addressRegion
+    (HKI/KLN/NT). Title-deny keywords (singles parties, pet adoption, camps)
+    auto-filter via aggregator gate.
+
+    First-time deploy: monitor for category mis-bucketing (everything starts
+    as "other" unless title keywords match). May want to add venue-name
+    keyword overrides (e.g. The Wanch → concert, M+ → exhibition).

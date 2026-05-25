@@ -743,13 +743,29 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
     """
     sess = session or requests
     url = venue_row["calendar_url"]
-    try:
-        resp = sess.get(url, headers=DEFAULT_HEADERS, timeout=DEFAULT_TIMEOUT)
-        resp.raise_for_status()
-    except requests.RequestException as exc:
-        log.warning("%s: page fetch failed: %s", venue_row["id"], exc)
+    # Optional pagination: if `pages: N` is set, fetch `?page=1..N` (or merge
+    # via `page_param`, default "page") and concatenate the response bodies.
+    # Used by Eventbrite city listings, which expose ~19 events per page in
+    # a single JSON-LD ItemList block, no API alternative.
+    pages = int(venue_row.get("pages", 1))
+    page_param = venue_row.get("page_param", "page")
+    bodies: list[str] = []
+    if pages <= 1:
+        page_urls = [url]
+    else:
+        sep = "&" if ("?" in url) else "?"
+        page_urls = [f"{url}{sep}{page_param}={p}" for p in range(1, pages + 1)]
+    for pu in page_urls:
+        try:
+            resp = sess.get(pu, headers=DEFAULT_HEADERS, timeout=DEFAULT_TIMEOUT)
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            log.warning("%s: page fetch failed (%s): %s", venue_row["id"], pu, exc)
+            continue
+        bodies.append(resp.text)
+    if not bodies:
         return []
-    text = resp.text
+    text = "\n".join(bodies)
 
     zone_map = venue_row.get("zone_map") or _DISCOVER_LA_ZONE_MAP
     default_zone = venue_row.get("default_zone", "Greater LA")
@@ -839,6 +855,18 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
                 # Per-event zoning + category from companion HTML data-attrs.
                 attrs = card_attrs.get(ev_url, {})
                 neighborhood = attrs.get("neighborhood", "")
+                # Fallback: zone derived from JSON-LD location.address (used by
+                # Eventbrite where there are no data-* HTML attrs). Honour
+                # `zone_from_address: true` to opt in. We try addressRegion
+                # first (HKI/KLN/NT for HK), then addressLocality.
+                if not neighborhood and venue_row.get("zone_from_address"):
+                    addr = loc.get("address") if isinstance(loc, dict) else None
+                    if isinstance(addr, dict):
+                        for fld in ("addressRegion", "addressLocality"):
+                            v = (addr.get(fld) or "").strip()
+                            if v:
+                                neighborhood = v
+                                break
                 zone = zone_map.get(neighborhood, default_zone)
                 raw_cat = attrs.get("category", "")
                 if raw_cat in deny_cats:
