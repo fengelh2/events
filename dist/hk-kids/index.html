@@ -1,0 +1,2741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What&#x27;s happening in Theo&#x27;s World</title>
+  <style>
+    :root {
+      --bg: #fafaf6;
+      --paper: #ffffff;
+      --ink: #1a1a1a;
+      --muted: #6f6a5e;
+      --accent: #b8860b;
+      --rule: #e7e3d6;
+      --hover: #f4f1e6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #15140f;
+        --paper: #1c1b15;
+        --ink: #f3efe2;
+        --muted: #9b9482;
+        --accent: #d9a93b;
+        --rule: #2a2820;
+        --hover: #232118;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+      font-size: 17px;
+      line-height: 1.5;
+    }
+    .serif { font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif; }
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+    /* Header */
+    /* Masthead — eyebrow + main + subtitle stack. All three lines share
+       line-height 1.2 + margin-bottom 4px for one tight visual block. */
+    .masthead {
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: 24px;
+    }
+    /* Eyebrow line: tiny caps, letter-spaced, muted. The topic tag
+       ("CULTURE IN LA-LA LAND") above the personal signature. */
+    .masthead__eyebrow {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin: 0 0 4px;
+      line-height: 1.2;
+    }
+    /* "La-La Land" accent — warm SoCal sunset orange so the LA reference
+       pops without screaming. */
+    .masthead__accent {
+      color: #e07b3a;
+      font-weight: 700;
+    }
+    /* Main title: large, slightly tighter tracking, personal signature feel. */
+    .masthead__main, .masthead h1 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 4px;
+      line-height: 1.2;
+    }
+    .masthead .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+    }
+    /* Filter panel — wraps Wo/Was/Wann/Häuser/search in one calm container */
+    .filter-panel {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 16px 18px 14px;
+      margin: 0 0 32px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .filter-panel { background: rgba(255,255,255,0.02); }
+    }
+    /* Search box — sits at top of filter panel, debounced via JS */
+    .search-row { margin: 0 0 12px; }
+    .search-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 14px;
+      font: inherit;
+      font-size: 15px;
+      color: var(--ink);
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      transition: border-color 100ms ease, background 100ms ease;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg);
+    }
+    .search-input::placeholder { color: var(--muted); }
+    /* When body has the .has-search-query class, hide rows/cards not flagged as matching.
+       Empty days/weeks/featured collapse via :has, mirroring the other filters. */
+    body.has-search-query a.row:not(.search-match),
+    body.has-search-query .agenda .day:not(:has(a.row.search-match:not(.venue-hidden))),
+    body.has-search-query .agenda .week:not(:has(a.row.search-match:not(.venue-hidden))),
+    body.has-search-query .featured .featured-card:not(.search-match),
+    body.has-search-query .featured:not(:has(.featured-card.search-match)) { display: none; }
+    /* Filter bar — Wo / Was / Wann / Häuser share consistent spacing & chip styles */
+    .filter-input { position: absolute; opacity: 0; pointer-events: none; }
+    .filter-bar,
+    .venue-chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      margin: 0 0 8px;
+    }
+    .filter-bar:last-child { margin-bottom: 0; }
+    /* "Auch Kurse..." toggle hidden; underlying audience filter still applies */
+    .extras-toggle-wrapper { display: none; }
+    /* Spacer that grows to fill remaining width — pushes Favoriten chip right. */
+    .filter-bar-spacer { flex: 1; min-width: 12px; }
+    .filter-chip-fav .cat-icon { font-size: 11px; }
+    .filter-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      margin-right: 6px;
+      min-width: 32px;
+    }
+    /* Single base style for ALL chips (filter-chip, venue-chip, venue-chip-all) */
+    .filter-chip,
+    .venue-chip,
+    .venue-chip-all {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--rule);
+      background: var(--bg);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      color: var(--ink);
+      cursor: pointer;
+      user-select: none;
+      transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+      line-height: 1.25;
+    }
+    .filter-chip:hover,
+    .venue-chip:hover,
+    .venue-chip-all:hover { background: var(--hover); }
+    .cat-icon { font-size: 11px; }
+    /* Active state — highlight the chip whose radio is checked.
+       (Per-city chip-active rules emitted dynamically in the city_css block.) */
+    #f-all:checked      ~ .filter-panel .filter-bar .filter-chip[for="f-all"],
+    #f-opera:checked    ~ .filter-panel .filter-bar .filter-chip[for="f-opera"],
+    #f-concert:checked  ~ .filter-panel .filter-bar .filter-chip[for="f-concert"],
+    #f-ballet:checked   ~ .filter-panel .filter-bar .filter-chip[for="f-ballet"],
+    #f-theatre:checked  ~ .filter-panel .filter-bar .filter-chip[for="f-theatre"],
+    #f-film:checked     ~ .filter-panel .filter-bar .filter-chip[for="f-film"],
+    #f-exh:checked      ~ .filter-panel .filter-bar .filter-chip[for="f-exh"],
+    #c-all:checked      ~ .filter-panel .filter-bar .filter-chip[for="c-all"] {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+    .chip-count {
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: 2px;
+    }
+    .filter-chip:hover .chip-count,
+    .filter-input:checked + .filter-chip .chip-count { color: inherit; opacity: 0.7; }
+    /* Filter logic — when a category is checked, hide rows + cards + days + weeks
+       that don't match. The :has(...:visible-row) checks deliberately exclude
+       audience-kids/active rows so days containing only hidden kids events
+       collapse too. The show-extras override re-shows them when the toggle is on. */
+    .filter-empty { display: none; color: var(--muted); padding: 16px 8px; }
+    /* Opera */
+    #f-opera:checked   ~ .featured .featured-card:not(.cat-opera),
+    #f-opera:checked   ~ .agenda .row:not(.cat-opera),
+    #f-opera:checked   ~ .agenda .day:not(:has(.row.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-opera:checked   ~ .agenda .week:not(:has(.row.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-opera:checked   ~ .featured:not(:has(.featured-card.cat-opera)) { display: none; }
+    #f-opera:checked   ~ .agenda:not(:has(.row.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #f-opera:checked ~ .agenda .day:has(.row.cat-opera:not(.venue-hidden)),
+    #show-extras:checked ~ #f-opera:checked ~ .agenda .week:has(.row.cat-opera:not(.venue-hidden)) { display: block !important; }
+    /* Concert */
+    #f-concert:checked ~ .featured .featured-card:not(.cat-concert),
+    #f-concert:checked ~ .agenda .row:not(.cat-concert),
+    #f-concert:checked ~ .agenda .day:not(:has(.row.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-concert:checked ~ .agenda .week:not(:has(.row.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-concert:checked ~ .featured:not(:has(.featured-card.cat-concert)) { display: none; }
+    #f-concert:checked ~ .agenda:not(:has(.row.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #f-concert:checked ~ .agenda .day:has(.row.cat-concert:not(.venue-hidden)),
+    #show-extras:checked ~ #f-concert:checked ~ .agenda .week:has(.row.cat-concert:not(.venue-hidden)) { display: block !important; }
+    /* Ballet */
+    #f-ballet:checked  ~ .featured .featured-card:not(.cat-ballet),
+    #f-ballet:checked  ~ .agenda .row:not(.cat-ballet),
+    #f-ballet:checked  ~ .agenda .day:not(:has(.row.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-ballet:checked  ~ .agenda .week:not(:has(.row.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-ballet:checked  ~ .featured:not(:has(.featured-card.cat-ballet)) { display: none; }
+    #f-ballet:checked  ~ .agenda:not(:has(.row.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #f-ballet:checked ~ .agenda .day:has(.row.cat-ballet:not(.venue-hidden)),
+    #show-extras:checked ~ #f-ballet:checked ~ .agenda .week:has(.row.cat-ballet:not(.venue-hidden)) { display: block !important; }
+    /* Theatre */
+    #f-theatre:checked ~ .featured .featured-card:not(.cat-theatre),
+    #f-theatre:checked ~ .agenda .row:not(.cat-theatre),
+    #f-theatre:checked ~ .agenda .day:not(:has(.row.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-theatre:checked ~ .agenda .week:not(:has(.row.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-theatre:checked ~ .featured:not(:has(.featured-card.cat-theatre)) { display: none; }
+    #f-theatre:checked ~ .agenda:not(:has(.row.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #f-theatre:checked ~ .agenda .day:has(.row.cat-theatre:not(.venue-hidden)),
+    #show-extras:checked ~ #f-theatre:checked ~ .agenda .week:has(.row.cat-theatre:not(.venue-hidden)) { display: block !important; }
+    /* Film */
+    #f-film:checked    ~ .featured .featured-card:not(.cat-film),
+    #f-film:checked    ~ .agenda .row:not(.cat-film),
+    #f-film:checked    ~ .agenda .day:not(:has(.row.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-film:checked    ~ .agenda .week:not(:has(.row.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-film:checked    ~ .featured:not(:has(.featured-card.cat-film)) { display: none; }
+    #f-film:checked    ~ .agenda:not(:has(.row.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #f-film:checked ~ .agenda .day:has(.row.cat-film:not(.venue-hidden)),
+    #show-extras:checked ~ #f-film:checked ~ .agenda .week:has(.row.cat-film:not(.venue-hidden)) { display: block !important; }
+    /* Exhibition */
+    #f-exh:checked     ~ .featured .featured-card:not(.cat-exh),
+    #f-exh:checked     ~ .agenda .row:not(.cat-exh),
+    #f-exh:checked     ~ .agenda .day:not(:has(.row.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-exh:checked     ~ .agenda .week:not(:has(.row.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-exh:checked     ~ .featured:not(:has(.featured-card.cat-exh)) { display: none; }
+    #f-exh:checked     ~ .agenda:not(:has(.row.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #f-exh:checked ~ .agenda .day:has(.row.cat-exh:not(.venue-hidden)),
+    #show-extras:checked ~ #f-exh:checked ~ .agenda .week:has(.row.cat-exh:not(.venue-hidden)) { display: block !important; }
+    /* When NO category filter is active, still hide days/weeks that contain only
+       audience-hidden rows (e.g. a school-concert-only day in default view). */
+    .agenda .day:not(:has(.row:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    .agenda .week:not(:has(.row:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ .agenda .day:has(.row:not(.venue-hidden)),
+    #show-extras:checked ~ .agenda .week:has(.row:not(.venue-hidden)) { display: block !important; }
+    /* City filters — emitted dynamically per city present in data */
+    #c-hong-kong-island:checked ~ .featured .featured-card:not(.city-hong-kong-island), #c-hong-kong-island:checked ~ .agenda .row:not(.city-hong-kong-island), #c-hong-kong-island:checked ~ .agenda .day:not(:has(.row.city-hong-kong-island:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #c-hong-kong-island:checked ~ .agenda .week:not(:has(.row.city-hong-kong-island:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #c-hong-kong-island:checked ~ .featured:not(:has(.featured-card.city-hong-kong-island)) { display: none; }
+    #c-hong-kong-island:checked ~ .agenda:not(:has(.row.city-hong-kong-island:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #c-hong-kong-island:checked ~ .agenda .day:has(.row.city-hong-kong-island:not(.venue-hidden)), #show-extras:checked ~ #c-hong-kong-island:checked ~ .agenda .week:has(.row.city-hong-kong-island:not(.venue-hidden)) { display: block !important; }
+    #c-hong-kong-island:checked ~ .filter-panel .venue-chips.city-hong-kong-island { display: flex; }
+    #c-hong-kong-island:checked ~ .filter-panel .filter-bar .filter-chip[for="c-hong-kong-island"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #f-opera:checked ~ #c-hong-kong-island:checked ~ .agenda .day:not(:has(.row.city-hong-kong-island.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-opera:checked ~ #c-hong-kong-island:checked ~ .agenda .week:not(:has(.row.city-hong-kong-island.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-opera:checked ~ #c-hong-kong-island:checked ~ .agenda .day:has(.row.city-hong-kong-island.cat-opera:not(.venue-hidden)), #show-extras:checked ~ #f-opera:checked ~ #c-hong-kong-island:checked ~ .agenda .week:has(.row.city-hong-kong-island.cat-opera:not(.venue-hidden)) { display: block !important; }
+    #f-concert:checked ~ #c-hong-kong-island:checked ~ .agenda .day:not(:has(.row.city-hong-kong-island.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-concert:checked ~ #c-hong-kong-island:checked ~ .agenda .week:not(:has(.row.city-hong-kong-island.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-concert:checked ~ #c-hong-kong-island:checked ~ .agenda .day:has(.row.city-hong-kong-island.cat-concert:not(.venue-hidden)), #show-extras:checked ~ #f-concert:checked ~ #c-hong-kong-island:checked ~ .agenda .week:has(.row.city-hong-kong-island.cat-concert:not(.venue-hidden)) { display: block !important; }
+    #f-ballet:checked ~ #c-hong-kong-island:checked ~ .agenda .day:not(:has(.row.city-hong-kong-island.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-ballet:checked ~ #c-hong-kong-island:checked ~ .agenda .week:not(:has(.row.city-hong-kong-island.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-ballet:checked ~ #c-hong-kong-island:checked ~ .agenda .day:has(.row.city-hong-kong-island.cat-ballet:not(.venue-hidden)), #show-extras:checked ~ #f-ballet:checked ~ #c-hong-kong-island:checked ~ .agenda .week:has(.row.city-hong-kong-island.cat-ballet:not(.venue-hidden)) { display: block !important; }
+    #f-theatre:checked ~ #c-hong-kong-island:checked ~ .agenda .day:not(:has(.row.city-hong-kong-island.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-theatre:checked ~ #c-hong-kong-island:checked ~ .agenda .week:not(:has(.row.city-hong-kong-island.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-theatre:checked ~ #c-hong-kong-island:checked ~ .agenda .day:has(.row.city-hong-kong-island.cat-theatre:not(.venue-hidden)), #show-extras:checked ~ #f-theatre:checked ~ #c-hong-kong-island:checked ~ .agenda .week:has(.row.city-hong-kong-island.cat-theatre:not(.venue-hidden)) { display: block !important; }
+    #f-film:checked ~ #c-hong-kong-island:checked ~ .agenda .day:not(:has(.row.city-hong-kong-island.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-film:checked ~ #c-hong-kong-island:checked ~ .agenda .week:not(:has(.row.city-hong-kong-island.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-film:checked ~ #c-hong-kong-island:checked ~ .agenda .day:has(.row.city-hong-kong-island.cat-film:not(.venue-hidden)), #show-extras:checked ~ #f-film:checked ~ #c-hong-kong-island:checked ~ .agenda .week:has(.row.city-hong-kong-island.cat-film:not(.venue-hidden)) { display: block !important; }
+    #f-exh:checked ~ #c-hong-kong-island:checked ~ .agenda .day:not(:has(.row.city-hong-kong-island.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-exh:checked ~ #c-hong-kong-island:checked ~ .agenda .week:not(:has(.row.city-hong-kong-island.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-exh:checked ~ #c-hong-kong-island:checked ~ .agenda .day:has(.row.city-hong-kong-island.cat-exh:not(.venue-hidden)), #show-extras:checked ~ #f-exh:checked ~ #c-hong-kong-island:checked ~ .agenda .week:has(.row.city-hong-kong-island.cat-exh:not(.venue-hidden)) { display: block !important; }
+    #c-kowloon:checked ~ .featured .featured-card:not(.city-kowloon), #c-kowloon:checked ~ .agenda .row:not(.city-kowloon), #c-kowloon:checked ~ .agenda .day:not(:has(.row.city-kowloon:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #c-kowloon:checked ~ .agenda .week:not(:has(.row.city-kowloon:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #c-kowloon:checked ~ .featured:not(:has(.featured-card.city-kowloon)) { display: none; }
+    #c-kowloon:checked ~ .agenda:not(:has(.row.city-kowloon:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #c-kowloon:checked ~ .agenda .day:has(.row.city-kowloon:not(.venue-hidden)), #show-extras:checked ~ #c-kowloon:checked ~ .agenda .week:has(.row.city-kowloon:not(.venue-hidden)) { display: block !important; }
+    #c-kowloon:checked ~ .filter-panel .venue-chips.city-kowloon { display: flex; }
+    #c-kowloon:checked ~ .filter-panel .filter-bar .filter-chip[for="c-kowloon"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #f-opera:checked ~ #c-kowloon:checked ~ .agenda .day:not(:has(.row.city-kowloon.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-opera:checked ~ #c-kowloon:checked ~ .agenda .week:not(:has(.row.city-kowloon.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-opera:checked ~ #c-kowloon:checked ~ .agenda .day:has(.row.city-kowloon.cat-opera:not(.venue-hidden)), #show-extras:checked ~ #f-opera:checked ~ #c-kowloon:checked ~ .agenda .week:has(.row.city-kowloon.cat-opera:not(.venue-hidden)) { display: block !important; }
+    #f-concert:checked ~ #c-kowloon:checked ~ .agenda .day:not(:has(.row.city-kowloon.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-concert:checked ~ #c-kowloon:checked ~ .agenda .week:not(:has(.row.city-kowloon.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-concert:checked ~ #c-kowloon:checked ~ .agenda .day:has(.row.city-kowloon.cat-concert:not(.venue-hidden)), #show-extras:checked ~ #f-concert:checked ~ #c-kowloon:checked ~ .agenda .week:has(.row.city-kowloon.cat-concert:not(.venue-hidden)) { display: block !important; }
+    #f-ballet:checked ~ #c-kowloon:checked ~ .agenda .day:not(:has(.row.city-kowloon.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-ballet:checked ~ #c-kowloon:checked ~ .agenda .week:not(:has(.row.city-kowloon.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-ballet:checked ~ #c-kowloon:checked ~ .agenda .day:has(.row.city-kowloon.cat-ballet:not(.venue-hidden)), #show-extras:checked ~ #f-ballet:checked ~ #c-kowloon:checked ~ .agenda .week:has(.row.city-kowloon.cat-ballet:not(.venue-hidden)) { display: block !important; }
+    #f-theatre:checked ~ #c-kowloon:checked ~ .agenda .day:not(:has(.row.city-kowloon.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-theatre:checked ~ #c-kowloon:checked ~ .agenda .week:not(:has(.row.city-kowloon.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-theatre:checked ~ #c-kowloon:checked ~ .agenda .day:has(.row.city-kowloon.cat-theatre:not(.venue-hidden)), #show-extras:checked ~ #f-theatre:checked ~ #c-kowloon:checked ~ .agenda .week:has(.row.city-kowloon.cat-theatre:not(.venue-hidden)) { display: block !important; }
+    #f-film:checked ~ #c-kowloon:checked ~ .agenda .day:not(:has(.row.city-kowloon.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-film:checked ~ #c-kowloon:checked ~ .agenda .week:not(:has(.row.city-kowloon.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-film:checked ~ #c-kowloon:checked ~ .agenda .day:has(.row.city-kowloon.cat-film:not(.venue-hidden)), #show-extras:checked ~ #f-film:checked ~ #c-kowloon:checked ~ .agenda .week:has(.row.city-kowloon.cat-film:not(.venue-hidden)) { display: block !important; }
+    #f-exh:checked ~ #c-kowloon:checked ~ .agenda .day:not(:has(.row.city-kowloon.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-exh:checked ~ #c-kowloon:checked ~ .agenda .week:not(:has(.row.city-kowloon.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-exh:checked ~ #c-kowloon:checked ~ .agenda .day:has(.row.city-kowloon.cat-exh:not(.venue-hidden)), #show-extras:checked ~ #f-exh:checked ~ #c-kowloon:checked ~ .agenda .week:has(.row.city-kowloon.cat-exh:not(.venue-hidden)) { display: block !important; }
+    #c-lantau:checked ~ .featured .featured-card:not(.city-lantau), #c-lantau:checked ~ .agenda .row:not(.city-lantau), #c-lantau:checked ~ .agenda .day:not(:has(.row.city-lantau:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #c-lantau:checked ~ .agenda .week:not(:has(.row.city-lantau:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #c-lantau:checked ~ .featured:not(:has(.featured-card.city-lantau)) { display: none; }
+    #c-lantau:checked ~ .agenda:not(:has(.row.city-lantau:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #c-lantau:checked ~ .agenda .day:has(.row.city-lantau:not(.venue-hidden)), #show-extras:checked ~ #c-lantau:checked ~ .agenda .week:has(.row.city-lantau:not(.venue-hidden)) { display: block !important; }
+    #c-lantau:checked ~ .filter-panel .venue-chips.city-lantau { display: flex; }
+    #c-lantau:checked ~ .filter-panel .filter-bar .filter-chip[for="c-lantau"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #f-opera:checked ~ #c-lantau:checked ~ .agenda .day:not(:has(.row.city-lantau.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-opera:checked ~ #c-lantau:checked ~ .agenda .week:not(:has(.row.city-lantau.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-opera:checked ~ #c-lantau:checked ~ .agenda .day:has(.row.city-lantau.cat-opera:not(.venue-hidden)), #show-extras:checked ~ #f-opera:checked ~ #c-lantau:checked ~ .agenda .week:has(.row.city-lantau.cat-opera:not(.venue-hidden)) { display: block !important; }
+    #f-concert:checked ~ #c-lantau:checked ~ .agenda .day:not(:has(.row.city-lantau.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-concert:checked ~ #c-lantau:checked ~ .agenda .week:not(:has(.row.city-lantau.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-concert:checked ~ #c-lantau:checked ~ .agenda .day:has(.row.city-lantau.cat-concert:not(.venue-hidden)), #show-extras:checked ~ #f-concert:checked ~ #c-lantau:checked ~ .agenda .week:has(.row.city-lantau.cat-concert:not(.venue-hidden)) { display: block !important; }
+    #f-ballet:checked ~ #c-lantau:checked ~ .agenda .day:not(:has(.row.city-lantau.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-ballet:checked ~ #c-lantau:checked ~ .agenda .week:not(:has(.row.city-lantau.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-ballet:checked ~ #c-lantau:checked ~ .agenda .day:has(.row.city-lantau.cat-ballet:not(.venue-hidden)), #show-extras:checked ~ #f-ballet:checked ~ #c-lantau:checked ~ .agenda .week:has(.row.city-lantau.cat-ballet:not(.venue-hidden)) { display: block !important; }
+    #f-theatre:checked ~ #c-lantau:checked ~ .agenda .day:not(:has(.row.city-lantau.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-theatre:checked ~ #c-lantau:checked ~ .agenda .week:not(:has(.row.city-lantau.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-theatre:checked ~ #c-lantau:checked ~ .agenda .day:has(.row.city-lantau.cat-theatre:not(.venue-hidden)), #show-extras:checked ~ #f-theatre:checked ~ #c-lantau:checked ~ .agenda .week:has(.row.city-lantau.cat-theatre:not(.venue-hidden)) { display: block !important; }
+    #f-film:checked ~ #c-lantau:checked ~ .agenda .day:not(:has(.row.city-lantau.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-film:checked ~ #c-lantau:checked ~ .agenda .week:not(:has(.row.city-lantau.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-film:checked ~ #c-lantau:checked ~ .agenda .day:has(.row.city-lantau.cat-film:not(.venue-hidden)), #show-extras:checked ~ #f-film:checked ~ #c-lantau:checked ~ .agenda .week:has(.row.city-lantau.cat-film:not(.venue-hidden)) { display: block !important; }
+    #f-exh:checked ~ #c-lantau:checked ~ .agenda .day:not(:has(.row.city-lantau.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-exh:checked ~ #c-lantau:checked ~ .agenda .week:not(:has(.row.city-lantau.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-exh:checked ~ #c-lantau:checked ~ .agenda .day:has(.row.city-lantau.cat-exh:not(.venue-hidden)), #show-extras:checked ~ #f-exh:checked ~ #c-lantau:checked ~ .agenda .week:has(.row.city-lantau.cat-exh:not(.venue-hidden)) { display: block !important; }
+    #c-new-territories:checked ~ .featured .featured-card:not(.city-new-territories), #c-new-territories:checked ~ .agenda .row:not(.city-new-territories), #c-new-territories:checked ~ .agenda .day:not(:has(.row.city-new-territories:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #c-new-territories:checked ~ .agenda .week:not(:has(.row.city-new-territories:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #c-new-territories:checked ~ .featured:not(:has(.featured-card.city-new-territories)) { display: none; }
+    #c-new-territories:checked ~ .agenda:not(:has(.row.city-new-territories:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty { display: block; }
+    #show-extras:checked ~ #c-new-territories:checked ~ .agenda .day:has(.row.city-new-territories:not(.venue-hidden)), #show-extras:checked ~ #c-new-territories:checked ~ .agenda .week:has(.row.city-new-territories:not(.venue-hidden)) { display: block !important; }
+    #c-new-territories:checked ~ .filter-panel .venue-chips.city-new-territories { display: flex; }
+    #c-new-territories:checked ~ .filter-panel .filter-bar .filter-chip[for="c-new-territories"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #f-opera:checked ~ #c-new-territories:checked ~ .agenda .day:not(:has(.row.city-new-territories.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-opera:checked ~ #c-new-territories:checked ~ .agenda .week:not(:has(.row.city-new-territories.cat-opera:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-opera:checked ~ #c-new-territories:checked ~ .agenda .day:has(.row.city-new-territories.cat-opera:not(.venue-hidden)), #show-extras:checked ~ #f-opera:checked ~ #c-new-territories:checked ~ .agenda .week:has(.row.city-new-territories.cat-opera:not(.venue-hidden)) { display: block !important; }
+    #f-concert:checked ~ #c-new-territories:checked ~ .agenda .day:not(:has(.row.city-new-territories.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-concert:checked ~ #c-new-territories:checked ~ .agenda .week:not(:has(.row.city-new-territories.cat-concert:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-concert:checked ~ #c-new-territories:checked ~ .agenda .day:has(.row.city-new-territories.cat-concert:not(.venue-hidden)), #show-extras:checked ~ #f-concert:checked ~ #c-new-territories:checked ~ .agenda .week:has(.row.city-new-territories.cat-concert:not(.venue-hidden)) { display: block !important; }
+    #f-ballet:checked ~ #c-new-territories:checked ~ .agenda .day:not(:has(.row.city-new-territories.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-ballet:checked ~ #c-new-territories:checked ~ .agenda .week:not(:has(.row.city-new-territories.cat-ballet:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-ballet:checked ~ #c-new-territories:checked ~ .agenda .day:has(.row.city-new-territories.cat-ballet:not(.venue-hidden)), #show-extras:checked ~ #f-ballet:checked ~ #c-new-territories:checked ~ .agenda .week:has(.row.city-new-territories.cat-ballet:not(.venue-hidden)) { display: block !important; }
+    #f-theatre:checked ~ #c-new-territories:checked ~ .agenda .day:not(:has(.row.city-new-territories.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-theatre:checked ~ #c-new-territories:checked ~ .agenda .week:not(:has(.row.city-new-territories.cat-theatre:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-theatre:checked ~ #c-new-territories:checked ~ .agenda .day:has(.row.city-new-territories.cat-theatre:not(.venue-hidden)), #show-extras:checked ~ #f-theatre:checked ~ #c-new-territories:checked ~ .agenda .week:has(.row.city-new-territories.cat-theatre:not(.venue-hidden)) { display: block !important; }
+    #f-film:checked ~ #c-new-territories:checked ~ .agenda .day:not(:has(.row.city-new-territories.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-film:checked ~ #c-new-territories:checked ~ .agenda .week:not(:has(.row.city-new-territories.cat-film:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-film:checked ~ #c-new-territories:checked ~ .agenda .day:has(.row.city-new-territories.cat-film:not(.venue-hidden)), #show-extras:checked ~ #f-film:checked ~ #c-new-territories:checked ~ .agenda .week:has(.row.city-new-territories.cat-film:not(.venue-hidden)) { display: block !important; }
+    #f-exh:checked ~ #c-new-territories:checked ~ .agenda .day:not(:has(.row.city-new-territories.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #f-exh:checked ~ #c-new-territories:checked ~ .agenda .week:not(:has(.row.city-new-territories.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))) { display: none; }
+    #show-extras:checked ~ #f-exh:checked ~ #c-new-territories:checked ~ .agenda .day:has(.row.city-new-territories.cat-exh:not(.venue-hidden)), #show-extras:checked ~ #f-exh:checked ~ #c-new-territories:checked ~ .agenda .week:has(.row.city-new-territories.cat-exh:not(.venue-hidden)) { display: block !important; }
+
+    /* Featured */
+    .featured { margin-bottom: 48px; }
+    .featured-heading {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      margin: 0 0 18px;
+    }
+    .featured-heading .star { font-size: 16px; margin-right: 6px; }
+    /* "Recently Added" strip — mirrors .featured but with a teal accent */
+    .new-strip { margin-bottom: 48px; }
+    .new-strip .featured-heading { color: #0a8a72; }
+    .new-strip .new-star { font-size: 14px; margin-right: 6px; }
+    .new-strip .new-overflow {
+      margin: 10px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+    .featured-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    /* Carousel — horizontal scroll with hidden scrollbar, fade edges, arrows */
+    .carousel-wrap {
+      position: relative;
+      /* Fade out left + right edges so cards don't hard-cut */
+      mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+    }
+    .featured-scroller {
+      display: flex; flex-direction: row;
+      gap: 12px;
+      overflow-x: auto; overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+      padding: 4px 8px 10px;
+      /* Hide scrollbar entirely */
+      scrollbar-width: none;
+    }
+    .featured-scroller::-webkit-scrollbar { display: none; }
+    .featured-scroller > .featured-card {
+      flex: 0 0 280px;
+      scroll-snap-align: start;
+    }
+    /* Arrow buttons — overlay, rounded, semi-transparent */
+    .carousel-arrow {
+      position: absolute; top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.92);
+      color: #181818;
+      font-size: 22px; line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.15s, opacity 0.2s;
+      opacity: 0;
+      padding-bottom: 3px;     /* optical centering of › */
+    }
+    .carousel-wrap:hover .carousel-arrow { opacity: 1; }
+    .carousel-arrow:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
+    .carousel-arrow--prev { left: 4px; }
+    .carousel-arrow--next { right: 4px; padding-left: 2px; }
+    .carousel-arrow.is-disabled { opacity: 0 !important; pointer-events: none; }
+    @media (prefers-color-scheme: dark) {
+      .carousel-arrow { background: rgba(40,40,40,0.92); color: #f5f5f5; box-shadow: 0 2px 10px rgba(0,0,0,0.6); }
+      .carousel-arrow:hover { background: #2a2a2a; }
+    }
+    /* On touch devices arrows are useless; keep them hidden, mask + swipe is enough */
+    @media (hover: none) { .carousel-arrow { display: none; } }
+
+    /* Wiggle hint — one-shot animation on first paint so the user notices it scrolls */
+    @keyframes carousel-wiggle {
+      0%   { transform: translateX(0); }
+      18%  { transform: translateX(28px); }
+      36%  { transform: translateX(-12px); }
+      55%  { transform: translateX(8px); }
+      78%  { transform: translateX(-2px); }
+      100% { transform: translateX(0); }
+    }
+    .wiggle-hint {
+      animation: carousel-wiggle 1.4s ease-in-out 0.8s 1;
+    }
+    @media (prefers-reduced-motion: reduce) { .wiggle-hint { animation: none; } }
+
+    /* Count bubble in heading */
+    .count-bubble {
+      display: inline-block;
+      background: rgba(0,0,0,0.08);
+      color: var(--muted, #666);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 999px;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .count-bubble { background: rgba(255,255,255,0.12); color: #ddd; }
+    }
+    /* When a category/city/when filter is active the count bubble shows the
+       unfiltered total which is misleading. Hide bubble + arrows in that state. */
+    body:has(input[name="catfilter"]:checked:not(#f-all)) .count-bubble,
+    body:has(input[name="cityfilter"]:checked:not(#c-all)) .count-bubble,
+    body:has(input[name="whenfilter"]:checked:not(#w-all)) .count-bubble,
+    body:has(input[name="catfilter"]:checked:not(#f-all)) .carousel-arrow,
+    body:has(input[name="cityfilter"]:checked:not(#c-all)) .carousel-arrow,
+    body:has(input[name="whenfilter"]:checked:not(#w-all)) .carousel-arrow {
+      display: none !important;
+    }
+    .featured-card {
+      display: block;
+      position: relative;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 140ms ease, box-shadow 140ms ease;
+    }
+    .featured-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    .fc-band { height: 6px; width: 100%; }
+    .featured-card.cat-exh     .fc-band { background: var(--c-exh); }
+    .featured-card.cat-film    .fc-band { background: var(--c-film); }
+    .featured-card.cat-opera   .fc-band { background: var(--c-opera); }
+    .featured-card.cat-ballet  .fc-band { background: var(--c-ballet); }
+    .featured-card.cat-concert .fc-band { background: var(--c-concert); }
+    .featured-card.cat-theatre .fc-band { background: var(--c-theatre); }
+    .featured-card.cat-vern    .fc-band { background: var(--c-vern); }
+    .featured-card.cat-other   .fc-band { background: var(--c-other); }
+    .fc-inner { padding: 18px 20px 20px; }
+    .fc-pill { margin-bottom: 12px; }
+    .fc-title {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+    .fc-venue { font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+    .fc-date { font-size: 14px; color: var(--accent); font-weight: 600; margin-bottom: 8px; }
+    .fc-desc { font-size: 14px; color: var(--muted); margin: 10px 0 12px; line-height: 1.45; }
+    .fc-meta { display: flex; justify-content: flex-end; align-items: center; font-size: 14px; color: var(--muted); }
+    .fc-meta .arrow { font-size: 18px; }
+    /* Agenda */
+    .agenda { }
+    .week-heading {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      margin: 32px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .day { margin-bottom: 24px; }
+    .day-heading {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink);
+      margin: 0 0 8px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 70px 1fr auto auto 18px;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 10px;
+      text-decoration: none;
+      color: inherit;
+      border-radius: 6px;
+      transition: background 100ms ease;
+    }
+    .row:hover { background: var(--hover); }
+    .row + .row { border-top: 1px solid var(--rule); }
+    .row-time {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      font-size: 17px;
+      color: var(--ink);
+      align-self: start;
+      padding-top: 2px;
+    }
+    .row-body { min-width: 0; align-self: start; }
+    .row-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+      overflow-wrap: anywhere;
+    }
+    .row-venue {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .row-meta {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .row-meta .relative { color: var(--accent); font-weight: 500; }
+    .row-arrow { color: var(--muted); font-size: 18px; padding-top: 2px; }
+    .featured-row .row-title { }
+    .inline-star { color: var(--accent); }
+    /* Footer */
+    footer {
+      margin-top: 48px;
+      padding-top: 16px;
+      border-top: 1px solid var(--rule);
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .empty { color: var(--muted); }
+    /* Per-category color accents.
+       Each category gets a colored 3px left stripe on the row + tinted icon.
+       Colors are mid-saturation hues that read on both light and dark themes. */
+    :root {
+      --c-exh: #b8860b;       /* amber */
+      --c-film: #1f6f8b;      /* film teal */
+      --c-opera: #962d3e;     /* deep red */
+      --c-ballet: #b8527c;    /* rose */
+      --c-concert: #2c4a6b;   /* deep blue */
+      --c-theatre: #3d5a3a;   /* forest green */
+      --c-vern: #6b3a87;      /* purple */
+      --c-other: #9b9482;     /* muted gray */
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --c-exh: #d9a93b;
+        --c-film: #5fa9c4;
+        --c-opera: #c97e8c;
+        --c-ballet: #d893b3;
+        --c-concert: #7da3c8;
+        --c-theatre: #88a585;
+        --c-vern: #b596d4;
+        --c-other: #9b9482;
+      }
+    }
+    /* Category pill — colored chip with icon + caps label, sits on top-right of each row.
+       Background = soft tint of category color (low alpha), text/icon = full saturation. */
+    .cat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px 5px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      align-self: start;
+    }
+    .cat-pill.cat-exh     { background: rgba(184,134,11,0.12);  color: var(--c-exh);     border-color: rgba(184,134,11,0.25); }
+    .cat-pill.cat-film    { background: rgba(31,111,139,0.12);  color: var(--c-film);    border-color: rgba(31,111,139,0.25); }
+    .cat-pill.cat-opera   { background: rgba(150,45,62,0.12);   color: var(--c-opera);   border-color: rgba(150,45,62,0.25); }
+    .cat-pill.cat-ballet  { background: rgba(184,82,124,0.12);  color: var(--c-ballet);  border-color: rgba(184,82,124,0.25); }
+    .cat-pill.cat-concert { background: rgba(44,74,107,0.12);   color: var(--c-concert); border-color: rgba(44,74,107,0.25); }
+    .cat-pill.cat-theatre { background: rgba(61,90,58,0.12);    color: var(--c-theatre); border-color: rgba(61,90,58,0.25); }
+    .cat-pill.cat-vern    { background: rgba(107,58,135,0.12);  color: var(--c-vern);    border-color: rgba(107,58,135,0.25); }
+    .cat-pill.cat-other   { background: rgba(155,148,130,0.12); color: var(--c-other);   border-color: rgba(155,148,130,0.25); }
+    @media (prefers-color-scheme: dark) {
+      .cat-pill.cat-exh     { background: rgba(217,169,59,0.18); }
+      .cat-pill.cat-opera   { background: rgba(201,126,140,0.18); }
+      .cat-pill.cat-ballet  { background: rgba(216,147,179,0.18); }
+      .cat-pill.cat-concert { background: rgba(125,163,200,0.18); }
+      .cat-pill.cat-theatre { background: rgba(136,165,133,0.18); }
+      .cat-pill.cat-vern    { background: rgba(181,150,212,0.18); }
+    }
+    .cat-icon { display: inline-flex; align-items: center; font-size: 14px; line-height: 1; }
+    .cat-pill .cat-label { display: inline-block; }
+    /* Favorite heart button — sits between category pill and arrow */
+    .fav-btn {
+      background: transparent;
+      border: 0;
+      padding: 4px 8px;
+      margin: 0;
+      font: inherit;
+      font-size: 18px;
+      line-height: 1;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 50%;
+      transition: color 100ms ease, background 100ms ease, transform 80ms ease;
+      align-self: start;
+    }
+    .fav-btn:hover { background: var(--hover); color: #d63a3a; }
+    .fav-btn:active { transform: scale(0.85); }
+    .fav-btn.is-fav,
+    a.row.is-fav .fav-btn,
+    a.featured-card.is-fav .fav-btn { color: #d63a3a; }
+    /* "NEU" badge — small red label inline before the title */
+    .new-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 1px 6px 2px;
+      background: #d63a3a;
+      color: white;
+      border-radius: 3px;
+      margin-right: 8px;
+      vertical-align: 2px;
+    }
+    .new-badge[hidden] { display: none; }
+    /* Featured-card heart sits in the corner */
+    .fc-fav {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 2;
+    }
+    /* Favoriten filter chip — slightly emphasized */
+    .filter-chip-fav .cat-icon { color: #d63a3a; }
+    #f-fav:checked ~ .filter-panel .filter-bar .filter-chip[for="f-fav"] {
+      background: #d63a3a !important;
+      color: white !important;
+      border-color: #d63a3a !important;
+    }
+    /* Wann filter — emitted dynamically per WHEN_OPTIONS slot */
+    #w-this-week:checked ~ .agenda .row:not([data-when~="this-week"]), #w-this-week:checked ~ .agenda .day:not(:has(.row[data-when~="this-week"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-this-week:checked ~ .agenda .week:not(:has(.row[data-when~="this-week"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-this-week:checked ~ .featured .featured-card:not([data-when~="this-week"]), #w-this-week:checked ~ .featured:not(:has(.featured-card[data-when~="this-week"])) { display: none; }
+    #w-this-week:checked ~ .filter-panel .filter-bar .filter-chip[for="w-this-week"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #w-next-week:checked ~ .agenda .row:not([data-when~="next-week"]), #w-next-week:checked ~ .agenda .day:not(:has(.row[data-when~="next-week"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-next-week:checked ~ .agenda .week:not(:has(.row[data-when~="next-week"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-next-week:checked ~ .featured .featured-card:not([data-when~="next-week"]), #w-next-week:checked ~ .featured:not(:has(.featured-card[data-when~="next-week"])) { display: none; }
+    #w-next-week:checked ~ .filter-panel .filter-bar .filter-chip[for="w-next-week"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #w-this-weekend:checked ~ .agenda .row:not([data-when~="this-weekend"]), #w-this-weekend:checked ~ .agenda .day:not(:has(.row[data-when~="this-weekend"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-this-weekend:checked ~ .agenda .week:not(:has(.row[data-when~="this-weekend"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-this-weekend:checked ~ .featured .featured-card:not([data-when~="this-weekend"]), #w-this-weekend:checked ~ .featured:not(:has(.featured-card[data-when~="this-weekend"])) { display: none; }
+    #w-this-weekend:checked ~ .filter-panel .filter-bar .filter-chip[for="w-this-weekend"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #w-next-weekend:checked ~ .agenda .row:not([data-when~="next-weekend"]), #w-next-weekend:checked ~ .agenda .day:not(:has(.row[data-when~="next-weekend"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-next-weekend:checked ~ .agenda .week:not(:has(.row[data-when~="next-weekend"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-next-weekend:checked ~ .featured .featured-card:not([data-when~="next-weekend"]), #w-next-weekend:checked ~ .featured:not(:has(.featured-card[data-when~="next-weekend"])) { display: none; }
+    #w-next-weekend:checked ~ .filter-panel .filter-bar .filter-chip[for="w-next-weekend"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #w-this-month:checked ~ .agenda .row:not([data-when~="this-month"]), #w-this-month:checked ~ .agenda .day:not(:has(.row[data-when~="this-month"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-this-month:checked ~ .agenda .week:not(:has(.row[data-when~="this-month"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-this-month:checked ~ .featured .featured-card:not([data-when~="this-month"]), #w-this-month:checked ~ .featured:not(:has(.featured-card[data-when~="this-month"])) { display: none; }
+    #w-this-month:checked ~ .filter-panel .filter-bar .filter-chip[for="w-this-month"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #w-next-month:checked ~ .agenda .row:not([data-when~="next-month"]), #w-next-month:checked ~ .agenda .day:not(:has(.row[data-when~="next-month"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-next-month:checked ~ .agenda .week:not(:has(.row[data-when~="next-month"]:not(.audience-kids):not(.audience-active):not(.venue-hidden))), #w-next-month:checked ~ .featured .featured-card:not([data-when~="next-month"]), #w-next-month:checked ~ .featured:not(:has(.featured-card[data-when~="next-month"])) { display: none; }
+    #w-next-month:checked ~ .filter-panel .filter-bar .filter-chip[for="w-next-month"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #w-all:checked ~ .filter-panel .filter-bar .filter-chip[for="w-all"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    /* Favoriten filter — hide rows + cards + days/weeks without is-fav */
+    #f-fav:checked ~ .agenda .row:not(.is-fav),
+    #f-fav:checked ~ .agenda .day:not(:has(.row.is-fav:not(.venue-hidden))),
+    #f-fav:checked ~ .agenda .week:not(:has(.row.is-fav:not(.venue-hidden))),
+    #f-fav:checked ~ .featured .featured-card:not(.is-fav),
+    #f-fav:checked ~ .featured:not(:has(.featured-card.is-fav)) { display: none; }
+    #f-fav:checked ~ .agenda:not(:has(.row.is-fav:not(.venue-hidden))) .filter-empty { display: block; }
+    /* Recurring-event bonus line under main meta */
+    .row-recurring {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+      font-style: italic;
+    }
+    /* De-emphasized rows (educational + kids/active when revealed): dimmer, smaller */
+    .row.de-emphasized {
+      opacity: 0.55;
+      border-left-color: transparent !important;
+    }
+    .row.de-emphasized .row-title { font-size: 15px; font-weight: 400; }
+    .row.de-emphasized .row-time { font-weight: 400; }
+    .row.de-emphasized:hover { opacity: 0.85; }
+    /* Kids + active (workshops, classes, family programme) — hidden by default;
+       toggled visible by the "Auch Kurse..." checkbox. When visible, they're dimmed. */
+    .row.audience-kids,
+    .row.audience-active,
+    .featured-card.audience-kids,
+    .featured-card.audience-active {
+      display: none;
+    }
+    #show-extras:checked ~ .agenda .row.audience-kids,
+    #show-extras:checked ~ .agenda .row.audience-active {
+      display: grid;
+    }
+    #show-extras:checked ~ .featured .featured-card.audience-kids,
+    #show-extras:checked ~ .featured .featured-card.audience-active {
+      display: block;
+    }
+    /* Per-venue chips — hidden by default, revealed when a specific city is picked */
+    .venue-chips {
+      display: none;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      margin: -2px 0 24px;
+    }
+    /* `display: flex` show rule for each venue-chips block emitted dynamically below */
+    /* When a category filter is active, hide chips for venues that don't have
+       events in that category — keeps the Häuser row focused on relevant houses. */
+    #f-opera:checked   ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-opera)   { display: none; }
+    #f-concert:checked ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-concert) { display: none; }
+    #f-ballet:checked  ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-ballet)  { display: none; }
+    #f-theatre:checked ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-theatre) { display: none; }
+    #f-exh:checked     ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-exh)     { display: none; }
+    #f-film:checked    ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-film)    { display: none; }
+    /* "Alle" reset button — same chip shape, slightly emphasized on hover */
+    /* "Reset" button — `.active` is toggled by JS when no venue chips are
+       checked, so it visually reads as the current selection. */
+    .venue-chip-all:hover,
+    .venue-chip-all.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .venue-checkbox {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      background: transparent;
+      border: 1px solid var(--rule);
+      flex-shrink: 0;
+      box-sizing: border-box;
+      transition: background 100ms ease, border-color 100ms ease;
+    }
+    /* JS sets .venue-hidden on rows/cards whose venue isn't in the active selection */
+    .venue-hidden { display: none !important; }
+    /* Per-chip "is checked" visual styles emitted dynamically below */
+    #v-hong-kong-island-activekids-hk:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-activekids-hk"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-activekids-hk:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-activekids-hk"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-esf-explore-camps:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-esf-explore-camps"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-esf-explore-camps:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-esf-explore-camps"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hk-book-fair:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hk-book-fair"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hk-book-fair:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hk-book-fair"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hk-fringe-workshops:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hk-fringe-workshops"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hk-fringe-workshops:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hk-fringe-workshops"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hk-rugby-sevens:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hk-rugby-sevens"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hk-rugby-sevens:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hk-rugby-sevens"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hk-tennis-tournaments:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hk-tennis-tournaments"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hk-tennis-tournaments:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hk-tennis-tournaments"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hkcec:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hkcec"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hkcec:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hkcec"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hkrfu-fixtures:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hkrfu-fixtures"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hkrfu-fixtures:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hkrfu-fixtures"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hktdc-toy-fair:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hktdc-toy-fair"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hktdc-toy-fair:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hktdc-toy-fair"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hong-kong-academy-for-performing-arts:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-academy-for-performing-arts"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hong-kong-academy-for-performing-arts:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-academy-for-performing-arts"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hong-kong-arts-centre:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-arts-centre"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hong-kong-arts-centre:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-arts-centre"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hong-kong-city-hall:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-city-hall"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hong-kong-city-hall:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-city-hall"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hong-kong-park-edward-youde-aviary-sports-carnivals-:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-park-edward-youde-aviary-sports-carnivals-"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hong-kong-park-edward-youde-aviary-sports-carnivals-:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-park-edward-youde-aviary-sports-carnivals-"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hong-kong-repertory-theatre:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-repertory-theatre"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hong-kong-repertory-theatre:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-repertory-theatre"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-hong-kong-sinfonietta:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-sinfonietta"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-hong-kong-sinfonietta:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-hong-kong-sinfonietta"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-indoor-playgrounds-arcades:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-indoor-playgrounds-arcades"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-indoor-playgrounds-arcades:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-indoor-playgrounds-arcades"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-ocean-park:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-ocean-park"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-ocean-park:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-ocean-park"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-hong-kong-island-time-out-hk:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-time-out-hk"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-hong-kong-island-time-out-hk:checked ~ .filter-panel .venue-chips .venue-chip[for="v-hong-kong-island-time-out-hk"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-kowloon-harbour-city:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-harbour-city"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-kowloon-harbour-city:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-harbour-city"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-kowloon-hk-palace-museum-events-:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hk-palace-museum-events-"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-kowloon-hk-palace-museum-events-:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hk-palace-museum-events-"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-kowloon-hk-sevens-2027:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hk-sevens-2027"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-kowloon-hk-sevens-2027:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hk-sevens-2027"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-kowloon-hong-kong-arts-festival:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hong-kong-arts-festival"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-kowloon-hong-kong-arts-festival:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hong-kong-arts-festival"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-kowloon-hong-kong-chinese-orchestra:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hong-kong-chinese-orchestra"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-kowloon-hong-kong-chinese-orchestra:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hong-kong-chinese-orchestra"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-kowloon-hong-kong-philharmonic-orchestra:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hong-kong-philharmonic-orchestra"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-kowloon-hong-kong-philharmonic-orchestra:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-hong-kong-philharmonic-orchestra"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-kowloon-m-cinema:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-m-cinema"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-kowloon-m-cinema:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-m-cinema"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-kowloon-xiqu-centre-west-kowloon-cultural-district-:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-xiqu-centre-west-kowloon-cultural-district-"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-kowloon-xiqu-centre-west-kowloon-cultural-district-:checked ~ .filter-panel .venue-chips .venue-chip[for="v-kowloon-xiqu-centre-west-kowloon-cultural-district-"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-lantau-hk-disneyland:checked ~ .filter-panel .venue-chips .venue-chip[for="v-lantau-hk-disneyland"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-lantau-hk-disneyland:checked ~ .filter-panel .venue-chips .venue-chip[for="v-lantau-hk-disneyland"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-new-territories-hong-kong-wetland-park:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-hong-kong-wetland-park"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-new-territories-hong-kong-wetland-park:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-hong-kong-wetland-park"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-new-territories-kadoorie-farm:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-kadoorie-farm"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-new-territories-kadoorie-farm:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-kadoorie-farm"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-new-territories-noah-s-ark-hong-kong-family-attraction-ma-wan-:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-noah-s-ark-hong-kong-family-attraction-ma-wan-"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-new-territories-noah-s-ark-hong-kong-family-attraction-ma-wan-:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-noah-s-ark-hong-kong-family-attraction-ma-wan-"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-new-territories-sha-tin-town-hall:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-sha-tin-town-hall"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-new-territories-sha-tin-town-hall:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-sha-tin-town-hall"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    #v-new-territories-tsuen-wan-town-hall:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-tsuen-wan-town-hall"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    #v-new-territories-tsuen-wan-town-hall:checked ~ .filter-panel .venue-chips .venue-chip[for="v-new-territories-tsuen-wan-town-hall"] .venue-checkbox { background: var(--bg); border: 1px solid var(--bg); }
+    /* Extras toggle styling */
+    .extras-toggle-wrapper {
+      margin: -20px 0 28px;
+    }
+    .extras-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 100ms ease, color 100ms ease;
+    }
+    .extras-toggle:hover { background: var(--hover); color: var(--ink); }
+    .extras-checkbox {
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid var(--rule);
+      border-radius: 3px;
+      background: var(--paper);
+      position: relative;
+      flex-shrink: 0;
+      transition: background 100ms ease, border-color 100ms ease;
+    }
+    #show-extras:checked ~ .filter-panel .extras-toggle-wrapper .extras-checkbox,
+    #show-extras:checked ~ .filter-panel .extras-toggle-wrapper .extras-toggle:hover .extras-checkbox {
+      background: var(--ink);
+      border-color: var(--ink);
+    }
+    #show-extras:checked ~ .filter-panel .extras-toggle-wrapper .extras-checkbox::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 0;
+      width: 5px;
+      height: 10px;
+      border: solid var(--bg);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    #show-extras:checked ~ .filter-panel .extras-toggle-wrapper .extras-toggle {
+      color: var(--ink);
+    }
+    /* Mobile tweaks */
+    @media (max-width: 640px) {
+      body { font-size: 16px; }
+      .page { padding: 20px 16px 60px; }
+      .masthead h1 { font-size: 32px; }
+      .featured-grid { grid-template-columns: 1fr; }
+      /* Slider keeps row layout on mobile; just smaller cards */
+      .featured-scroller > .featured-card { flex: 0 0 240px; }
+      /* On mobile, drop the pill column from the grid and let it wrap to a new row */
+      .row { grid-template-columns: 60px 1fr auto 18px; grid-template-rows: auto auto; gap: 10px 12px; padding: 12px 8px; }
+      .row-time { grid-column: 1; grid-row: 1; font-size: 16px; }
+      .row-body { grid-column: 2 / span 2; grid-row: 1; }
+      .cat-pill { grid-column: 2; grid-row: 2; justify-self: start; }
+      .fav-btn { grid-column: 3; grid-row: 2; justify-self: end; }
+      .row-arrow { grid-column: 4; grid-row: 1; }
+      .row-title { font-size: 18px; }
+      .fc-title { font-size: 22px; }
+    }
+    /* City switcher — top nav linking the 4 sister calendars */
+    .city-switcher {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      max-width: 1200px; margin: 0 auto; padding: 10px 16px;
+      border-bottom: 1px solid var(--line, #e5e5e5); flex-wrap: wrap;
+    }
+    .city-switcher__home {
+      color: var(--muted, #666); text-decoration: none; font-size: 13px;
+    }
+    .city-switcher__home:hover { color: var(--accent, #0a8a72); }
+    .city-switcher__chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .city-switcher__chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 999px; text-decoration: none;
+      font-size: 13px; color: var(--muted, #666);
+      background: rgba(0,0,0,0.04); transition: all 0.15s;
+    }
+    .city-switcher__chip:hover { background: rgba(0,0,0,0.08); color: inherit; }
+    .city-switcher__chip.is-active {
+      background: #181818; color: #fff; font-weight: 500;
+    }
+    @media (prefers-color-scheme: dark) {
+      .city-switcher__chip { background: rgba(255,255,255,0.06); }
+      .city-switcher__chip:hover { background: rgba(255,255,255,0.12); }
+      .city-switcher__chip.is-active { background: #f5f5f5; color: #181818; }
+    }
+  </style>
+  <!-- GoatCounter analytics (privacy-friendly, no cookies) -->
+  <script data-goatcounter="https://fengelh.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<nav class="city-switcher" aria-label="Switch city">
+  <a class="city-switcher__home" href="../">← All cities</a>
+  <div class="city-switcher__chips">
+    <a class="city-switcher__chip" href="../hk/">🇨🇳 Hong Kong</a>
+    <a class="city-switcher__chip is-active" href="../hk-kids/">👶 HK Kids</a>
+    <a class="city-switcher__chip" href="../la/">🇺🇸 Los Angeles</a>
+    <a class="city-switcher__chip" href="../nrw/">🇩🇪 NRW</a>
+    <a class="city-switcher__chip" href="../singa/">🇸🇬 Singapore</a>
+    <a class="city-switcher__chip" href="../fukuoka/">🇯🇵 Fukuoka</a>
+  </div>
+</nav>
+<div class="page">
+  <input type="checkbox" id="show-extras" class="filter-input">
+  <input type="radio" name="catfilter" id="f-all" class="filter-input" checked>
+  <input type="radio" name="catfilter" id="f-opera" class="filter-input">
+  <input type="radio" name="catfilter" id="f-concert" class="filter-input">
+  <input type="radio" name="catfilter" id="f-ballet" class="filter-input">
+  <input type="radio" name="catfilter" id="f-theatre" class="filter-input">
+  <input type="radio" name="catfilter" id="f-film" class="filter-input">
+  <input type="radio" name="catfilter" id="f-exh" class="filter-input">
+  <input type="radio" name="catfilter" id="f-fav" class="filter-input">
+  <input type="radio" name="cityfilter" id="c-all" class="filter-input" checked>
+  <input type="radio" name="cityfilter" id="c-hong-kong-island" class="filter-input">
+  <input type="radio" name="cityfilter" id="c-kowloon" class="filter-input">
+  <input type="radio" name="cityfilter" id="c-lantau" class="filter-input">
+  <input type="radio" name="cityfilter" id="c-new-territories" class="filter-input">
+  <input type="radio" name="whenfilter" id="w-all" class="filter-input" checked>
+  <input type="radio" name="whenfilter" id="w-this-week" class="filter-input">
+  <input type="radio" name="whenfilter" id="w-next-week" class="filter-input">
+  <input type="radio" name="whenfilter" id="w-this-weekend" class="filter-input">
+  <input type="radio" name="whenfilter" id="w-next-weekend" class="filter-input">
+  <input type="radio" name="whenfilter" id="w-this-month" class="filter-input">
+  <input type="radio" name="whenfilter" id="w-next-month" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-activekids-hk" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-esf-explore-camps" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hk-book-fair" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hk-fringe-workshops" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hk-rugby-sevens" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hk-tennis-tournaments" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hkcec" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hkrfu-fixtures" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hktdc-toy-fair" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hong-kong-academy-for-performing-arts" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hong-kong-arts-centre" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hong-kong-city-hall" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hong-kong-park-edward-youde-aviary-sports-carnivals-" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hong-kong-repertory-theatre" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-hong-kong-sinfonietta" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-indoor-playgrounds-arcades" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-ocean-park" class="filter-input">
+  <input type="checkbox" id="v-hong-kong-island-time-out-hk" class="filter-input">
+  <input type="checkbox" id="v-kowloon-harbour-city" class="filter-input">
+  <input type="checkbox" id="v-kowloon-hk-palace-museum-events-" class="filter-input">
+  <input type="checkbox" id="v-kowloon-hk-sevens-2027" class="filter-input">
+  <input type="checkbox" id="v-kowloon-hong-kong-arts-festival" class="filter-input">
+  <input type="checkbox" id="v-kowloon-hong-kong-chinese-orchestra" class="filter-input">
+  <input type="checkbox" id="v-kowloon-hong-kong-philharmonic-orchestra" class="filter-input">
+  <input type="checkbox" id="v-kowloon-m-cinema" class="filter-input">
+  <input type="checkbox" id="v-kowloon-xiqu-centre-west-kowloon-cultural-district-" class="filter-input">
+  <input type="checkbox" id="v-lantau-hk-disneyland" class="filter-input">
+  <input type="checkbox" id="v-new-territories-hong-kong-wetland-park" class="filter-input">
+  <input type="checkbox" id="v-new-territories-kadoorie-farm" class="filter-input">
+  <input type="checkbox" id="v-new-territories-noah-s-ark-hong-kong-family-attraction-ma-wan-" class="filter-input">
+  <input type="checkbox" id="v-new-territories-sha-tin-town-hall" class="filter-input">
+  <input type="checkbox" id="v-new-territories-tsuen-wan-town-hall" class="filter-input">
+  <header class="masthead">
+    <p class="masthead__eyebrow">Kids in <span class="masthead__accent">Honkers</span></p>
+    <h1 class="masthead__main">What&#x27;s happening in Theo&#x27;s World</h1>
+    <p class="subtitle">As of May 24, 2026, 21:19</p>
+  </header>
+  <div class="filter-panel">
+  <div class="search-row">
+    <input type="search" id="search-box" class="search-input" placeholder="Search — e.g. Beethoven, LACMA, ballet…" autocomplete="off" spellcheck="false">
+  </div>
+  <nav class="filter-bar filter-bar-city" aria-label="Filter by neighborhood">
+    <span class="filter-label">Where</span>
+    <label for="c-all" class="filter-chip filter-all">All</label>
+    <label for="c-hong-kong-island" class="filter-chip">Hong Kong Island <span class="chip-count">52</span></label>
+    <label for="c-kowloon" class="filter-chip">Kowloon <span class="chip-count">15</span></label>
+    <label for="c-lantau" class="filter-chip">Lantau <span class="chip-count">3</span></label>
+    <label for="c-new-territories" class="filter-chip">New Territories <span class="chip-count">18</span></label>
+  </nav>
+  <nav class="filter-bar filter-bar-when" aria-label="Filter by time">
+    <span class="filter-label">When</span>
+    <label for="w-all" class="filter-chip filter-all">Anytime</label>
+    <label for="w-this-week" class="filter-chip">This Week</label>
+    <label for="w-next-week" class="filter-chip">Next Week</label>
+    <label for="w-this-weekend" class="filter-chip">This Weekend</label>
+    <label for="w-next-weekend" class="filter-chip">Next Weekend</label>
+    <label for="w-this-month" class="filter-chip">This Month</label>
+    <label for="w-next-month" class="filter-chip">Next Month</label>
+  </nav>
+  <nav class="filter-bar" aria-label="Filter by category">
+    <span class="filter-label">What</span>
+    <label for="f-all"     class="filter-chip filter-all">All</label>
+    <label for="f-opera"   class="filter-chip cat-opera"><span class="cat-icon">🎭</span><span>Opera</span></label>
+    <label for="f-concert" class="filter-chip cat-concert"><span class="cat-icon">🎵</span><span>Concert</span></label>
+    <label for="f-ballet"  class="filter-chip cat-ballet"><span class="cat-icon">🩰</span><span>Ballet</span></label>
+    <label for="f-theatre" class="filter-chip cat-theatre"><span class="cat-icon">🎟️</span><span>Theatre</span></label>
+    <label for="f-film"    class="filter-chip cat-film"><span class="cat-icon">🎬</span><span>Film</span></label>
+    <label for="f-exh"     class="filter-chip cat-exh"><span class="cat-icon">🎨</span><span>Exhibition</span></label>
+    <span class="filter-bar-spacer" aria-hidden="true"></span>
+    <label for="f-fav"     class="filter-chip filter-chip-fav"><span class="cat-icon">❤️</span><span>Favorites</span></label>
+  </nav>
+  <nav class="venue-chips city-kowloon" aria-label="Filter by venue">
+    <span class="filter-label">Venues</span>
+    <button type="button" class="venue-chip-all" data-city="kowloon">All</button>
+    <label for="v-kowloon-harbour-city" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Harbour City</label>
+    <label for="v-kowloon-hk-palace-museum-events-" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HK Palace Museum (Events)</label>
+    <label for="v-kowloon-hk-sevens-2027" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HK Sevens 2027</label>
+    <label for="v-kowloon-hong-kong-arts-festival" class="venue-chip has-cat-concert has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Arts Festival</label>
+    <label for="v-kowloon-hong-kong-chinese-orchestra" class="venue-chip has-cat-concert"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Chinese Orchestra</label>
+    <label for="v-kowloon-hong-kong-philharmonic-orchestra" class="venue-chip has-cat-concert"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Philharmonic Orchestra</label>
+    <label for="v-kowloon-m-cinema" class="venue-chip has-cat-film"><span class="venue-checkbox" aria-hidden="true"></span>M+ Cinema</label>
+    <label for="v-kowloon-xiqu-centre-west-kowloon-cultural-district-" class="venue-chip has-cat-theatre"><span class="venue-checkbox" aria-hidden="true"></span>Xiqu Centre (West Kowloon Cultural District)</label>
+  </nav>
+  <nav class="venue-chips city-lantau" aria-label="Filter by venue">
+    <span class="filter-label">Venues</span>
+    <button type="button" class="venue-chip-all" data-city="lantau">All</button>
+    <label for="v-lantau-hk-disneyland" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HK Disneyland</label>
+  </nav>
+  <nav class="venue-chips city-hong-kong-island" aria-label="Filter by venue">
+    <span class="filter-label">Venues</span>
+    <button type="button" class="venue-chip-all" data-city="hong-kong-island">All</button>
+    <label for="v-hong-kong-island-activekids-hk" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>ActiveKids HK</label>
+    <label for="v-hong-kong-island-esf-explore-camps" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>ESF Explore Camps</label>
+    <label for="v-hong-kong-island-hk-book-fair" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HK Book Fair</label>
+    <label for="v-hong-kong-island-hk-fringe-workshops" class="venue-chip has-cat-other has-cat-theatre"><span class="venue-checkbox" aria-hidden="true"></span>HK Fringe Workshops</label>
+    <label for="v-hong-kong-island-hk-rugby-sevens" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HK Rugby Sevens</label>
+    <label for="v-hong-kong-island-hk-tennis-tournaments" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HK Tennis Tournaments</label>
+    <label for="v-hong-kong-island-hkcec" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HKCEC</label>
+    <label for="v-hong-kong-island-hkrfu-fixtures" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HKRFU Fixtures</label>
+    <label for="v-hong-kong-island-hktdc-toy-fair" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>HKTDC Toy Fair</label>
+    <label for="v-hong-kong-island-hong-kong-academy-for-performing-arts" class="venue-chip has-cat-other has-cat-theatre"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Academy for Performing Arts</label>
+    <label for="v-hong-kong-island-hong-kong-arts-centre" class="venue-chip has-cat-exh has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Arts Centre</label>
+    <label for="v-hong-kong-island-hong-kong-city-hall" class="venue-chip has-cat-concert has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong City Hall</label>
+    <label for="v-hong-kong-island-hong-kong-park-edward-youde-aviary-sports-carnivals-" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Park (Edward Youde Aviary + sports + carnivals)</label>
+    <label for="v-hong-kong-island-hong-kong-repertory-theatre" class="venue-chip has-cat-theatre"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Repertory Theatre</label>
+    <label for="v-hong-kong-island-hong-kong-sinfonietta" class="venue-chip has-cat-concert has-cat-theatre"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Sinfonietta</label>
+    <label for="v-hong-kong-island-indoor-playgrounds-arcades" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Indoor playgrounds + arcades</label>
+    <label for="v-hong-kong-island-ocean-park" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Ocean Park</label>
+    <label for="v-hong-kong-island-time-out-hk" class="venue-chip has-cat-exh has-cat-other has-cat-theatre"><span class="venue-checkbox" aria-hidden="true"></span>Time Out HK</label>
+  </nav>
+  <nav class="venue-chips city-new-territories" aria-label="Filter by venue">
+    <span class="filter-label">Venues</span>
+    <button type="button" class="venue-chip-all" data-city="new-territories">All</button>
+    <label for="v-new-territories-hong-kong-wetland-park" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Hong Kong Wetland Park</label>
+    <label for="v-new-territories-kadoorie-farm" class="venue-chip has-cat-concert has-cat-other has-cat-theatre"><span class="venue-checkbox" aria-hidden="true"></span>Kadoorie Farm</label>
+    <label for="v-new-territories-noah-s-ark-hong-kong-family-attraction-ma-wan-" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Noah&#x27;s Ark Hong Kong (family attraction, Ma Wan)</label>
+    <label for="v-new-territories-sha-tin-town-hall" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Sha Tin Town Hall</label>
+    <label for="v-new-territories-tsuen-wan-town-hall" class="venue-chip has-cat-other"><span class="venue-checkbox" aria-hidden="true"></span>Tsuen Wan Town Hall</label>
+  </nav>
+  <div class="extras-toggle-wrapper">
+    <label for="show-extras" class="extras-toggle"><span class="extras-checkbox" aria-hidden="true"></span>Also show classes, workshops, and family programmes</label>
+  </div>
+  </div>
+  <section class="new-strip featured">
+    <h2 class="featured-heading"><span class="new-star">✨</span> Recently Added <span class="count-bubble">47</span></h2>
+    <div class="carousel-wrap">
+      <button class="carousel-arrow carousel-arrow--prev" aria-label="Scroll left" type="button">‹</button>
+      <div class="featured-grid featured-scroller wiggle-hint">
+    <a class="featured-card cat-other city-hong-kong-island" href="https://www.lcsd.gov.hk/en/parks/hkp/" target="_blank" rel="noopener noreferrer" data-venue="hk-park-events" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+      <div class="fc-band"></div>
+      <div class="fc-inner">
+        <div class="cat-pill cat-other fc-pill"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+        <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
+        <div class="fc-title"><span class="new-badge">NEW</span>HK Park — Edward Youde Aviary + Tai Chi Garden (open daily)</div>
+        <div class="fc-venue">Hong Kong Park (Edward Youde Aviary + sports + carnivals) · Hong Kong Island</div>
+        <div class="fc-date">through May 21 · 362 days left</div>
+        
+        <div class="fc-meta"><span class="arrow">→</span></div>
+      </div>
+    </a>
+    <a class="featured-card cat-other city-hong-kong-island" href="https://www.round1usa.com/store-locator" target="_blank" rel="noopener noreferrer" data-venue="hk-arcades-kid-friendly" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+      <div class="fc-band"></div>
+      <div class="fc-inner">
+        <div class="cat-pill cat-other fc-pill"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+        <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
+        <div class="fc-title"><span class="new-badge">NEW</span>Round 1 Spo-Cha + arcade (Mong Kok)</div>
+        <div class="fc-venue">Indoor playgrounds + arcades · Hong Kong Island</div>
+        <div class="fc-date">through May 21 · 362 days left</div>
+        
+        <div class="fc-meta"><span class="arrow">→</span></div>
+      </div>
+    </a>
+    <a class="featured-card cat-other city-hong-kong-island" href="https://www.hkrugby.com/match-centre/calendar" target="_blank" rel="noopener noreferrer" data-venue="hkrfu-fixtures" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+      <div class="fc-band"></div>
+      <div class="fc-inner">
+        <div class="cat-pill cat-other fc-pill"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+        <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
+        <div class="fc-title"><span class="new-badge">NEW</span>Asia Rugby Emirates Men&#x27;s Championship 2026 (HK matches)</div>
+        <div class="fc-venue">HKRFU Fixtures · Hong Kong Island</div>
+        <div class="fc-date">through June 14 · 21 days left</div>
+        
+        <div class="fc-meta"><span class="arrow">→</span></div>
+      </div>
+    </a>
+    <a class="featured-card cat-other city-new-territories" href="https://www.wetlandpark.gov.hk/en/" target="_blank" rel="noopener noreferrer" data-venue="wetland-park" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+      <div class="fc-band"></div>
+      <div class="fc-inner">
+        <div class="cat-pill cat-other fc-pill"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+        <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
+        <div class="fc-title"><span class="new-badge">NEW</span>Hong Kong Wetland Park — open daily, mangrove + reedbed + birding</div>
+        <div class="fc-venue">Hong Kong Wetland Park · New Territories</div>
+        <div class="fc-date">through May 24 · 365 days left</div>
+        
+        <div class="fc-meta"><span class="arrow">→</span></div>
+      </div>
+    </a>
+    <a class="featured-card cat-other city-kowloon" href="https://www.harbourcity.com.hk/en/event_type/event/" target="_blank" rel="noopener noreferrer" data-venue="harbour-city" data-when="next-week this-month">
+      <div class="fc-band"></div>
+      <div class="fc-inner">
+        <div class="cat-pill cat-other fc-pill"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+        <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
+        <div class="fc-title"><span class="new-badge">NEW</span>GAC-APMG OCEAN TERMINAL CAR SHOW</div>
+        <div class="fc-venue">Harbour City · Kowloon</div>
+        <div class="fc-date">Monday, May 25 · 12:00 AM</div>
+        
+        <div class="fc-meta"><span class="arrow">→</span></div>
+      </div>
+    </a>
+    <a class="featured-card cat-other city-kowloon" href="https://www.harbourcity.com.hk/en/event_type/event/" target="_blank" rel="noopener noreferrer" data-venue="harbour-city" data-when="next-week this-month">
+      <div class="fc-band"></div>
+      <div class="fc-inner">
+        <div class="cat-pill cat-other fc-pill"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+        <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
+        <div class="fc-title"><span class="new-badge">NEW</span>Social Media Redemption – Maison Perrier Sparkling Beverage</div>
+        <div class="fc-venue">Harbour City · Kowloon</div>
+        <div class="fc-date">Monday, May 25 · 12:00 AM</div>
+        
+        <div class="fc-meta"><span class="arrow">→</span></div>
+      </div>
+    </a>
+    <a class="featured-card cat-other city-new-territories" href="https://www.kfbg.org/en/events/4pm-for-permaculture-design-certificate-course-hong-kong" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="next-week this-month">
+      <div class="fc-band"></div>
+      <div class="fc-inner">
+        <div class="cat-pill cat-other fc-pill"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+        <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
+        <div class="fc-title"><span class="new-badge">NEW</span>4PM - For Permaculture Design Certificate Course Hong Kong</div>
+        <div class="fc-venue">Kadoorie Farm · New Territories</div>
+        <div class="fc-date">Monday, May 25 · 12:00 AM</div>
+        
+        <div class="fc-meta"><span class="arrow">→</span></div>
+      </div>
+    </a>
+    <a class="featured-card cat-other city-hong-kong-island" href="http://vinexpoasia.com/%20" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-week this-month">
+      <div class="fc-band"></div>
+      <div class="fc-inner">
+        <div class="cat-pill cat-other fc-pill"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+        <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
+        <div class="fc-title"><span class="new-badge">NEW</span>Vinexpo Asia Hong Kong 2026 26/05/2026 - 28/05/2026</div>
+        <div class="fc-venue">HKCEC · Hong Kong Island</div>
+        <div class="fc-date">through May 28 · 4 days left</div>
+        
+        <div class="fc-meta"><span class="arrow">→</span></div>
+      </div>
+    </a>
+      </div>
+      <button class="carousel-arrow carousel-arrow--next" aria-label="Scroll right" type="button">›</button>
+    </div>
+    <p class="new-overflow">+ 39 more new events tagged below</p>
+  </section>
+  <section class="agenda">
+    <div class="week">
+      <h2 class="week-heading">This Week · May 18–24</h2>
+    <div class="day day-ongoing">
+      <h3 class="day-heading">Now Showing</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.hkrugby.com/match-centre/calendar" target="_blank" rel="noopener noreferrer" data-venue="hkrfu-fixtures" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru Jun 14</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Asia Rugby Emirates Men&#x27;s Championship 2026 (HK matches)</div>
+            <div class="row-venue">HKRFU Fixtures · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">21 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-kowloon audience-active de-emphasized" href="https://www.hkpm.org.hk/en/event/discover-pyramid-workshop" target="_blank" rel="noopener noreferrer" data-venue="hk-palace-museum-events" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru Aug 15</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Discover Pyramid Workshop</div>
+            <div class="row-venue">HK Palace Museum (Events) · Kowloon</div>
+            <div class="row-meta"><span class="relative">83 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-lantau" href="https://www.hongkongdisneyland.com/calendar/" target="_blank" rel="noopener noreferrer" data-venue="hk-disneyland-events" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 21</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Disneyland — daily parades, character meet &amp; greet</div>
+            <div class="row-venue">HK Disneyland · Lantau</div>
+            <div class="row-meta"><span class="relative">362 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island" href="https://www.oceanpark.com.hk/en" target="_blank" rel="noopener noreferrer" data-venue="ocean-park-events" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 21</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Ocean Park — open daily, family rides + Grand Aquarium</div>
+            <div class="row-venue">Ocean Park · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">362 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories" href="https://www.noahsark.com.hk/eng/" target="_blank" rel="noopener noreferrer" data-venue="noahs-ark-hk" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 21</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Noah&#x27;s Ark — family attraction, Ma Wan (open daily)</div>
+            <div class="row-venue">Noah&#x27;s Ark Hong Kong (family attraction, Ma Wan) · New Territories</div>
+            <div class="row-meta"><span class="relative">362 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.lcsd.gov.hk/en/parks/hkp/" target="_blank" rel="noopener noreferrer" data-venue="hk-park-events" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 21</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>HK Park — Edward Youde Aviary + Tai Chi Garden (open daily)</div>
+            <div class="row-venue">Hong Kong Park (Edward Youde Aviary + sports + carnivals) · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">362 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island" href="https://kidsgallery.com/" target="_blank" rel="noopener noreferrer" data-venue="hk-arcades-kid-friendly" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 21</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Kids&#x27; Gallery — open play sessions (Central)</div>
+            <div class="row-venue">Indoor playgrounds + arcades · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">362 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island" href="https://www.facebook.com/CoolZoneHK/" target="_blank" rel="noopener noreferrer" data-venue="hk-arcades-kid-friendly" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 21</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Cool Zone Indoor Playground (Cityplaza, Taikoo Shing)</div>
+            <div class="row-venue">Indoor playgrounds + arcades · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">362 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.round1usa.com/store-locator" target="_blank" rel="noopener noreferrer" data-venue="hk-arcades-kid-friendly" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 21</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Round 1 Spo-Cha + arcade (Mong Kok)</div>
+            <div class="row-venue">Indoor playgrounds + arcades · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">362 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island" href="https://www.newtownplaza.com.hk/en/snoopy-world" target="_blank" rel="noopener noreferrer" data-venue="hk-arcades-kid-friendly" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 21</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Snoopy World (Sha Tin New Town Plaza)</div>
+            <div class="row-venue">Indoor playgrounds + arcades · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">362 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.wetlandpark.gov.hk/en/" target="_blank" rel="noopener noreferrer" data-venue="wetland-park" data-when="this-week next-week this-weekend next-weekend this-month next-month">
+          <div class="row-time">thru May 24</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Hong Kong Wetland Park — open daily, mangrove + reedbed + birding</div>
+            <div class="row-venue">Hong Kong Wetland Park · New Territories</div>
+            <div class="row-meta"><span class="relative">365 days left</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Sunday, May 24</h3>
+      <div class="rows">
+        <a class="row cat-other city-new-territories audience-kids de-emphasized" href="https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=STTH" target="_blank" rel="noopener noreferrer" data-venue="lcsd-stth" data-when="this-week this-weekend this-month">
+          <div class="row-time">15:45</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Hong Kong Kids Dance Festival</div>
+            <div class="row-venue">Sha Tin Town Hall · New Territories</div>
+            <div class="row-meta"><span class="relative">today</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">Next Week · May 25–31</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, May 25</h3>
+      <div class="rows">
+        <a class="row cat-other city-kowloon is-server-new" href="https://www.harbourcity.com.hk/en/event_type/event/" target="_blank" rel="noopener noreferrer" data-venue="harbour-city" data-when="next-week this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>GAC-APMG OCEAN TERMINAL CAR SHOW</div>
+            <div class="row-venue">Harbour City · Kowloon</div>
+            <div class="row-meta"><span class="relative">tomorrow</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-kowloon is-server-new" href="https://www.harbourcity.com.hk/en/event_type/event/" target="_blank" rel="noopener noreferrer" data-venue="harbour-city" data-when="next-week this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Social Media Redemption – Maison Perrier Sparkling Beverage</div>
+            <div class="row-venue">Harbour City · Kowloon</div>
+            <div class="row-meta"><span class="relative">tomorrow</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.kfbg.org/en/events/4pm-for-permaculture-design-certificate-course-hong-kong" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="next-week this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>4PM - For Permaculture Design Certificate Course Hong Kong</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">tomorrow</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories audience-kids de-emphasized" href="https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=TWTH" target="_blank" rel="noopener noreferrer" data-venue="lcsd-twth" data-when="next-week this-month">
+          <div class="row-time">14:30</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>TEENSHK CUP Dance Competition 2026</div>
+            <div class="row-venue">Tsuen Wan Town Hall · New Territories</div>
+            <div class="row-meta"><span class="relative">tomorrow</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories" href="https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=TWTH" target="_blank" rel="noopener noreferrer" data-venue="lcsd-twth" data-when="next-week this-month">
+          <div class="row-time">15:00</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Hong Kong Inter-school Choral Festival 2026 – Guest Choir of the Year Concert – USC Thornton Chamber Singers</div>
+            <div class="row-venue">Tsuen Wan Town Hall · New Territories</div>
+            <div class="row-meta"><span class="relative">tomorrow</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island" href="https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=HKCH" target="_blank" rel="noopener noreferrer" data-venue="lcsd-hkch" data-when="next-week this-month">
+          <div class="row-time">19:30</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Musical Moments - Right Here</div>
+            <div class="row-venue">Hong Kong City Hall · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">tomorrow</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Tuesday, May 26</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="http://vinexpoasia.com/%20" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-week this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Vinexpo Asia Hong Kong 2026 26/05/2026 - 28/05/2026</div>
+            <div class="row-venue">HKCEC · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 2 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Wednesday, May 27</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.hkfringeclub.com/en/whatson/2639-Discover+Swing+Dancing-Lindy+Hop.html" target="_blank" rel="noopener noreferrer" data-venue="hk-fringe-workshops" data-when="next-week this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Discover Swing Dancing-Lindy Hop</div>
+            <div class="row-venue">HK Fringe Workshops · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 3 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-concert city-hong-kong-island" href="https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=HKCH" target="_blank" rel="noopener noreferrer" data-venue="lcsd-hkch" data-when="next-week this-month">
+          <div class="row-time">20:00</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Hong Kong City Hall Venue Partnership Scheme — French May Arts Festival 2026: HKS Recital Series: Raphaël Sévère: A Rendezvous in Paris</div>
+            <div class="row-venue">Hong Kong City Hall · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 3 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/things-to-do/happy-french-wednesday-is-back-with-irresistible-parisian-passion" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="next-week this-month">
+          <div class="row-time">23:00</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Happy French Wednesday is back with irresistible Parisian passion</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 3 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Thursday, May 28</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/sport-and-fitness/fifa-museum-hong-kong" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="next-week this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>FIFA Museum Hong Kong</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 4 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Friday, May 29</h3>
+      <div class="rows">
+        <a class="row cat-film city-kowloon" href="https://www.mplus.org.hk/en/cinema/asian-avant-garde-film-festival/" target="_blank" rel="noopener noreferrer" data-venue="mplus-cinema" data-when="next-week this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Asian Avant-Garde Film Festival 2026: Space Enter Shift 亞洲前衛電影節2026：空間 進入 轉移</div>
+            <div class="row-venue">M+ Cinema · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 5 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-film"><span class="cat-icon">🎬</span><span class="cat-label">FILM</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.hkcomiccon.com/" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-week this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Hong Kong Comic Con 2026 29/05/2026 - 31/05/2026</div>
+            <div class="row-venue">HKCEC · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 5 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Saturday, May 30</h3>
+      <div class="rows">
+        <a class="row cat-theatre city-kowloon is-server-new" href="https://www.westk.hk/en/event/cabaret-festival" target="_blank" rel="noopener noreferrer" data-venue="xiqu-centre" data-when="next-week next-weekend this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>WestK Cabaret Festival 2026</div>
+            <div class="row-venue">Xiqu Centre (West Kowloon Cultural District) · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 6 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-theatre"><span class="cat-icon">🎟️</span><span class="cat-label">THEATRE</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://aim.mect.cuhk.edu.hk/" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-week next-weekend this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Advances in Medicine 2026 30/05/2026 - 31/05/2026</div>
+            <div class="row-venue">HKCEC · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 6 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.kfbg.org/en/events/2026-world-otter-day-celebration-event" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="next-week next-weekend this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>2026 World Otter Day Celebration Event</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 6 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-theatre city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/things-to-do/westk-cabaret-festival-2026-hong-kongs-first-ever-large-scale-cabaret-celebration" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="next-week next-weekend this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>WestK Cabaret Festival 2026</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 6 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-theatre"><span class="cat-icon">🎟️</span><span class="cat-label">THEATRE</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories audience-kids de-emphasized" href="https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=STTH" target="_blank" rel="noopener noreferrer" data-venue="lcsd-stth" data-when="next-week next-weekend this-month">
+          <div class="row-time">19:30</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Hong Kong Youth Symphonic Band Annual Concert 2026 “Peter and the Wolf | Music Speaks, Stories Unfold”</div>
+            <div class="row-venue">Sha Tin Town Hall · New Territories</div>
+            <div class="row-meta"><span class="relative">in 6 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-concert city-hong-kong-island" href="https://www.performing-arts.gov.hk/en/e-calendar.html?subscribe_code=HKCH" target="_blank" rel="noopener noreferrer" data-venue="lcsd-hkch" data-when="next-week next-weekend this-month">
+          <div class="row-time">20:00</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Hong Kong City Hall Venue Partnership Scheme — French May Arts Festival 2026: Raphaël Sévère Plays Nielsen Clarinet Concerto</div>
+            <div class="row-venue">Hong Kong City Hall · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 6 days</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Sunday, May 31</h3>
+      <div class="rows">
+        <a class="row cat-other city-kowloon is-server-new" href="https://www.harbourcity.com.hk/en/event_type/event/" target="_blank" rel="noopener noreferrer" data-venue="harbour-city" data-when="next-week next-weekend this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>FREE Redeem $150 Free Gifts by Completing Simple Check-In</div>
+            <div class="row-venue">Harbour City · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.kfbg.org/en/events/artist-in-residence-programme-2026-2027this-earth-this-water-artworks-made-with-natural-pigments-and-living-water-by-hanien-conradie" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="next-week next-weekend this-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>ARTIST-IN-RESIDENCE PROGRAMME 2026-2027｜‘This Earth. This Water.’ –– Artworks made with Natural Pigments and Living Water by Hanien Conradie</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/things-to-do/hedwig-and-the-angry-inch" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="next-week next-weekend this-month">
+          <div class="row-time">23:59</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Hedwig and the Angry Inch</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/art/bruce-lee-homecoming-85-years-later" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="next-week next-weekend this-month">
+          <div class="row-time">23:59</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Bruce Lee: Homecoming – 85 Years Later</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">June 1–7</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Jun 1</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island audience-kids de-emphasized" href="https://www.activekidshk.com/summer-camps-2026" target="_blank" rel="noopener noreferrer" data-venue="activekids-hk" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>ActiveKids Summer Camps 2026 — Science / Chess / Cooking / Code / Art</div>
+            <div class="row-venue">ActiveKids HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Tuesday, Jun 2</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.oshexpo.hk" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>2nd OSH Innovation and Technology Expo 02/06/2026 - 03/06/2026</div>
+            <div class="row-venue">HKCEC · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Wednesday, Jun 3</h3>
+      <div class="rows">
+        <a class="row cat-concert city-kowloon" href="https://www.hk.artsfestival.org/en/programme/YFS2026" target="_blank" rel="noopener noreferrer" data-venue="hk-arts-festival" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Young Friends Special: Jazz Music Theatre World&#x27;s End Jazz Café</div>
+            <div class="row-venue">Hong Kong Arts Festival · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island audience-active de-emphasized" href="https://www.hkfringeclub.com/en/whatson/2647-Music+Workshop+in+Hong+Kong.html" target="_blank" rel="noopener noreferrer" data-venue="hk-fringe-workshops" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Music Workshop in Hong Kong</div>
+            <div class="row-venue">HK Fringe Workshops · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            <div class="row-recurring">+ 1 more date through Jun 10</div>
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Thursday, Jun 4</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.aipluspower.com/" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Business GOVirtual Expo &amp; Conference 2026 04/06/2026 - 05/06/2026</div>
+            <div class="row-venue">HKCEC · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Friday, Jun 5</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="http://www.hkccasc.com" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>34th Annual Scientific Congress of the Hong Kong College of Cardiology 05/06/2026 - 07/06/2026</div>
+            <div class="row-venue">HKCEC · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.hkcec.com/en/event-calendar" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Premium Pet Supplies Expo 2026 (優質寵物用品展2026) 05/06/2026 - 07/06/2026</div>
+            <div class="row-venue">HKCEC · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="http://www.wedding-show.com.hk" target="_blank" rel="noopener noreferrer" data-venue="hkcec" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>The 122nd Hong Kong Wedding Fair incorporating Beauty &amp; Fitness Expo 2026 05/06/2026 - 07/06/2026</div>
+            <div class="row-venue">HKCEC · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.wetlandpark.gov.hk/en/whatsnew/1873" target="_blank" rel="noopener noreferrer" data-venue="wetland-park" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Free Admission on Environment Day (Wetland Park)</div>
+            <div class="row-venue">Hong Kong Wetland Park · New Territories</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Jun 6</h3>
+      <div class="rows">
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.kfbg.org/en/events/growth-ring-empowering-wood-upcycling-through-training-and-innovation-talk-on-traditional-wooden-furnitures-and-joinery" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Growth Ring: Empowering Wood Upcycling through Training and Innovation | Talk on Traditional Wooden Furnitures and Joinery</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.tennishk.org" target="_blank" rel="noopener noreferrer" data-venue="tennis-hk" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>SCAA Open 2026</div>
+            <div class="row-venue">SCAA Tennis Centre, King&#x27;s Park · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 week</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">June 8–14</h2>
+    <div class="day">
+      <h3 class="day-heading">Friday, Jun 12</h3>
+      <div class="rows">
+        <a class="row cat-concert city-hong-kong-island audience-kids de-emphasized" href="https://hksl.org/concert/good-music-for-kids-3-6-years-old-2026/" target="_blank" rel="noopener noreferrer" data-venue="hk-sinfonietta" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Good Music for Kids (3-6 years old)</div>
+            <div class="row-venue">Hong Kong Sinfonietta · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 2 weeks</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">June 15–21</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Jun 15</h3>
+      <div class="rows">
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.kfbg.org/en/events/nature-based-eco-literate-experiential-education-programme-neeep-2026-27-academic-year-partner-school-recruitment" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Nature-based Eco-literate Experiential Education Programme (NEEEP)｜2026/27 Academic Year: Partner School Recruitment</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 3 weeks</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">June 22–28</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Jun 22</h3>
+      <div class="rows">
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.kfbg.org/en/events/kep-2026-awakening-of-memory-talk-series-learning-the-language-of-the-land-by-donna-kerridge" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>KEP 2026 ‘Awakening of Memory’ Talk Series | Learning the Language of the Land by Donna Kerridge</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 4 weeks</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Wednesday, Jun 24</h3>
+      <div class="rows">
+        <a class="row cat-theatre city-hong-kong-island is-server-new" href="https://www.hkfringeclub.com/en/whatson/2645-A+Different+Kind+of+Choir+.html" target="_blank" rel="noopener noreferrer" data-venue="hk-fringe-workshops" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>A Different Kind of Choir</div>
+            <div class="row-venue">HK Fringe Workshops · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-theatre"><span class="cat-icon">🎟️</span><span class="cat-label">THEATRE</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Jun 27</h3>
+      <div class="rows">
+        <a class="row cat-concert city-new-territories is-server-new" href="https://www.kfbg.org/en/events/music-journey-evening-concerto-2026" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Music Journey: Evening Concerto 2026</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">Jun 29 – Jul 5</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Jun 29</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island audience-kids de-emphasized" href="https://www.esfexplore.org.hk/summer-camp/" target="_blank" rel="noopener noreferrer" data-venue="esf-explore-camps" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>ESF Explore — Summer Camps 2026 (Full + Half Day, Ages 5–14)</div>
+            <div class="row-venue">ESF Explore Camps · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-hong-kong-island audience-kids de-emphasized" href="https://www.esfexplore.org.hk/summer-camp/" target="_blank" rel="noopener noreferrer" data-venue="esf-explore-camps" data-when="next-month">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>ESF Explore — Summer Academy 2026 (Ages 12–14)</div>
+            <div class="row-venue">ESF Explore Camps · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Sunday, Jul 5</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/art/seeing-sound-hearing-time-by-ryuichi-sakamoto" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">23:59</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Seeing Sound, Hearing Time by Ryuichi Sakamoto</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">July 6–12</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Jul 6</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/things-to-do/from-memory-to-horizon-the-visual-language-of-hong-kong-tourism" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">19:00</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>From Memory to Horizon: The Visual Language of Hong Kong Tourism</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Sunday, Jul 12</h3>
+      <div class="rows">
+        <a class="row cat-concert city-kowloon" href="https://www.hkco.org/en/Concerts/Music-Magic---Family-Concert.html" target="_blank" rel="noopener noreferrer" data-venue="hk-chinese-orchestra" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Music Magic</div>
+            <div class="row-venue">Hong Kong Chinese Orchestra · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-kowloon audience-active de-emphasized" href="https://www.hkpm.org.hk/en/event/ancient-egyptian-paper-making-workshop" target="_blank" rel="noopener noreferrer" data-venue="hk-palace-museum-events" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Ancient Egyptian Paper Making Workshop</div>
+            <div class="row-venue">HK Palace Museum (Events) · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-other city-kowloon audience-active de-emphasized" href="https://www.hkpm.org.hk/en/event/decoding-ancient-egyptian-scripts-workshop" target="_blank" rel="noopener noreferrer" data-venue="hk-palace-museum-events" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Decoding Ancient Egyptian Scripts Workshop</div>
+            <div class="row-venue">HK Palace Museum (Events) · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">July 13–19</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Jul 13</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island audience-kids de-emphasized" href="https://www.hkac.org.hk/en/calendar_detail/?u=" target="_blank" rel="noopener noreferrer" data-venue="hk-arts-centre" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Kids Corner Art Programme</div>
+            <div class="row-venue">Hong Kong Arts Centre · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Wednesday, Jul 15</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.hkbookfair.hktdc.com/en/" target="_blank" rel="noopener noreferrer" data-venue="hk-book-fair-2026" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Hong Kong Book Fair 2026 (HKTDC, dates TBC mid-July)</div>
+            <div class="row-venue">HK Book Fair · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Friday, Jul 17</h3>
+      <div class="rows">
+        <a class="row cat-other city-new-territories audience-kids de-emphasized" href="https://www.kfbg.org/en/events/in-touch-with-nature-4-day-summer-camp-for-children-2026" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>In Touch with Nature | 4-day Summer Camp for Children 2026</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">July 20–26</h2>
+    <div class="day">
+      <h3 class="day-heading">Tuesday, Jul 21</h3>
+      <div class="rows">
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.kfbg.org/en/events/create-art-with-blessings-of-the-forest-the-woodcraft-art-camp-2026" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Create Art with Blessings of the Forest | The Woodcraft Art Camp 2026</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+        <a class="row cat-theatre city-new-territories audience-kids de-emphasized" href="https://www.kfbg.org/en/events/play-in-the-woods-a-day-with-little-forest-friends-1-day-camp-for-parents-and-children-2026" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Play in the Woods | A Day with Little Forest Friends : 1-Day Camp for Parents and Children 2026</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 1 month</span></div>
+            
+          </div>
+          <div class="cat-pill cat-theatre"><span class="cat-icon">🎟️</span><span class="cat-label">THEATRE</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Sunday, Jul 26</h3>
+      <div class="rows">
+        <a class="row cat-other city-kowloon audience-kids de-emphasized" href="https://www.hkpm.org.hk/en/event/horse-themed-chinese-ink-painting-workshop-children-and-youth" target="_blank" rel="noopener noreferrer" data-venue="hk-palace-museum-events" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Horse-themed Chinese Ink Painting Workshop (Children and Youth)</div>
+            <div class="row-venue">HK Palace Museum (Events) · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 2 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">Jul 27 – Aug 2</h2>
+    <div class="day">
+      <h3 class="day-heading">Wednesday, Jul 29</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/art/blooming-the-art-of-gardens-in-east-and-west" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">23:59</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Blooming: The Art of Gardens in East and West</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 2 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Friday, Jul 31</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/art/the-cha-chaan-teng-codex-tales-of-invisible-designs" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">23:59</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>The Cha Chaan Teng Codex: Tales of Invisible Designs</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 2 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">August 3–9</h2>
+    <div class="day">
+      <h3 class="day-heading">Sunday, Aug 9</h3>
+      <div class="rows">
+        <a class="row cat-exh city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/art/lee-bul-from-1998-to-now-exhibition" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">23:59</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>‘Lee Bul: From 1998 to Now’ exhibition</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 2 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-exh"><span class="cat-icon">🎨</span><span class="cat-label">EXHIBITION</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">August 10–16</h2>
+    <div class="day">
+      <h3 class="day-heading">Tuesday, Aug 11</h3>
+      <div class="rows">
+        <a class="row cat-exh city-hong-kong-island" href="https://www.hkac.org.hk/en/calendar_detail/?u=" target="_blank" rel="noopener noreferrer" data-venue="hk-arts-centre" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Discover the Art of Connection: Junior Docents Programme Making Waves at Hong Kong Arts Centre Flagship Exhibition 2027</div>
+            <div class="row-venue">Hong Kong Arts Centre · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 2 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-exh"><span class="cat-icon">🎨</span><span class="cat-label">EXHIBITION</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Aug 15</h3>
+      <div class="rows">
+        <a class="row cat-other city-new-territories is-server-new" href="https://www.kfbg.org/en/events/nature-based-eco-literate-experiential-education-programme-neeep-2026-27-academic-year-application-for-neeep-teaching-and-learning-resource" target="_blank" rel="noopener noreferrer" data-venue="kfbg" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Nature-based Eco-literate Experiential Education Programme (NEEEP)｜ 2026/27 Academic Year: Application for NEEEP Teaching and Learning Resource</div>
+            <div class="row-venue">Kadoorie Farm · New Territories</div>
+            <div class="row-meta"><span class="relative">in 2 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Sunday, Aug 16</h3>
+      <div class="rows">
+        <a class="row cat-other city-kowloon audience-kids de-emphasized" href="https://www.hkpm.org.hk/en/event/the-little-archaeologists-summer-camp-ancient-egypt-themed" target="_blank" rel="noopener noreferrer" data-venue="hk-palace-museum-events" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>The Little Archaeologists Summer Camp (Ancient Egypt-themed)</div>
+            <div class="row-venue">HK Palace Museum (Events) · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 2 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">August 24–30</h2>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Aug 29</h3>
+      <div class="rows">
+        <a class="row cat-theatre city-hong-kong-island" href="https://hksl.org/concert/stefan-temmingh-plays-vivaldi-moonchilds-dream/" target="_blank" rel="noopener noreferrer" data-venue="hk-sinfonietta" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Stefan Temmingh Plays Vivaldi &amp; Moonchild’s Dream</div>
+            <div class="row-venue">Hong Kong Sinfonietta · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 3 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-theatre"><span class="cat-icon">🎟️</span><span class="cat-label">THEATRE</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Sunday, Aug 30</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/art/jeremys-bathhouse-by-chan-wai-lap" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">20:00</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Jeremy’s Bathhouse by Chan Wai-lap</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 3 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">Aug 31 – Sep 6</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Aug 31</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/things-to-do/ancient-egypt-unveiled-treasures-from-egyptian-museums" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">23:59</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Ancient Egypt Unveiled: Treasures from Egyptian Museums</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 3 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">September 14–20</h2>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Sep 19</h3>
+      <div class="rows">
+        <a class="row cat-other city-lantau" href="https://www.hongkongdisneyland.com/halloween/" target="_blank" rel="noopener noreferrer" data-venue="hk-disneyland-events" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Disney Halloween Time</div>
+            <div class="row-venue">HK Disneyland · Lantau</div>
+            <div class="row-meta"><span class="relative">in 3 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">September 21–27</h2>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Sep 26</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.oceanpark.com.hk/en/halloween-fest" target="_blank" rel="noopener noreferrer" data-venue="ocean-park-events" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Halloween Fest</div>
+            <div class="row-venue">Ocean Park · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 4 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">Sep 28 – Oct 4</h2>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Oct 3</h3>
+      <div class="rows">
+        <a class="row cat-other city-kowloon audience-educational de-emphasized" href="https://www.hk.artsfestival.org/en/programme/PLUS_DCLS_13" target="_blank" rel="noopener noreferrer" data-venue="hk-arts-festival" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Hong Kong Arts Festival Distinguished Cultural Leadership Series (13) In Conversation with Meng Jinghui, Artistic Director of the Wuzhen Theatre Festival</div>
+            <div class="row-venue">Hong Kong Arts Festival · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 4 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">November 9–15</h2>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Nov 14</h3>
+      <div class="rows">
+        <a class="row cat-other city-lantau" href="https://www.hongkongdisneyland.com/christmas/" target="_blank" rel="noopener noreferrer" data-venue="hk-disneyland-events" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>A Disney Christmas</div>
+            <div class="row-venue">HK Disneyland · Lantau</div>
+            <div class="row-meta"><span class="relative">in 5 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">November 23–29</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Nov 23</h3>
+      <div class="rows">
+        <a class="row cat-theatre city-hong-kong-island" href="https://www.hkrep.com/en/Season-Programme/Main-Stage-Productions/Operation-Oops.html" target="_blank" rel="noopener noreferrer" data-venue="hk-rep" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Panasonic proudly sponsors &quot;Operation Oops! - the Musical&quot;</div>
+            <div class="row-venue">Hong Kong Repertory Theatre · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 6 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-theatre"><span class="cat-icon">🎟️</span><span class="cat-label">THEATRE</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Thursday, Nov 26</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/music/the-analogue-record-series" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">23:00</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>The Analogue Record Series</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 6 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">Dec 28 – Jan 3</h2>
+    <div class="day">
+      <h3 class="day-heading">Thursday, Dec 31</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.timeout.com/hong-kong/attractions/yau-ma-tei-police-station-a-cinematic-journey" target="_blank" rel="noopener noreferrer" data-venue="timeout-hk-month" data-when="">
+          <div class="row-time">23:59</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Yau Ma Tei Police Station: A Cinematic Journey</div>
+            <div class="row-venue">Time Out HK · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 7 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">January 4–10</h2>
+    <div class="day">
+      <h3 class="day-heading">Wednesday, Jan 6</h3>
+      <div class="rows">
+        <a class="row cat-concert city-kowloon" href="https://www.hkphil.org/concert/swire-denim-series-vincent-dubois-and-the-magic-of-the-rieger-organ" target="_blank" rel="noopener noreferrer" data-venue="hk-phil" data-when="">
+          <div class="row-time">19:30</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Swire Denim Series: Vincent Dubois and the Magic of the Rieger Organ</div>
+            <div class="row-venue">Hong Kong Philharmonic Orchestra · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 7 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    <div class="day">
+      <h3 class="day-heading">Friday, Jan 8</h3>
+      <div class="rows">
+        <a class="row cat-concert city-hong-kong-island audience-kids de-emphasized" href="https://hksl.org/concert/alasdairs-super-kingdom-of-toys/" target="_blank" rel="noopener noreferrer" data-venue="hk-sinfonietta" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Good Music for Kids</div>
+            <div class="row-venue">Hong Kong Sinfonietta · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 7 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">January 11–17</h2>
+    <div class="day">
+      <h3 class="day-heading">Monday, Jan 11</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island is-server-new" href="https://www.hktdc.com/event/hktoyfair/en" target="_blank" rel="noopener noreferrer" data-venue="hktdc-toy-fair-2027" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>HKTDC Hong Kong Toys &amp; Games Fair 2027 (early January, Pop &amp; Play kid zone)</div>
+            <div class="row-venue">HKTDC Toy Fair · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 7 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">February 8–14</h2>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Feb 13</h3>
+      <div class="rows">
+        <a class="row cat-concert city-hong-kong-island audience-kids de-emphasized" href="https://hksl.org/concert/good-music-for-babies-2027/" target="_blank" rel="noopener noreferrer" data-venue="hk-sinfonietta" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Good Music for Babies</div>
+            <div class="row-venue">Hong Kong Sinfonietta · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 8 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-concert"><span class="cat-icon">🎵</span><span class="cat-label">CONCERT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">March 22–28</h2>
+    <div class="day">
+      <h3 class="day-heading">Saturday, Mar 27</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island" href="https://www.hksevens.com/" target="_blank" rel="noopener noreferrer" data-venue="hk-rugby-sevens" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Hong Kong Sevens — family carnival, kid zone (annual)</div>
+            <div class="row-venue">HK Rugby Sevens · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 10 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">Mar 29 – Apr 4</h2>
+    <div class="day">
+      <h3 class="day-heading">Friday, Apr 2</h3>
+      <div class="rows">
+        <a class="row cat-other city-kowloon is-server-new" href="https://www.hksevens.com/" target="_blank" rel="noopener noreferrer" data-venue="hk-sevens-2027" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge">NEW</span>Cathay/HSBC Hong Kong Sevens 2027 (dates TBC, typically early April)</div>
+            <div class="row-venue">HK Sevens 2027 · Kowloon</div>
+            <div class="row-meta"><span class="relative">in 10 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">April 12–18</h2>
+    <div class="day">
+      <h3 class="day-heading">Sunday, Apr 18</h3>
+      <div class="rows">
+        <a class="row cat-other city-hong-kong-island" href="https://www.hkapa.edu/event/academy-cello-festival2026" target="_blank" rel="noopener noreferrer" data-venue="hkapa" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>Academy Cello Festival 2026</div>
+            <div class="row-venue">Hong Kong Academy for Performing Arts · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 10 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-other"><span class="cat-icon">✨</span><span class="cat-label">EVENT</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <div class="week">
+      <h2 class="week-heading">Apr 26 – May 2</h2>
+    <div class="day">
+      <h3 class="day-heading">Tuesday, Apr 27</h3>
+      <div class="rows">
+        <a class="row cat-theatre city-hong-kong-island" href="https://www.hkapa.edu/event/the-unthinkable-drama-festival2026-monsun-by-anja-hilling" target="_blank" rel="noopener noreferrer" data-venue="hkapa" data-when="">
+          <div class="row-time">all day</div>
+          <div class="row-body">
+            <div class="row-title"><span class="new-badge" hidden>NEW</span>The Unthinkable Drama Festival 2026: Monsun by Anja Hilling</div>
+            <div class="row-venue">Hong Kong Academy for Performing Arts · Hong Kong Island</div>
+            <div class="row-meta"><span class="relative">in 11 months</span></div>
+            
+          </div>
+          <div class="cat-pill cat-theatre"><span class="cat-icon">🎟️</span><span class="cat-label">THEATRE</span></div>
+          <button type="button" class="fav-btn" aria-label="Mark as favorite">♡</button>
+          <div class="row-arrow">→</div>
+        </a>
+      </div>
+    </div>
+    </div>
+    <p class="filter-empty">No events in this category.</p>
+  </section>
+  <footer>
+    <p>Updated May 24, 2026 · 21:19</p>
+  </footer>
+</div>
+<script>
+(function(){
+  var chipMap={"kowloon-harbour-city": ["harbour-city"], "kowloon-hk-palace-museum-events-": ["hk-palace-museum-events"], "kowloon-hk-sevens-2027": ["hk-sevens-2027"], "kowloon-hong-kong-arts-festival": ["hk-arts-festival"], "kowloon-hong-kong-chinese-orchestra": ["hk-chinese-orchestra"], "kowloon-hong-kong-philharmonic-orchestra": ["hk-phil"], "kowloon-m-cinema": ["mplus-cinema"], "kowloon-xiqu-centre-west-kowloon-cultural-district-": ["xiqu-centre"], "lantau-hk-disneyland": ["hk-disneyland-events"], "hong-kong-island-activekids-hk": ["activekids-hk"], "hong-kong-island-esf-explore-camps": ["esf-explore-camps"], "hong-kong-island-hk-book-fair": ["hk-book-fair-2026"], "hong-kong-island-hk-fringe-workshops": ["hk-fringe-workshops"], "hong-kong-island-hk-rugby-sevens": ["hk-rugby-sevens"], "hong-kong-island-hk-tennis-tournaments": ["tennis-hk"], "hong-kong-island-hkcec": ["hkcec"], "hong-kong-island-hkrfu-fixtures": ["hkrfu-fixtures"], "hong-kong-island-hktdc-toy-fair": ["hktdc-toy-fair-2027"], "hong-kong-island-hong-kong-academy-for-performing-arts": ["hkapa"], "hong-kong-island-hong-kong-arts-centre": ["hk-arts-centre"], "hong-kong-island-hong-kong-city-hall": ["lcsd-hkch"], "hong-kong-island-hong-kong-park-edward-youde-aviary-sports-carnivals-": ["hk-park-events"], "hong-kong-island-hong-kong-repertory-theatre": ["hk-rep"], "hong-kong-island-hong-kong-sinfonietta": ["hk-sinfonietta"], "hong-kong-island-indoor-playgrounds-arcades": ["hk-arcades-kid-friendly"], "hong-kong-island-ocean-park": ["ocean-park-events"], "hong-kong-island-time-out-hk": ["timeout-hk-month"], "new-territories-hong-kong-wetland-park": ["wetland-park"], "new-territories-kadoorie-farm": ["kfbg"], "new-territories-noah-s-ark-hong-kong-family-attraction-ma-wan-": ["noahs-ark-hk"], "new-territories-sha-tin-town-hall": ["lcsd-stth"], "new-territories-tsuen-wan-town-hall": ["lcsd-twth"]};
+  // Apply venue filter: tag non-matching rows with .venue-hidden.
+  // When NO chips checked, no filter applied (everything visible).
+  function applyVenueFilter(){
+    var checked=Object.create(null);
+    document.querySelectorAll('input.filter-input[id^="v-"]:checked').forEach(function(c){
+      var cid=c.id.slice(2);
+      (chipMap[cid]||[]).forEach(function(v){checked[v]=true;});
+    });
+    var anyChecked=Object.keys(checked).length>0;
+    document.querySelectorAll("a.row[data-venue], a.featured-card[data-venue]").forEach(function(el){
+      var vid=el.getAttribute("data-venue");
+      if(!anyChecked||checked[vid]) el.classList.remove("venue-hidden");
+      else el.classList.add("venue-hidden");
+    });
+    // "Reset" button is the visual default — highlight it when no
+    // venue chips are checked, dim it when the user has picked specific venues.
+    document.querySelectorAll(".venue-chip-all").forEach(function(b){
+      b.classList.toggle("active",!anyChecked);
+    });
+  }
+  document.querySelectorAll('input.filter-input[id^="v-"]').forEach(function(c){
+    c.addEventListener("change",applyVenueFilter);
+  });
+  // Initialize "Reset" highlight on page load (default = active).
+  applyVenueFilter();
+  // "Alle" button = clear venue selection (uncheck all chips, show everything).
+  document.querySelectorAll(".venue-chip-all").forEach(function(b){
+    b.addEventListener("click",function(){
+      document.querySelectorAll('input.filter-input[id^="v-"]').forEach(function(c){c.checked=false;});
+      applyVenueFilter();
+    });
+  });
+  // Favorites + NEU badges (state in localStorage)
+  var FAV="momev:favs",SEEN="momev:seen",TS="momev:seen-ts";
+  var FOUR_HOURS=4*60*60*1000, SEEN_DELAY=30*1000;
+  function load(k){try{return JSON.parse(localStorage.getItem(k)||"[]");}catch(e){return [];}}
+  function save(k,arr){try{localStorage.setItem(k,JSON.stringify(arr));}catch(e){}}
+  var favs={},seen={};
+  load(FAV).forEach(function(id){favs[id]=true;});
+  load(SEEN).forEach(function(id){seen[id]=true;});
+  var lastTs=parseInt(localStorage.getItem(TS)||"0",10);
+  var now=Date.now();
+  var firstEverVisit=lastTs===0;
+  var freshSession=(now-lastTs)>FOUR_HOURS;
+  var els=document.querySelectorAll("a.row, a.featured-card");
+  var currentIds={};
+  els.forEach(function(el){
+    var id=el.getAttribute("href");
+    currentIds[id]=true;
+    if(favs[id]){
+      el.classList.add("is-fav");
+      var btn=el.querySelector(".fav-btn");
+      if(btn) btn.textContent="♥";
+    }
+    if(freshSession && !firstEverVisit && !seen[id]){
+      el.classList.add("is-new");
+      var b=el.querySelector(".new-badge");
+      if(b) b.removeAttribute("hidden");
+    }
+    var fav=el.querySelector(".fav-btn");
+    if(fav){
+      fav.addEventListener("click",function(e){
+        e.preventDefault(); e.stopPropagation();
+        if(favs[id]){ delete favs[id]; el.classList.remove("is-fav"); fav.textContent="♡"; }
+        else        { favs[id]=true; el.classList.add("is-fav");     fav.textContent="♥"; }
+        save(FAV,Object.keys(favs));
+      });
+    }
+  });
+  // First visit: persist seen-state SYNCHRONOUSLY so a fast tab-close
+  // doesn't leave us stuck in "first ever visit" mode forever.
+  if(firstEverVisit){
+    Object.keys(currentIds).forEach(function(id){seen[id]=true;});
+    save(SEEN,Object.keys(seen));
+    localStorage.setItem(TS,String(now));
+  } else {
+    // Normal: delay merge so user has time to see NEU badges
+    setTimeout(function(){
+      Object.keys(currentIds).forEach(function(id){seen[id]=true;});
+      save(SEEN,Object.keys(seen));
+      localStorage.setItem(TS,String(now));
+    }, SEEN_DELAY);
+  }
+  // Search box — debounced free-text filter. Tags rows with
+  // .search-match when title/venue/city contains the typed text.
+  var box=document.getElementById("search-box");
+  if(box){
+    var allEls=document.querySelectorAll("a.row, a.featured-card");
+    var idx=Array.prototype.map.call(allEls,function(el){
+      var t=(el.querySelector(".row-title,.fc-title")||{}).textContent||"";
+      var v=(el.querySelector(".row-venue,.fc-venue")||{}).textContent||"";
+      return {el:el, hay:(t+" "+v).toLowerCase()};
+    });
+    var deb;
+    box.addEventListener("input",function(){
+      clearTimeout(deb);
+      deb=setTimeout(function(){
+        var q=box.value.trim().toLowerCase();
+        if(!q){
+          document.body.classList.remove("has-search-query");
+          idx.forEach(function(o){o.el.classList.remove("search-match");});
+          return;
+        }
+        document.body.classList.add("has-search-query");
+        idx.forEach(function(o){
+          if(o.hay.indexOf(q)!==-1) o.el.classList.add("search-match");
+          else                      o.el.classList.remove("search-match");
+        });
+      },120);
+    });
+  }
+})();
+(function(){
+  document.addEventListener("click",function(e){
+    var a=e.target.closest("a.row, a.featured-card"); if(!a) return;
+    if(!window.goatcounter||!window.goatcounter.count) return;
+    var venue=a.getAttribute("data-venue")||"unknown";
+    var t=(a.querySelector(".row-title, .fc-title")||{}).textContent||"";
+    t=t.replace(/^NEW/,"").trim().slice(0,80);
+    window.goatcounter.count({path:"event-click/hk-kids/"+venue+"/"+t,title:"event-click "+t,event:true});
+  });
+})();
+(function(){
+  function syncEmpty(){
+    document.querySelectorAll(".featured").forEach(function(sec){
+      var cards=sec.querySelectorAll(".featured-card");
+      if(cards.length===0) return;
+      var any=false;
+      cards.forEach(function(c){ if(c.offsetParent!==null) any=true; });
+      sec.style.display = any ? "" : "none";
+    });
+  }
+  document.addEventListener("change", function(e){
+    if(e.target && e.target.classList && e.target.classList.contains("filter-input")) setTimeout(syncEmpty,0);
+  });
+  setTimeout(syncEmpty,0);
+})();
+(function(){
+  document.querySelectorAll(".carousel-wrap").forEach(function(wrap){
+    var sc=wrap.querySelector(".featured-scroller");
+    var prev=wrap.querySelector(".carousel-arrow--prev");
+    var next=wrap.querySelector(".carousel-arrow--next");
+    if(!sc||!prev||!next) return;
+    function step(){var c=sc.querySelector(".featured-card"); return (c?c.getBoundingClientRect().width:280)+12;}
+    function update(){
+      prev.classList.toggle("is-disabled", sc.scrollLeft<=2);
+      next.classList.toggle("is-disabled", sc.scrollLeft+sc.clientWidth>=sc.scrollWidth-2);
+    }
+    prev.addEventListener("click",function(){sc.scrollBy({left:-step(),behavior:"smooth"});});
+    next.addEventListener("click",function(){sc.scrollBy({left:step(),behavior:"smooth"});});
+    sc.addEventListener("scroll",update,{passive:true});
+    window.addEventListener("resize",update);
+    update();
+  });
+})();
+</script>
+</body></html>

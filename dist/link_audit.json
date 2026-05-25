@@ -1,0 +1,46 @@
+{
+  "audited_at": "2026-05-25T02:02:32Z",
+  "cities": {
+    "hk-kids": {
+      "city": "hk-kids",
+      "total": 79,
+      "broken": 6,
+      "broken_pct": 7.6,
+      "broken_by_host": {
+        "www.hongkongdisneyland.com": 2,
+        "www.wetlandpark.gov.hk": 2,
+        "www.round1usa.com": 1,
+        "www.newtownplaza.com.hk": 1
+      },
+      "samples": [
+        {
+          "url": "https://www.round1usa.com/store-locator",
+          "status": 404
+        },
+        {
+          "url": "https://www.hongkongdisneyland.com/halloween/",
+          "status": 404
+        },
+        {
+          "url": "https://www.wetlandpark.gov.hk/en/",
+          "status": 404
+        },
+        {
+          "url": "https://www.hongkongdisneyland.com/christmas/",
+          "status": 404
+        },
+        {
+          "url": "https://www.newtownplaza.com.hk/en/snoopy-world",
+          "status": 404
+        },
+        {
+          "url": "https://www.wetlandpark.gov.hk/en/whatsnew/1873",
+          "status": 404
+        }
+      ]
+    }
+  },
+  "grand_total": 79,
+  "grand_broken": 6,
+  "grand_pct": 7.6
+}

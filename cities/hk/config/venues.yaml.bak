@@ -1146,11 +1146,11 @@
     - title: "Free Admission on Environment Day (Wetland Park)"
       start: 2026-06-05
       end:   2026-06-05
-      detail_url: "https://www.facebook.com/HongKongWetlandPark/whatsnew/1873"
+      detail_url: "https://www.wetlandpark.gov.hk/en/whatsnew/1873"
     - title: "Hong Kong Wetland Park — open daily, mangrove + reedbed + birding"
       start: 2026-05-24
       end:   2027-05-24
-      detail_url: "https://www.facebook.com/HongKongWetlandPark/"
+      detail_url: "https://www.wetlandpark.gov.hk/en/"
   notes: |
     Verified 2026-05-24: site lives but the events feed is sparse
     (1 news post for Env Day + closure notice). Static seed for the
@@ -1566,15 +1566,15 @@
     - title: "Disneyland — daily parades, character meet & greet"
       start: 2026-05-21
       end:   2027-05-21
-      detail_url: "https://www.hongkongdisneyland.com/en-hk/"
+      detail_url: "https://www.hongkongdisneyland.com/calendar/"
     - title: "Disney Halloween Time"
       start: 2026-09-19
       end:   2026-10-31
-      detail_url: "https://www.hongkongdisneyland.com/en-hk/"
+      detail_url: "https://www.hongkongdisneyland.com/halloween/"
     - title: "A Disney Christmas"
       start: 2026-11-14
       end:   2026-12-31
-      detail_url: "https://www.hongkongdisneyland.com/en-hk/"
+      detail_url: "https://www.hongkongdisneyland.com/christmas/"
   notes: |
     Static placeholder; the Disney site is heavily JS + blocks bots.
     Refresh seasonally with the published Disney calendar.

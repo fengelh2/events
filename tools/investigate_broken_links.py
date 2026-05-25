@@ -134,6 +134,11 @@ def investigate(broken_url: str, ctx: dict | None) -> dict:
     name = (ctx or {}).get("name", "")
     tokens = _name_tokens(name)
     expect = _slug(name.split("(")[0])[:20] or None
+    # Extract the most specific path segment from the broken URL — for a
+    # static event we want the replacement to share *something* topical with it
+    # ("halloween" in halloween/, "christmas" in christmas/, etc.), otherwise
+    # we'd "fix" Disneyland Halloween → Disneyland homepage and degrade UX.
+    broken_segments = [s.lower() for s in parsed.path.strip("/").split("/") if s and len(s) > 3]
 
     # Layer 1: same-host path variants
     candidates = [origin + p for p in COMMON_PATHS]
@@ -163,20 +168,41 @@ def investigate(broken_url: str, ctx: dict | None) -> dict:
     with ThreadPoolExecutor(max_workers=8) as ex:
         results = list(ex.map(lambda u: (u, *probe(u, expect)), ordered))
 
-    # Score: 200 status + body contains expected token = high confidence
+    # Score: 200 status + body contains expected token = high confidence.
+    # Strict trust rules:
+    #   - Same-host candidate must share a topical path segment with the
+    #     broken URL (so /halloween → /en-hk/ is rejected unless it has
+    #     "halloween" in it).
+    #   - Off-host candidate is ONLY acceptable if it's an official social /
+    #     reference page (Facebook, Instagram, Wikipedia of the venue).
+    #     Random fan blogs that happen to contain the venue name are
+    #     explicitly rejected.
+    TRUSTED_OFF_HOSTS = ("facebook.com", "instagram.com", "twitter.com",
+                          "x.com", "wikipedia.org", "youtube.com",
+                          "eventbrite.com", "eventbrite.hk")
+    same_host = host_of(broken_url)
     scored = []
     for u, code, body in results:
         if code not in (200, 401):
             continue
-        # Prefer hosts containing venue-name tokens or matching original host base
         h = host_of(u)
+        is_same_host = (h == same_host)
+        is_trusted_off = any(t in h for t in TRUSTED_OFF_HOSTS)
+        if not is_same_host and not is_trusted_off:
+            continue  # rejected — off-domain fan-blog / aggregator we don't trust
+        cand_segs = [s.lower() for s in urlparse(u).path.strip("/").split("/") if s and len(s) > 3]
+        topical_match = bool(broken_segments) and any(s in cand_segs for s in broken_segments)
+        if is_same_host and broken_segments and not topical_match:
+            continue  # same host but unrelated path
         score = 1
         if expect and expect.lower() in body.lower():
             score += 3
         if any(tok.lower() in h for tok in tokens[:3]):
             score += 2
-        if h == host_of(broken_url):
-            score += 1  # same host as original = likely just a moved path
+        if is_same_host:
+            score += 2  # same host is best
+        if topical_match:
+            score += 2
         scored.append((score, code, u))
     scored.sort(reverse=True)
 

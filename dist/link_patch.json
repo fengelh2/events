@@ -1,0 +1,36 @@
+{
+  "patches": [
+    {
+      "city": "hk",
+      "venue_id": "wetland-park",
+      "field": "static_events[Hong Kong Wetland Park — open daily, man].detail_url",
+      "old": "https://www.wetlandpark.gov.hk/en/",
+      "new": "https://www.facebook.com/HongKongWetlandPark/",
+      "evidence": "probed 41 candidates, top match scored highest"
+    },
+    {
+      "city": "hk",
+      "venue_id": "wetland-park",
+      "field": "static_events[Free Admission on Environment Day (Wetla].detail_url",
+      "old": "https://www.wetlandpark.gov.hk/en/whatsnew/1873",
+      "new": "https://www.wetlandpark.gov.hk/en/whatsnew",
+      "evidence": "probed 42 candidates, top match scored highest"
+    }
+  ],
+  "removals": [
+    {
+      "city": "hk",
+      "venue_id": "hk-disneyland-events",
+      "field": "static_events[Disney Halloween Time].detail_url",
+      "url": "https://www.hongkongdisneyland.com/halloween/",
+      "evidence": "probed 42 candidates, none returned 200 with venue-name match"
+    },
+    {
+      "city": "hk",
+      "venue_id": "hk-disneyland-events",
+      "field": "static_events[A Disney Christmas].detail_url",
+      "url": "https://www.hongkongdisneyland.com/christmas/",
+      "evidence": "probed 42 candidates, none returned 200 with venue-name match"
+    }
+  ]
+}
