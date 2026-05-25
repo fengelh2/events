@@ -300,6 +300,16 @@ def main() -> int:
             return False
         all_events = [e for e in all_events if _is_kid_event(e)]
         log.info("audience_filter=kids: kept %d / %d events", len(all_events), before)
+        # On the kids site, every event IS kid-relevant by definition, so the
+        # renderer's "hide audience=kids by default" rule (built for adult sites
+        # where kids events are an opt-in extra) is wrong here. Promote to
+        # "general" so they render as first-class rows.
+        for _e in all_events:
+            if getattr(_e, "audience", "general") in ("kids", "active"):
+                try:
+                    _e.audience = "general"
+                except Exception:
+                    pass
     elif af == "adults":
         # Adult calendar: DROP events that are pure-kid. Mirror of the kids filter.
         # Drop if:
