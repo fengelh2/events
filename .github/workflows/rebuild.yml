@@ -38,8 +38,50 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ steps.pw-version.outputs.version }}-chromium
       - run: python -m playwright install --with-deps chromium
-      - name: Rebuild all cities (cache hits skip scrape)
-        run: python tools/build_all.py --verbose
+
+      # Scoped rebuild: only re-scrape cities whose YAML changed (or whose
+      # shared tools changed). For ALL cities not in scope, we re-use the
+      # last deployed dist/<code>/index.html so they don't disappear from
+      # the published site.
+      - name: Determine scope of rebuild
+        id: scope
+        run: |
+          ALL_CITIES="hk hk-kids la nrw singa fukuoka"
+          ONLY=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "scheduled/manual → full rebuild"
+          else
+            CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+            if echo "$CHANGED" | grep -qE "^tools/(scrape_venue_events|render_events_html|rebuild_calendar|build_all|parse_ical|check_links|investigate_broken_links|apply_link_patch)\.py$"; then
+              echo "shared tools changed → full rebuild"
+            elif echo "$CHANGED" | grep -qE "^\.github/workflows/"; then
+              echo "workflow changed → full rebuild"
+            elif echo "$CHANGED" | grep -qE "^cities/[^/]+/(config|site\.yaml|data)"; then
+              CITIES=$(echo "$CHANGED" | grep -oE "^cities/[^/]+" | sort -u | sed 's|cities/||' | tr '\n' ' ')
+              echo "city configs changed: $CITIES"
+              ONLY="--only $CITIES"
+            else
+              echo "no scope-affecting change → full rebuild (defensive)"
+            fi
+          fi
+          echo "only=$ONLY" >> $GITHUB_OUTPUT
+
+      # Restore the live dist/ from the gh-pages branch so cities NOT in
+      # scope keep their existing rendered HTML.
+      - name: Fetch previous dist from gh-pages
+        if: steps.scope.outputs.only != ''
+        run: |
+          mkdir -p dist
+          git fetch origin gh-pages --depth=1 2>/dev/null || true
+          if git show-ref --quiet refs/remotes/origin/gh-pages; then
+            git worktree add /tmp/prev-dist origin/gh-pages
+            cp -r /tmp/prev-dist/* dist/ 2>/dev/null || true
+            git worktree remove /tmp/prev-dist 2>/dev/null || true
+            echo "Restored $(ls dist/ | wc -l) entries from previous deploy"
+          fi
+
+      - name: Rebuild cities
+        run: python tools/build_all.py --verbose ${{ steps.scope.outputs.only }}
       - name: Audit event links (non-fatal)
         run: python tools/check_links.py
         continue-on-error: true
