@@ -1,8 +1,27 @@
-# Broken-link triage process
+# Broken-link triage process — AUTOMATED
 
-When the link audit (`tools/check_links.py` → `dist/link_audit.json`) flags a URL,
-**investigate before excluding**. The venue or event almost always still
-exists somewhere — the URL just moved.
+When the link audit flags a URL, the CI pipeline now auto-investigates and
+patches the YAML when a working alternative is found.
+
+**No manual investigation needed for URL replacements.** Removals are
+informational only — a human still decides whether a venue is truly gone.
+
+## Automated flow (runs on every build)
+
+1. `tools/check_links.py` — HEAD-probes every event URL → `dist/link_audit.json`
+2. `tools/investigate_broken_links.py` — for each broken URL:
+   - Looks up which YAML entry owns it (venue id, name, city)
+   - Probes 15-30 candidates: same-host path variants, alt TLDs (`.hk`, `.com.hk`, etc.) derived from venue name, DuckDuckGo top hits for `"<venue name> <city> official site"`
+   - Scores each by: HTTP 200 + body contains a slice of venue name + host matches venue tokens
+   - Emits `dist/link_patch.json` with `{patches, removals}`
+3. `tools/apply_link_patch.py` — applies the URL→URL swaps to `cities/<code>/config/venues.yaml`; leaves a `.bak` of the original
+4. CI commits the patched YAML so future builds use the corrected URL
+
+## Manual fallback (only when auto-investigator can't find anything)
+
+If `dist/link_patch.json.removals` lists an entry, the auto-investigator
+exhausted all candidate URLs (paths, TLDs, search) without finding a working
+replacement. Then:
 
 ## Standard process
 

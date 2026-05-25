@@ -43,13 +43,18 @@ jobs:
       - name: Audit event links (non-fatal)
         run: python tools/check_links.py
         continue-on-error: true
+      - name: Investigate broken links + auto-patch URL replacements
+        run: |
+          python tools/investigate_broken_links.py || true
+          python tools/apply_link_patch.py || true   # replacements only; removals still informational
+        continue-on-error: true
       - name: Commit seen-events state
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet cities/*/data/seen_events.json cities/*/data/events_cache.json; then
-            git add cities/*/data/seen_events.json cities/*/data/events_cache.json
-            git commit -m "auto: update seen_events + scrape cache"
+          if ! git diff --quiet cities/*/data/seen_events.json cities/*/data/events_cache.json cities/*/config/venues.yaml; then
+            git add cities/*/data/seen_events.json cities/*/data/events_cache.json cities/*/config/venues.yaml
+            git commit -m "auto: seen_events + scrape cache + auto-patched broken URLs"
             for i in 1 2 3; do
               if git push origin main; then break; fi
               git pull --rebase -X ours origin main || true
