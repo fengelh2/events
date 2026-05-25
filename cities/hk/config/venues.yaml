@@ -1548,3 +1548,259 @@
     week's detail URLs at /e/aia-vitality-hub-<slug>-tickets-<id>. Each
     detail page exposes JSON-LD with name + startDate; we extract via
     OpenGraph meta tags as a more robust path.
+
+# ============================================================================
+# UNIFIED HK — kid-only venues merged from hk-kids (2026-05-25)
+# These show in /hk-kids/ by default; /hk/ ignores them via audience filter.
+# ============================================================================
+
+- id: hk-disneyland-events
+  name: Hong Kong Disneyland (special events + seasonal)
+  display_name: HK Disneyland
+  city: Lantau
+  category: other
+  homepage: https://www.hongkongdisneyland.com
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "Disneyland — daily parades, character meet & greet"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.hongkongdisneyland.com/calendar/"
+    - title: "Disney Halloween Time"
+      start: 2026-09-19
+      end:   2026-10-31
+      detail_url: "https://www.hongkongdisneyland.com/halloween/"
+    - title: "A Disney Christmas"
+      start: 2026-11-14
+      end:   2026-12-31
+      detail_url: "https://www.hongkongdisneyland.com/christmas/"
+  notes: |
+    Static placeholder; the Disney site is heavily JS + blocks bots.
+    Refresh seasonally with the published Disney calendar.
+
+- id: ocean-park-events
+  name: Ocean Park (rides + animal exhibits + events)
+  display_name: Ocean Park
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.oceanpark.com.hk
+  kind: static
+  source_priority: 0
+  static_events:
+    - title: "Ocean Park — open daily, family rides + Grand Aquarium"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.oceanpark.com.hk/en"
+    - title: "Halloween Fest"
+      start: 2026-09-26
+      end:   2026-10-31
+      detail_url: "https://www.oceanpark.com.hk/en/halloween-fest"
+
+- id: hk-science-museum-kids
+  name: HK Science Museum (kids programs)
+  display_name: HK Science Museum
+  city: Kowloon
+  category: museum_exhibition
+  homepage: https://hk.science.museum
+  calendar_url: https://hk.science.museum/en/web/scm/exhibition.html
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".content_box"
+    title: "h2, h3, .title"
+    date: ".date, p"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    Tsim Sha Tsui science museum. Tier-2 — selectors not pixel-verified
+    against current HTML; should produce SOME events. Refine after first build.
+
+- id: hk-public-libraries-kids
+  name: HK Public Libraries (kids storytime + workshops)
+  display_name: HK Public Library kids
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hkpl.gov.hk
+  calendar_url: https://www.hkpl.gov.hk/en/event-and-news/programme/index.html
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: ".event-item, .programme-item, article"
+    title: "h2, h3, .title, a"
+    date: ".date, time, p"
+    detail_link: "a@href"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  notes: |
+    HKPL runs constant family storytime + workshops across 80+ branches.
+    Tier-2 selectors; refine after first build.
+
+- id: hk-arcades-kid-friendly
+  name: Kid-friendly video arcades + indoor playgrounds (curated)
+  display_name: Indoor playgrounds + arcades
+  city: Hong Kong Island
+  category: other
+  homepage: "#"
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Kids' Gallery — open play sessions (Central)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://kidsgallery.com/"
+    - title: "Cool Zone Indoor Playground (Cityplaza, Taikoo Shing)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.facebook.com/CoolZoneHK/"
+    - title: "Snoopy World (Sha Tin New Town Plaza, free admission)"
+      start: 2026-05-21
+      end:   2027-05-21
+      detail_url: "https://www.newtownplaza.com.hk/en/snoopy_world"
+
+# ============================================================================
+# ROUND-2 KIDS VENUES (sport + mall + aggregators, 2026-05-24)
+# ============================================================================
+# Probed 20 URLs; 6 yielded confirmable selectors with real (title, date)
+# pairs; 4 yielded enough verified data for static entries; 10 are deferred
+# (JS-rendered SPAs, pages that returned 0 events at probe time, sites whose
+# WebFetch markdown stripped the class names we needed). Per CLAUDE.md
+# honesty rule, deferred entries are documented with reason — DO NOT
+# fabricate selectors to fill the slot.
+
+# ----- The Mills (Tsuen Wan) — CHAT exhibitions + family programmes -----
+- id: the-mills
+  name: The Mills (Tsuen Wan — CHAT + family programmes)
+  display_name: The Mills
+  city: New Territories            # Tsuen Wan
+  category: other
+  homepage: https://www.themills.com.hk
+  calendar_url: https://www.themills.com.hk/en/event/
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".row-list-event .activity-box"
+    title: ".act-title h3"
+    date: ".act-time"
+    detail_link: "a@href"
+  # Date format inside .act-time: "2026.03.08<span></span>02.21" (range) or
+  # "2026.03.21<span></span>06.28". The <span> separator collapses to space
+  # in extracted text → "2026.03.08 02.21". First YYYY.MM.DD is the start.
+  date_extract_regex: '\d{4}\.\d{1,2}\.\d{1,2}'
+  date_format: "%Y.%m.%d"
+  notes: |
+    Verified 2026-05-24: row-list-event > activity-box cards.
+    Example: "Snuggle and Stitch: Childhood Textiles of Hong Kong" /
+    "2026.03.08 02.21" (DD.MM range; year stays on first half).
+    Includes CHAT (Centre for Heritage, Arts and Textile) exhibitions
+    + Mills family/kid programmes — high signal for kids audience.
+
+# ----- HK Fringe Club Workshops -----
+- id: hk-fringe-workshops
+  name: Hong Kong Fringe Club (Workshops)
+  display_name: HK Fringe Workshops
+  city: Hong Kong Island           # Central
+  category: other
+  homepage: https://www.hkfringeclub.com
+  calendar_url: https://www.hkfringeclub.com/en/whatson/index/6-Workshop.html
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: ".accordion-group"
+    title: "h3"
+    date: "ul.unstyled li"
+    detail_link: "a.cover@href"
+  # Date format: "Wed 27-05-2026, 7:00 PM - 1 h" (DOW DD-MM-YYYY).
+  date_extract_regex: '\d{1,2}-\d{1,2}-\d{4}'
+  date_format: "%d-%m-%Y"
+  accept_drop_rate: 0.4
+  notes: |
+    Verified 2026-05-24: .accordion-group rows on the Workshops listing.
+    Example: "Discover Swing Dancing-Lindy Hop" / "Wed 27-05-2026".
+    Mix of music / dance / craft workshops; render-side kids filter
+    keeps family-friendly ones. Detail URLs are /en/whatson/<id>-<slug>.html.
+
+# ----- Harbour City (TST) — mall happenings -----
+- id: timeout-hk-month
+  name: Time Out Hong Kong (monthly events roundup)
+  display_name: Time Out HK
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.timeout.com/hong-kong
+  # The /things-to-do article URL rotates monthly; this one auto-updates
+  # to "this month's events". Cards expose <time datetime="..."> microdata
+  # so we don't need to parse English date strings.
+  calendar_url: https://www.timeout.com/hong-kong/things-to-do/things-to-do-hong-kong-may-events-festivals
+  kind: html_list
+  source_priority: 2
+  selectors:
+    item: "article"
+    title: "h3"
+    date: "time@datetime"
+    detail_link: "a@href"
+  accept_drop_rate: 0.5
+  notes: |
+    Verified 2026-05-24: 14 events extracted with clean ISO datetimes
+    (Hedwig and the Angry Inch / 2026-05-31, Bruce Lee: Homecoming /
+    2026-05-31, Lee Bul exhibition / 2026-08-09, etc.). The <time>
+    element's datetime attribute is the "until" date for ongoing shows
+    and the start date for one-shots — render-side future filter handles
+    both. URL is the May-events page; rotate the slug when the monthly
+    listing rolls over (e.g. ...-hong-kong-jun-events-festivals).
+    Some article entries are evergreen guides ("Best things to do in
+    Hong Kong 2025") that lack a <time> element and get dropped silently;
+    accept_drop_rate=0.5 covers them.
+
+# ----- New Town Plaza — mall happenings via detail-page walk -----
+- id: new-town-plaza
+  name: New Town Plaza (Sha Tin — mall happenings + Snoopy World tie-ins)
+  display_name: New Town Plaza
+  city: New Territories
+  category: other
+  homepage: https://www.newtownplaza.com.hk
+  calendar_url: https://www.newtownplaza.com.hk/en/whats-on/event
+  kind: detail_pages
+  source_priority: 1
+  # Listing page exposes /happenings/<slug>/ links but no dates inline.
+  # Each detail page carries DD/MM/YYYY date(s) in the prose body.
+  detail_url_pattern: 'https://www\.newtownplaza\.com\.hk/happenings/[a-z0-9\-]+/'
+  selectors:
+    title: "h1.happening-post_title"
+    date: "body"
+  date_extract_regex: '\d{1,2}/\d{1,2}/\d{4}'
+  date_format: "%d/%m/%Y"
+  accept_drop_rate: 0.7
+  notes: |
+    Verified 2026-05-24: listing /en/whats-on/event surfaces 6 happenings
+    anchors; 2 detail pages carry a concrete DD/MM/YYYY date in body text
+    (Chill and Dine e-Stamp Rewards 04/05/2026, Spending Reward 1/5/2026).
+    Remaining 4 are evergreen promos without dates → silently dropped.
+    Includes Snoopy World tie-in events when published. accept_drop_rate
+    high because most mall promos are dateless.
+
+# ----- Ocean Park /whats-on — detail page walk -----
+- id: ocean-park-whatson
+  name: Ocean Park (current shows + collaborations)
+  display_name: Ocean Park Shows
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.oceanpark.com.hk
+  calendar_url: https://www.oceanpark.com.hk/en/whats-on
+  kind: detail_pages
+  source_priority: 1
+  detail_url_pattern: '/en/park-experience/[a-z0-9\-]+'
+  selectors:
+    title: "h1"
+    date: "body"
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  accept_drop_rate: 0.7
+  notes: |
+    Verified 2026-05-24: /en/whats-on listing exposes 32
+    /en/park-experience/<slug> anchors. Detail pages render the full
+    "DD Month YYYY" run dates in prose ("AXA Sanrio Marine Wonders —
+    28 March 2026 ... 31 June 2026"). Render-side future filter drops
+    the legacy past-event pages still linked from the navigation.
+    Complements the existing static ocean-park-events entry (which
+    covers seasonal Halloween/Christmas) — this one catches the
+    rotating collaborations + giant-panda programmes.
+
+# ----- HKFC Rugby — table-row fixture listing -----

@@ -9,6 +9,9 @@ date_order: DMY
 timezone: Asia/Hong_Kong
 horizon_days: 270
 goatcounter_code: fengelh
+# Same venue database as adult HK — different VIEW (filter + branding).
+# Single source of truth: cities/hk/config/venues.yaml. Scraped once, filtered per-city.
+venues_from: hk
 # Audience inversion: keep events that EITHER match the broad kids_keywords
 # below, OR come from a venue explicitly listed as kid-relevant (the venue
 # itself vouches for the events). The second rule lets us include Kadoorie's

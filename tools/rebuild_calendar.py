@@ -189,7 +189,16 @@ def main() -> int:
             site.get("lang", "en"),
         )
         cd = Path(args.site_yaml).parent
-        if args.venues is None:     args.venues = str(cd / "config/venues.yaml")
+        # venues_from: <other_city> → use that city's venues.yaml as the shared
+        # source of truth (e.g. hk-kids reuses hk's venue list).
+        venues_from = site.get("venues_from")
+        if args.venues is None:
+            if venues_from:
+                shared = REPO_ROOT / "cities" / venues_from / "config" / "venues.yaml"
+                args.venues = str(shared)
+                log.info("venues_from: using %s as venue source", shared)
+            else:
+                args.venues = str(cd / "config/venues.yaml")
         if args.highlights is None: args.highlights = str(cd / "config/highlights.yaml")
         if args.seen is None:       args.seen = str(cd / "data/seen_events.json")
         if args.out is None:        args.out = str(REPO_ROOT / f"dist/{site['code']}/index.html")
@@ -256,10 +265,16 @@ def main() -> int:
         # Persist scrape to cache for the next render-only build
         _save_cache(cache_path, all_events, config_hash)
 
-    # Audience filter — `audience_filter: kids` in site.yaml keeps only events
-    # whose audience is "kids" OR title matches site's `kids_keywords` OR the
-    # event's source/venue_id is in `always_include_venues` (venues explicitly
-    # tagged as kid-relevant get to bypass keyword matching).
+    # Audience filter:
+    #   audience_filter: kids   → keep events that are kid-relevant.
+    #   audience_filter: adults → drop events that are explicitly kids-targeted
+    #                              (currently a no-op since adult sites are the default).
+    # An event is kid-relevant when ANY of these is true (and audience != "adults"):
+    #   - venue id is in `always_include_venues` (hard whitelist, e.g. Disneyland)
+    #   - audience classifier returned "kids"
+    #   - title matches a `kids_keywords` regex
+    # `audience == "adults"` is a hard veto — overrides every kid-include rule
+    # (so "Adults-only Wine Tasting at HK Book Fair" is correctly dropped from kids).
     af = (site.get("audience_filter") or "").lower()
     if af == "kids":
         import re as _re
@@ -267,11 +282,17 @@ def main() -> int:
         pat = _re.compile("|".join(_re.escape(k) for k in kw), _re.IGNORECASE) if kw else None
         always = set(site.get("always_include_venues") or [])
         before = len(all_events)
-        all_events = [e for e in all_events
-                      if getattr(e, "source", "") in always
-                      or getattr(e, "venue_id", "") in always
-                      or getattr(e, "audience", "general") == "kids"
-                      or (pat and pat.search(getattr(e, "title", "") or ""))]
+        def _is_kid_event(e):
+            if getattr(e, "audience", "general") == "adults":
+                return False  # hard veto
+            if getattr(e, "source", "") in always or getattr(e, "venue_id", "") in always:
+                return True
+            if getattr(e, "audience", "general") == "kids":
+                return True
+            if pat and pat.search(getattr(e, "title", "") or ""):
+                return True
+            return False
+        all_events = [e for e in all_events if _is_kid_event(e)]
         log.info("audience_filter=kids: kept %d / %d events", len(all_events), before)
 
     # Mark featured events using highlights config

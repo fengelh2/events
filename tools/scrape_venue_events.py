@@ -2519,6 +2519,21 @@ _AUDIENCE_KEYWORDS = {
     # ORDER MATTERS — first match wins. Hide-by-default classes (kids, active)
     # are listed before the dim-only "educational" class so a "Family Workshop"
     # gets classified as kids (hidden) rather than educational (dimmed).
+    # "adults" is at the TOP — explicit adult content overrides any kid-keyword
+    # match below (a "Kids' Wine Pairing" stays adults).
+    "adults": [
+        "18+", "18 +", "(18+)", "adults only", "adult only",
+        "wine tasting", "wine pairing", "wine club", "wine dinner",
+        "whisky tasting", "whiskey tasting", "cocktail class", "cocktail night",
+        "burlesque", "drag show", "drag night", "drag bingo",
+        "late night", "after dark", "midnight", "afterparty",
+        "explicit", "mature audiences", "18 and over", "21+",
+        "speed dating", "singles night",
+        "stag", "hen party", "bachelor",
+        "champagne tasting", "spirits tasting", "sake tasting",
+        "casino night", "poker night",
+        "gala dinner", "charity gala",
+    ],
 
     # Hidden by default; revealed by the toggle.
     "kids": [
