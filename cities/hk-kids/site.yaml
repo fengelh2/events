@@ -12,88 +12,87 @@ goatcounter_code: fengelh
 # Same venue database as adult HK — different VIEW (filter + branding).
 # Single source of truth: cities/hk/config/venues.yaml. Scraped once, filtered per-city.
 venues_from: hk
-# Audience inversion: keep events that EITHER match the broad kids_keywords
-# below, OR come from a venue explicitly listed as kid-relevant (the venue
-# itself vouches for the events). The second rule lets us include Kadoorie's
-# "Plant Walk" or HKPL "Book Display" which wouldn't match keyword alone.
+# Audience filter logic (in rebuild_calendar.py):
+#   1. event.audience == "adults"   → HARD VETO (drops it regardless)
+#   2. venue in always_include_venues → admit (venue vouches for all its events)
+#   3. event.audience == "kids"     → admit
+#   4. title matches kids_keywords  → admit
+#   else: drop
 audience_filter: kids
+# WHITELIST ONLY 100%-kid-focused venues. If a venue has ANY meaningful adult
+# programming (Harbour City car shows, HK Sevens party, HKCEC trade fairs,
+# HK Park Tai Chi), DO NOT put it here — let the keyword filter decide
+# per-event. Venues in this list bypass ALL kid-keyword checks.
 always_include_venues:
-  # Static kids venues (added in round 1)
+  # Theme parks & dedicated kid attractions
   - hk-disneyland-events
   - ocean-park-events
-  - hk-science-museum-kids
+  - ocean-park-whatson
   - noahs-ark-hk
-  - hk-rugby-sevens
-  - hk-public-libraries-kids
-  - hk-park-events
   - hk-arcades-kid-friendly
-  # Round 2 additions
-  - the-mills
-  - hk-fringe-workshops
-  - harbour-city
-  - hkcec
-  - hk-marathon-youth-run
-  - hkfc-youth-10s
-  - hkrfu-fixtures
-  # Round 3 deep dive
-  - kfbg
-  - hkpl-events
-  - wetland-park
-  - hkrugby-asia-championship-2026
-  - hkfa-fixtures-2026
-  - hk-sevens-2027
-  - hk-book-fair-2026
-  - hktdc-toy-fair-2027
-  # Round 3 rescue
-  - tennis-hk
+  # Dedicated kids programs (venue's name explicitly contains "kids" or similar)
+  - hk-science-museum-kids
+  - hk-public-libraries-kids
   - esf-explore-camps
   - activekids-hk
-  - aia-vitality-hub
-  - timeout-hk-month
-  - new-town-plaza
-  - ocean-park-whatson
-  - hkfc-rugby-fixtures
-# Extra title keywords that promote an event into the kids calendar even if
-# the global _AUDIENCE_KEYWORDS didn't flag it as kids.
+  - hkfc-youth-10s
+  - hk-marathon-youth-run
+  - hktdc-toy-fair-2027
+  # Family nature venues (programming is family-default, no adult-only sessions)
+  - kfbg
+  - wetland-park
+# Title keywords that promote an event into the kids calendar.
+# DELIBERATELY narrow — don't use broad sport terms (rugby/football/marathon)
+# because they match Men's Pro Championship titles. Use child-specific
+# qualifiers ("kids rugby", "mini rugby", "youth football") instead.
 kids_keywords:
+  # Direct kid signals
   - kid
   - kids
   - child
   - children
   - family
   - families
+  # Kid-specific activities
   - puppet
   - storytelling
   - story time
   - fairy
-  - LEGO
   - lego
-  - magic
+  - LEGO
   - magic show
-  - parent
-  - mom
-  - dad
+  - parent and child
+  - parent & child
+  - parent-and-child
+  - mom and me
+  - dad and me
   - school holiday
   - holiday camp
   - junior
   - youth
-  - young
   - playground
-  - workshop          # craft/cooking workshops typically family-friendly
-  - rugby
+  - kindergarten
+  - preschool
+  - toddler
+  # Kid-specific sport phrasings ONLY (not generic "rugby"/"sport"/"marathon")
+  - mini rugby
+  - kids rugby
+  - youth rugby
+  - junior rugby
   - football camp
-  - sport
-  - sports
-  - carnival
-  - fair
-  - parade
-  - festival
-  - circus
+  - junior tennis
+  - mini football
+  - youth football
+  - youth run
+  - kids workshop
+  # Kid-friendly cultural events
   - balloon
-  - puppet
   - mascot
-  - hatch
-  - hatchimal
+  - carnival
+  - parade
+  - circus
+  - musical               # touring musicals are family-default
+  # Kid characters / brands
   - disney
   - pixar
   - peppa
@@ -103,4 +102,7 @@ kids_keywords:
   - bluey
   - panda
   - snoopy
-  - musical          # most touring musicals are family-friendly
+  - mickey
+  - elsa
+  - frozen
+  - star wars
