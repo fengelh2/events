@@ -2087,3 +2087,185 @@
     First-time deploy: monitor for category mis-bucketing (everything starts
     as "other" unless title keywords match). May want to add venue-name
     keyword overrides (e.g. The Wanch → concert, M+ → exhibition).
+
+# ===========================================================================
+# Round-5 kids-sport venues (2026-05-25) — class/program providers
+# Static umbrella entries: each links to live schedule/booking page; gives
+# the kids site real sport-class entries while we evaluate full scrapers.
+# All marked audience: kids and category: sport so they survive HK Kids
+# filter AND get dropped from adult HK (kids_only_venues).
+# ===========================================================================
+- id: hkfa-grassroots
+  name: HKFA Jockey Club Youth Football Programme
+  display_name: HKFA Youth Football
+  city: Hong Kong
+  category: sport
+  homepage: https://grassroots.hkfa.com/index_en.html
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HKFA Youth Football Training (U6–U18, district-wide)
+      detail_url: https://grassroots.hkfa.com/index_en.html
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: esf-sports-classes
+  name: ESF Sports & Language — kids sport classes
+  display_name: ESF Sports (term + holiday)
+  city: Hong Kong
+  category: sport
+  homepage: https://www.esfsla.org.hk/sports/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: ESF Sports — Football / Tennis / Basketball / Gymnastics / Badminton (term classes)
+      detail_url: https://www.esfsla.org.hk/sports/
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: apss-soccer-school
+  name: Asia Pacific Soccer School
+  display_name: APSS Soccer School
+  city: Hong Kong
+  category: sport
+  homepage: https://www.apsoccer.hk/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: APSS — Kids Football Classes (4,000+ kids/week, citywide)
+      detail_url: https://www.apsoccer.hk/apss-hk-about-football-classes/
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: hkjc-public-riding
+  name: HKJC Public Riding Schools (Pok Fu Lam + Tuen Mun)
+  display_name: HKJC Riding Schools
+  city: Hong Kong
+  category: sport
+  homepage: https://corporate.hkjc.com/corporate/english/jc-news-and-activities/jc-equestrian-development/public-riding-schools/pfl/pfl-programms/pfl-lesson.aspx
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HKJC Pok Fu Lam Riding School — kids horse-riding lessons
+      detail_url: https://corporate.hkjc.com/corporate/english/jc-news-and-activities/jc-equestrian-development/public-riding-schools/pfl/pfl-programms/pfl-lesson.aspx
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+    - title: HKJC Tuen Mun Riding School — kids horse-riding lessons
+      detail_url: https://corporate.hkjc.com/corporate/english/jc-news-and-activities/jc-equestrian-development/public-riding-schools/tm/tm-programms/tm-lesson.aspx
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: harry-wright-swim
+  name: Harry Wright International Swim School
+  display_name: Harry Wright Swim
+  city: Hong Kong
+  category: sport
+  homepage: https://www.harrywright.com.hk/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Harry Wright — Learn-to-Swim + Competitive Squad (ages 3+)
+      detail_url: https://www.harrywright.com.hk/swimming-programmes
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: hkba-badminton-courses
+  name: HK Badminton Association — training courses
+  display_name: HK Badminton Assn (junior)
+  city: Hong Kong
+  category: sport
+  homepage: http://www.hkbadmintonassn.org.hk/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HKBA Junior Badminton — rolling training programmes
+      detail_url: http://www.hkbadmintonassn.org.hk/en/training-course/
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: ymca-multisport
+  name: YMCA HK — multi-sport classes (badminton, gymnastics, table tennis)
+  display_name: YMCA Multi-Sport
+  city: Hong Kong
+  category: sport
+  homepage: https://mcs.ymcahk.org.hk/en/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: YMCA — Kids Badminton Classes
+      detail_url: https://mcs.ymcahk.org.hk/en/BADMINTON
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+    - title: YMCA — Kids Gymnastics Classes
+      detail_url: https://mcs.ymcahk.org.hk/en/GYMNASTICS
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+    - title: YMCA — Kids Table Tennis Classes
+      detail_url: https://mcs.ymcahk.org.hk/en/TABLE.TENNIS
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: trybe-gym-ninja
+  name: Trybe HK — gymnastics + ninja warrior (kids)
+  display_name: Trybe (gymnastics)
+  city: Hong Kong
+  category: sport
+  homepage: https://www.trybehk.com/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Trybe — Kids Gymnastics + Ninja Warrior (Hong Kong Island)
+      detail_url: https://www.trybehk.com/trybekidsschedule
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: tennis-hk-junior
+  name: HK Tennis — Tennis for All (junior schemes + timetables)
+  display_name: HK Tennis (junior)
+  city: Hong Kong
+  category: sport
+  homepage: https://www.tennishk.org/en/training/junior-training/tennis-for-all-training-scheme/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HK Tennis — Tennis for All Junior Training (citywide timetables)
+      detail_url: https://www.tennishk.org/en/training/junior-training/tennis-for-all-training-scheme/timetables
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+    - title: HK Tennis — Bank of China Junior Team Tennis League
+      detail_url: https://www.tennishk.org/en/leagues/junior-team-tennis/
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+
+- id: try-hk-rugby
+  name: HSBC Try Rugby — kids intro programme (HKRU)
+  display_name: HSBC Try Rugby (kids)
+  city: Hong Kong
+  category: sport
+  homepage: https://try.hkrugby.com/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HSBC Try Rugby — Kids Intro Programme (HKRU citywide)
+      detail_url: https://try.hkrugby.com/
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids
+    - title: HKRU School Rugby Programme (Jockey Club)
+      detail_url: https://www.hkrugby.com/play-rugby/get-involved/school-rugby
+      start: 2026-05-25
+      end: 2026-12-31
+      audience: kids

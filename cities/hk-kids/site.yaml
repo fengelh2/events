@@ -41,6 +41,17 @@ always_include_venues:
   # Round-4 kid-only venues (2026-05-25)
   - kids-gallery                # 100% kid arts studio
   - hkru-summer-of-rugby-2026   # static — youth + mini rugby festivals
+  # Round-5 kids-sport class providers (2026-05-25)
+  - hkfa-grassroots
+  - esf-sports-classes
+  - apss-soccer-school
+  - hkjc-public-riding
+  - harry-wright-swim
+  - hkba-badminton-courses
+  - ymca-multisport
+  - trybe-gym-ninja
+  - tennis-hk-junior
+  - try-hk-rugby
   # Family nature venues (programming is family-default, no adult-only sessions)
   - kfbg
   - wetland-park

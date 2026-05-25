@@ -28,6 +28,17 @@ kids_only_venues:
   - hkfc-youth-10s
   - hk-marathon-youth-run
   - hktdc-toy-fair-2027
+  # Round-5 kids-sport class providers (2026-05-25)
+  - hkfa-grassroots
+  - esf-sports-classes
+  - apss-soccer-school
+  - hkjc-public-riding
+  - harry-wright-swim
+  - hkba-badminton-courses
+  - ymca-multisport
+  - trybe-gym-ninja
+  - tennis-hk-junior
+  - try-hk-rugby
 # Title keywords that signal a kid-only event (drops from adult HK even if
 # venue isn't pure-kid). Conservative — only patterns that are unambiguously
 # kid-only ("Storytime for Toddlers", "Preschool", "Mini Rugby U6", etc.).
