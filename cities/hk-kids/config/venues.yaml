@@ -1016,14 +1016,10 @@
       start: 2026-05-21
       end:   2027-05-21
       detail_url: "https://www.facebook.com/CoolZoneHK/"
-    - title: "Round 1 Spo-Cha + arcade (Mong Kok)"
+    - title: "Snoopy World (Sha Tin New Town Plaza, free admission)"
       start: 2026-05-21
       end:   2027-05-21
-      detail_url: "https://www.round1usa.com/store-locator"
-    - title: "Snoopy World (Sha Tin New Town Plaza)"
-      start: 2026-05-21
-      end:   2027-05-21
-      detail_url: "https://www.newtownplaza.com.hk/en/snoopy-world"
+      detail_url: "https://www.newtownplaza.com.hk/en/snoopy_world"
 
 # ============================================================================
 # ROUND-2 KIDS VENUES (sport + mall + aggregators, 2026-05-24)
