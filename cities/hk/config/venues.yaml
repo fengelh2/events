@@ -1806,3 +1806,211 @@
     rotating collaborations + giant-panda programmes.
 
 # ----- HKFC Rugby — table-row fixture listing -----
+
+# ============================================================================
+# KIDS SPORT + ACTIVITY DEEP-DIVE (2026-05-25 round 4)
+# ============================================================================
+# Pushed hard on rugby clubs, judo, tennis, swimming, sailing, art workshops.
+# Per CLAUDE.md honesty rule — only wiring sources that returned verified
+# (title, date) pairs at probe time. ECONNREFUSED / 403 / 404 / SPA-shells
+# are documented as DEFERRED with the failure reason.
+#
+# Probed and WORKING (wired below): hkgswimming (HKASA), HKSF Sailing,
+# HK Rugby Union /event listing, Kids' Gallery summer 2026.
+# Probed and DEAD: hkmrfu.com, hkjudo.org, hkkarate.org, htkd.com.hk,
+# hktriathlon.com, hkba.com, valleymini.org, sandybayrugby.org,
+# hkfootballacademy.com — all ECONNREFUSED (domains don't exist / TLS-walled).
+# Probed and SPA-empty: hksquash.org.hk (403 on calendar/tournament/events),
+# hkkarate.org.hk (403), hktkda.com (cert), hkcricket.org/* (empty filter).
+
+# ----- HKASA Swimming (HK Gymnastic Swimming) — biggest find, ~8+ events -----
+# /en redirects to /en/ (works); /en/activities lists all events with
+# event cards as <a> tags wrapping span date + span title. Detail pages
+# are /en/activities/<numeric-id>/. Includes Asian Age Group Champs,
+# Youth Swimming Championship Series, Olympism Camp, Division 3 LC,
+# Open Water Series — all kid/youth relevant.
+- id: hk-swimming
+  name: Hong Kong China Swimming Association (HKASA — competitions + youth events)
+  display_name: HK Swimming
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hkgswimming.org.hk
+  calendar_url: https://www.hkgswimming.org.hk/en/activities
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/en/activities/\d+/?'
+  selectors:
+    title: "h1, h2, title"
+    date: "body"
+  date_extract_regex: '\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}/\d{1,2}/\d{4}'
+  accept_drop_rate: 0.5
+  notes: |
+    Verified 2026-05-25: /en/activities lists 7+ upcoming events
+    (2026 Youth Swimming Championship Series 5 May, Olympism Camp 19 May,
+    12th Asian Age Group Championships 27 Apr, Division 3 LC 12 May,
+    Open Water Series 16 Mar). Cards are <a href="/en/activities/<id>/">
+    with span date + span title; detail pages carry "DD Mon YYYY" prose
+    + "Uploaded at" timestamps. Strong youth/age-group signal — most
+    competitions tagged for U10/U12/U14/U18 age divisions.
+    HKASA = old domain name; site rebranded to hkgswimming.org.hk
+    (the .hkasa.org.hk URL 301-redirects here).
+
+# ----- HKSF Sailing — Optimist + 29er + youth camps -----
+# /event/<slug>/ detail pages render "Start Date / End Date" as DD/MM/YYYY
+# under h3 headings. Homepage exposes 10-12 upcoming event cards.
+- id: hksf-sailing
+  name: Hong Kong Sailing Federation (regattas + youth Optimist + 29er camps)
+  display_name: HK Sailing Federation
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.sailing.org.hk
+  calendar_url: https://www.sailing.org.hk
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: 'https://www\.sailing\.org\.hk/event/[a-z0-9\-]+/?'
+  selectors:
+    title: "h1"
+    date: "body"
+  # Detail pages: "02/05/2026" + "03/05/2026" under Start/End headings,
+  # plus prose "Date: 2-3 May 2026 (Sat-Sun)". DMY format.
+  date_extract_regex: '\d{1,2}/\d{1,2}/\d{4}'
+  date_format: "%d/%m/%Y"
+  accept_drop_rate: 0.4
+  notes: |
+    Verified 2026-05-25: 8+ upcoming events on homepage (Tai Mei Tuk
+    Optimist Ranking Regatta, HKODA Optimist Camp, HKSF 29er Camp,
+    2026 HK 29er Nationals GP3, HKSF Selection Regatta, Easter Training
+    Camp, HKSF Feeder Scheme, HKSF Junior Sail 1&2). Per-event detail
+    pages carry DD/MM/YYYY start+end dates as h3 headings. Heavy
+    youth-program weighting — Optimist is the under-15 dinghy class,
+    29er camps are teen-only, Feeder Scheme is junior development.
+    DOES include adult events (Match Racing Nationals etc.) — render-side
+    audience inference will tag those as adult.
+
+# ----- HKRU — main events feed (Summer of Rugby + Nations Cup + youth) -----
+# /event listing surfaces 5+ active events with date ranges.
+# Detail pages at /event/details/<slug>.
+- id: hkru-events
+  name: Hong Kong Rugby Union (events programme — Summer of Rugby, Nations Cup)
+  display_name: HKRU Events
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hkrugby.com
+  calendar_url: https://www.hkrugby.com/event
+  kind: detail_pages
+  source_priority: 1
+  detail_url_pattern: 'https://www\.hkrugby\.com/event/details/[a-z0-9\-]+'
+  selectors:
+    title: "h1"
+    date: "body"
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.5
+  notes: |
+    Verified 2026-05-25: /event listing exposes 5 active programmes
+    (Summer of Rugby 2026 Jul-Aug, Nations Cup 2026 5-19 Jul, Asia Rugby
+    Men's Championship 24 May - 13 Jun 2026, Men's RWC 2027 1 Oct - 13 Nov,
+    APPT Grand Slam Platinum 17-19 Apr 2026). Summer of Rugby is the
+    flagship youth event (mini rugby festivals every Sunday Jul-Aug).
+    Detail URL pattern /event/details/<slug> verified live. Cards lack
+    stable CSS class names in initial HTML, hence detail_pages parser
+    rather than html_list.
+
+# ----- Kids' Gallery — Summer 2026 programmes (static, verified) -----
+# Site lists Summer 2026 camps prominently on homepage but per-camp
+# detail pages are JS-rendered Wix without dates in static HTML.
+# One static umbrella entry mirrors the ESF / ActiveKids pattern.
+- id: kids-gallery
+  name: Kids' Gallery (art + drama + writing + portfolio camps)
+  display_name: Kids' Gallery
+  city: Hong Kong Island            # Central + Causeway Bay studios
+  category: other
+  homepage: https://www.kidsgallery.com
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "Kids' Gallery — Summer Programmes 2026 (creative arts, drama, writing camps)"
+      start: 2026-06-22
+      end:   2026-08-28
+      detail_url: "https://www.kidsgallery.com/"
+      audience: kids
+    - title: "Kids' Gallery — VA Summer Portfolio 2026 (Homage to Hong Kong, ages 10+)"
+      start: 2026-07-01
+      end:   2026-08-15
+      detail_url: "https://www.kidsgallery.com/"
+      audience: kids
+    - title: "Kids' Gallery — Festival Week 2026 (Alice in Wonderland themed)"
+      start: 2026-06-15
+      end:   2026-06-19
+      detail_url: "https://www.kidsgallery.com/"
+      audience: kids
+    - title: "Kids' Gallery — Write A Book This Summer 2026"
+      start: 2026-07-06
+      end:   2026-08-21
+      detail_url: "https://www.kidsgallery.com/"
+      audience: kids
+  notes: |
+    Verified 2026-05-25 via WebFetch — five summer 2026 programmes
+    confirmed on homepage (Summer Programmes, VA Portfolio, Festival
+    Week Alice-in-Wonderland, Write A Book, My Book of Art). Per-camp
+    schedule pages are JS-rendered Wix and don't expose date strings
+    in static HTML. Date ranges below are based on the typical Kids'
+    Gallery summer window (late-June through August); refresh once the
+    studio publishes the exact week-by-week schedule. Replaces the
+    earlier "Kids' Gallery — open play sessions" placeholder in the
+    hk-arcades-kid-friendly bundle (kept for redundancy).
+
+# ----- HKRU Summer of Rugby — also a static seed so it shows even if
+# the detail-pages parser drops it for some reason -----
+- id: hkru-summer-of-rugby-2026
+  name: HKRU Summer of Rugby 2026 (mini + youth rugby festivals)
+  display_name: HKRU Summer of Rugby
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.hkrugby.com
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: "HKRU Summer of Rugby 2026 — youth + mini rugby festivals"
+      start: 2026-07-01
+      end:   2026-08-31
+      detail_url: "https://www.hkrugby.com/event/details/summer-of-rugby-2026"
+      audience: kids
+  notes: |
+    Verified 2026-05-25 via WebFetch — confirmed July-August 2026 window.
+    Static backstop alongside the hkru-events detail_pages parser.
+
+# ============================================================================
+# ROUND-4 DEFERRED (2026-05-25 — probed but failed)
+# ============================================================================
+# DEFERRED: hkmrfu.com (HK Mini Rugby Football Union) — ECONNREFUSED.
+#   Domain does not resolve. Mini rugby in HK is run via member clubs
+#   (HKFC mini, Valley, Sandy Bay etc.) not a central union site.
+# DEFERRED: valleymini.org — ECONNREFUSED.
+# DEFERRED: sandybayrugby.org / sandybayminirugby.org — ECONNREFUSED.
+# DEFERRED: hkjudo.org / www.judo.org.hk — ECONNREFUSED on both. No
+#   working public site found for the Hong Kong Judo Association.
+# DEFERRED: hkkarate.org.hk — 403 Forbidden (Cloudflare or IP block).
+# DEFERRED: htkd.com.hk / hktkda.com / hktaekwondo.com — all
+#   ECONNREFUSED / cert errors. No working HK Taekwondo public calendar.
+# DEFERRED: hktriathlon.com / hktriathlon.org — both ECONNREFUSED.
+# DEFERRED: hkba.com (HK Badminton Association) — ECONNREFUSED.
+# DEFERRED: hktta.org.hk (Table Tennis) — page returns blank/no content.
+# DEFERRED: hksquash.org.hk /calendar /events /tournament — all 403.
+# DEFERRED: hkcricket.org /tournaments /matches — show "no items for
+#   selected filter" empty state. Genuinely no upcoming cricket events
+#   published at probe time. Recheck end of summer for autumn league.
+# DEFERRED: hockey.org.hk /calendar — JS-rendered, no dates in static.
+# DEFERRED: hkfa.com /en/events /en/match /en/competitions/fixtures
+#   — all 404 (Nuxt SPA). Existing hkfa-fixtures-2026 static entry
+#   remains the workable path.
+# DEFERRED: hkvisualarts.lcsd.gov.hk — ECONNREFUSED. The HK Visual
+#   Arts Centre is LCSD-run; its public-programmes calendar isn't
+#   exposed at the .hk path probed.
+# DEFERRED: artistree.com.hk / hk.artistree.com — 404 + TLS error.
+#   ArtisTree may have moved to Swire Properties' venue feed.
+# DEFERRED: legodiscoverycentre.com.hk — ECONNREFUSED.
+# DEFERRED: pmq.org.hk /programmes-events/ — 404 + listing remained
+#   empty since round 3. Recheck quarterly.
+# DEFERRED: hkfootballacademy.com — ECONNREFUSED.
+# DEFERRED: hkbasketball.org.hk — ECONNREFUSED.
+# DEFERRED: hkfootball.org — ECONNREFUSED.

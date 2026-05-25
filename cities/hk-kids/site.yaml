@@ -38,6 +38,9 @@ always_include_venues:
   - hkfc-youth-10s
   - hk-marathon-youth-run
   - hktdc-toy-fair-2027
+  # Round-4 kid-only venues (2026-05-25)
+  - kids-gallery                # 100% kid arts studio
+  - hkru-summer-of-rugby-2026   # static — youth + mini rugby festivals
   # Family nature venues (programming is family-default, no adult-only sessions)
   - kfbg
   - wetland-park
@@ -93,6 +96,16 @@ kids_keywords:
   - youth football
   - youth run
   - kids workshop
+  # Round-4 youth-sport jargon (2026-05-25)
+  - optimist            # Optimist dinghy class is U15 sailing
+  - age group           # "Asian Age Group Championships" = junior swimming
+  - feeder scheme       # HKSF Feeder Scheme = junior dinghy
+  - 29er                # 29er sailing dinghy = teen class
+  - mini sail
+  - junior sail
+  - youth swimming
+  - youth championship
+  - schools             # school sport competitions
   # Kid-friendly cultural events
   - balloon
   - mascot
