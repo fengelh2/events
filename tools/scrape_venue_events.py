@@ -2284,6 +2284,12 @@ _CATEGORY_KEYWORDS = [
     ("vernissage", ["opening reception", "opening night", "vernissage"]),
     # Sport — added 2026-05-25. Word-boundary match enforced in _infer_category.
     ("sport", [
+        # Fitness classes (AIA Vitality, gyms)
+        "yoga", "pilates", "bootcamp", "boxing", "kickboxing",
+        "hiit", "spin class", "spinning class", "barre class",
+        "ashtanga", "vinyasa", "core training", "strength training",
+        "babalates", "stretch class", "tabata", "crossfit",
+        # Team sports + competitions
         "rugby", "sevens", "football match", "fixture", "fixtures",
         "soccer", "premier league", "cricket match", "tennis open",
         "marathon", "half marathon", "10k", "10 km", "fun run", "trail run",

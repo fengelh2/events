@@ -1528,7 +1528,9 @@
   name: AIA Vitality Hub (Central Harbourfront waterfront events)
   display_name: AIA Vitality Hub
   city: Hong Kong Island
-  category: sport
+  category: mixed                  # most events are fitness/sport but some are
+                                   # wellness (sound healing, craft) — title
+                                   # keywords sort them per-event
   homepage: https://www.eventbrite.hk/o/aia-vitality-hub-zicket-48357599143
   calendar_url: https://www.eventbrite.hk/o/aia-vitality-hub-zicket-48357599143
   kind: detail_pages
