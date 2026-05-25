@@ -294,6 +294,27 @@ def main() -> int:
             return False
         all_events = [e for e in all_events if _is_kid_event(e)]
         log.info("audience_filter=kids: kept %d / %d events", len(all_events), before)
+    elif af == "adults":
+        # Adult calendar: DROP events that are pure-kid. Mirror of the kids filter.
+        # Drop if:
+        #   - audience classifier marked it "kids"
+        #   - event source/venue is in `kids_only_venues:`
+        #   - title matches `kids_only_keywords:` regex
+        import re as _re
+        kw = [k.lower() for k in (site.get("kids_only_keywords") or [])]
+        pat = _re.compile("|".join(_re.escape(k) for k in kw), _re.IGNORECASE) if kw else None
+        kids_only = set(site.get("kids_only_venues") or [])
+        before = len(all_events)
+        def _is_adult_event(e):
+            if getattr(e, "source", "") in kids_only or getattr(e, "venue_id", "") in kids_only:
+                return False
+            if getattr(e, "audience", "general") == "kids":
+                return False
+            if pat and pat.search(getattr(e, "title", "") or ""):
+                return False
+            return True
+        all_events = [e for e in all_events if _is_adult_event(e)]
+        log.info("audience_filter=adults: kept %d / %d events", len(all_events), before)
 
     # Mark featured events using highlights config
     featured = _compute_featured_set(all_events, highlights)

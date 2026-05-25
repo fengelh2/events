@@ -9,3 +9,65 @@ date_order: DMY
 timezone: Asia/Hong_Kong
 horizon_days: 270
 goatcounter_code: fengelh
+# Mirror of the kids filter — adult HK DROPS events that are clearly kids-only
+# (Kids' Gallery open play, Snoopy World, preschool storytime, etc.) and events
+# from pure-kid venues. Sister filter to hk-kids/site.yaml.
+audience_filter: adults
+# Venues whose events are ALWAYS dropped from adult HK (100%-kid venues).
+# Mirror of hk-kids `always_include_venues:` — these go ONLY to kids.
+kids_only_venues:
+  - hk-disneyland-events
+  - ocean-park-events
+  - ocean-park-whatson
+  - noahs-ark-hk
+  - hk-arcades-kid-friendly
+  - hk-science-museum-kids
+  - hk-public-libraries-kids
+  - esf-explore-camps
+  - activekids-hk
+  - hkfc-youth-10s
+  - hk-marathon-youth-run
+  - hktdc-toy-fair-2027
+# Title keywords that signal a kid-only event (drops from adult HK even if
+# venue isn't pure-kid). Conservative — only patterns that are unambiguously
+# kid-only ("Storytime for Toddlers", "Preschool", "Mini Rugby U6", etc.).
+kids_only_keywords:
+  - "for kids"
+  - "for children"
+  - "for toddlers"
+  - "for babies"
+  - "kids only"
+  - "kids-only"
+  - "children only"
+  - "preschool"
+  - "toddler"
+  - "infant"
+  - "baby class"
+  - "babies"
+  - "ages 0"
+  - "ages 1"
+  - "ages 2"
+  - "ages 3"
+  - "ages 4"
+  - "ages 5"
+  - "ages 6"
+  - "ages 7"
+  - "(u5"
+  - "(u6"
+  - "(u7"
+  - "(u8"
+  - "(u9"
+  - "(u10"
+  - "kindergarten"
+  - "mini rugby"
+  - "kids workshop"
+  - "kids' workshop"
+  - "kids gallery"
+  - "kids' gallery"
+  - "snoopy world"
+  - "youth run"
+  - "junior tennis"
+  - "junior football"
+  - "youth rugby"
+  - "school holiday camp"
+  - "summer camp"
