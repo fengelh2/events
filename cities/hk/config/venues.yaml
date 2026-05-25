@@ -2046,8 +2046,8 @@
   display_name: Eventbrite HK
   city: __aggregator__              # per-event zone from JSON-LD addressRegion
   category: other                   # title-keyword inference refines per event
-  homepage: https://www.eventbrite.hk/d/hong-kong/all-events/
-  calendar_url: https://www.eventbrite.hk/d/hong-kong/all-events/
+  homepage: https://www.eventbrite.hk/d/hong-kong-sar/all-events/
+  calendar_url: https://www.eventbrite.hk/d/hong-kong-sar/all-events/
   kind: json_ld_aggregator
   source_priority: 1
   pages: 25                         # 23 active + 2 headroom; empties no-op
