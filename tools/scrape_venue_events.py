@@ -2539,6 +2539,11 @@ _AUDIENCE_KEYWORDS = {
         "champagne tasting", "spirits tasting", "sake tasting",
         "casino night", "poker night",
         "gala dinner", "charity gala",
+        # Adult-targeted education / professional
+        "certificate course", "professional course", "permaculture design",
+        "permaculture course", "diploma course", "masterclass",
+        "professional development", "advanced course",
+        "phd ", "doctoral", "doctorate",
     ],
 
     # Hidden by default; revealed by the toggle.
