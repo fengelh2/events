@@ -1867,7 +1867,7 @@
   calendar_url: https://www.sailing.org.hk
   kind: detail_pages
   source_priority: 0
-  detail_url_pattern: 'https://www\.sailing\.org\.hk/event/[a-z0-9\-]+/?'
+  detail_url_pattern: '/event/[a-z0-9\-]+/?'
   selectors:
     title: "h1"
     date: "body"
@@ -1899,7 +1899,7 @@
   calendar_url: https://www.hkrugby.com/event
   kind: detail_pages
   source_priority: 1
-  detail_url_pattern: 'https://www\.hkrugby\.com/event/details/[a-z0-9\-]+'
+  detail_url_pattern: '/event/details/[a-z0-9\-]+'
   selectors:
     title: "h1"
     date: "body"
