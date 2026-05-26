@@ -2281,17 +2281,29 @@
   display_name: LCSD CommRec Sports
   city: Hong Kong Island
   category: sport
-  homepage: https://www.lcsd.gov.hk/clpss/en/search/leisure/srchCommRecretSprtProgsForm.do
+  homepage: https://www.smartplay.lcsd.gov.hk/programme/search-result?district=all&startDate=ALL&activityType=%5B%5D&lang=en
   kind: static
   source_priority: 1
+  # Real-scraper investigation 2026-05-26: the two .do form URLs both 302 to the
+  # SmartPlay Vue SPA at smartplay.lcsd.gov.hk. The SPA fetches data from
+  # /rest/programme-catalog/api/v1/publ/activities (path confirmed via JS-bundle
+  # decorator metadata in programme.fa1307c3.js), but the endpoint returns only
+  # the success-wrapper {code:"0",message:"success",timestamp:...} with no `data`
+  # field for unauthenticated callers — there's an app-session/signature header we
+  # haven't reproduced. Direct Playwright navigation to the search-result URL
+  # lands on about:blank (client-side route guard requires in-app entry from
+  # the home page with language selection). Reproducing this is ~1 day of
+  # fragile work for one venue behind an Alibaba WAF; staying static and
+  # pointing users at the live search instead. Revisit if SmartPlay ever
+  # exposes an unauthenticated JSON feed.
   static_events:
     - title: LCSD — Community Recreation & Sports Programmes (paid, all districts)
-      detail_url: https://www.lcsd.gov.hk/clpss/en/search/leisure/srchCommRecretSprtProgsForm.do
+      detail_url: https://www.smartplay.lcsd.gov.hk/programme/search-result?district=all&startDate=ALL&activityType=%5B%5D&lang=en
       start: 2026-05-26
       end: 2026-12-31
       audience: kids
     - title: LCSD — Free Community Programmes (next 7 days, all districts)
-      detail_url: https://www.lcsd.gov.hk/clpss/en/search/leisure/freeCommProgsSrchByNextSevenDaysForm.do
+      detail_url: https://www.smartplay.lcsd.gov.hk/programme/search-result?district=all&startDate=ALL&activityType=%5B%5D&enrlStatus=ASC_7_D&lang=en
       start: 2026-05-26
       end: 2026-12-31
       audience: kids
