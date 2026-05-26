@@ -2912,24 +2912,116 @@
     PMQ creative-hub programme is fragmented across many small organizers;
     this is the most consistent Eventbrite presence under the PMQ umbrella.
 
-# === Eventbrite organizer pages PROBED but NOT added (2026-05-26 audit) ===
-# - The Wanch (https://www.eventbrite.com/o/the-wanch-107956042221):
-#   organizer page currently shows "No upcoming events". Re-check periodically.
-# - Soho House HK / Zicket (https://www.eventbrite.hk/o/soho-house-hong-kong-zicket-113791728061):
-#   0 detail URLs on the page (events list via citywide Soho House search,
-#   not this organizer). Skip.
-# - Anahata Yoga & Wellness (https://www.eventbrite.com/o/anahata-yoga-and-wellnesstina-makris-19355253963):
-#   0 current upcoming detail URLs (training-course cohort cadence; long
-#   gaps between cohorts). Re-check when next TT cohort opens.
+# === Direct-from-venue scrapers (added 2026-05-26 re-investigation) ===
+# Previous Eventbrite-only audit had marked these "no upcoming events", but
+# the venues do publish schedules on their own sites. Wired up here.
+
+- id: hk-the-wanch
+  name: The Wanch (Wan Chai live music venue)
+  display_name: The Wanch
+  city: Hong Kong Island          # 54 Jaffe Road, Wan Chai
+  category: concert                # live music — rock/funk/acoustic gigs nearly nightly
+  homepage: https://www.thewanch.hk
+  calendar_url: https://www.thewanch.hk/?post_type=tribe_events&ical=1&eventDisplay=list
+  kind: ical
+  source_priority: 0
+  notes: |
+    The Wanch runs The Events Calendar (Tribe) on WordPress. Public .ics
+    endpoint exposes the full upcoming list (30+ events in a typical week
+    — open mics, themed nights, showcases). No org-page on Eventbrite.
+    Direct iCal beats the Eventbrite organizer path that the previous
+    audit flagged "no upcoming events" (organizer page is stale; the
+    venue books direct).
+
+- id: hk-crown-wine-cellars
+  name: Crown Wine Cellars (Shouson Hill — wine tastings + dinners)
+  display_name: Crown Wine Cellars
+  city: Hong Kong Island          # 18 Deep Water Bay Drive, Shouson Hill
+  category: other                  # wine dinners, tastings, occasional music salons
+  homepage: https://www.crownwinecellars.com
+  calendar_url: https://www.crownwinecellars.com/news-events/category/events/
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/news-events/events/[a-z0-9-]+/'
+  selectors:
+    title: 'meta[property="og:title"]@content'
+    date: 'meta[property="og:title"]@content'
+  # og:title is "<Event Name> Saturday, 14 March 2026 - Crown Wine Cellars".
+  # Extract the trailing "D Month YYYY" portion. Year may be implicit on
+  # older posts, but the events worth surfacing always include it.
+  date_extract_regex: '\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}'
+  title_strip_suffixes:
+    - " - Crown Wine Cellars"
+  accept_drop_rate: 0.5            # listing also surfaces undated news posts
+  notes: |
+    WordPress, no Tribe REST or .ics endpoint. og:title carries both
+    title and date ("A Journey Through Burgundy Saturday, 14 March 2026
+    - Crown Wine Cellars"). detail_pages parser fetches each event page
+    and pulls date via regex from og:title. The /news-events/events/
+    URL pattern is the canonical event-detail path; non-event news posts
+    sit under /news-events/news/ and are excluded by the pattern.
+
+- id: hk-anahata-yoga
+  name: Anahata Yoga & Wellness (Central — workshops + teacher training)
+  display_name: Anahata Yoga
+  city: Hong Kong Island          # 18/F Lyndhurst Tower, 1 Lyndhurst Terrace, Central
+  category: other                  # workshops, teacher trainings, intro sessions
+  homepage: https://www.anahatayoga.com.hk
+  calendar_url: https://www.anahatayoga.com.hk/
+  kind: detail_pages
+  source_priority: 1               # studio drop-ins via Mindbody widget; this only catches training/workshop posts
+  detail_url_pattern: '/training_workshop/[a-z0-9-]+/'
+  selectors:
+    title: 'meta[property="og:title"]@content'
+    date: 'h1, h2, .entry-title, body'
+  date_extract_regex: '\d{1,2}\s*(?:-\s*\d{1,2}\s+)?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*'
+  accept_drop_rate: 0.6
+  notes: |
+    Daily class drop-ins run through a Mindbody widget (not scrapable
+    statically). What IS publicly listed on the homepage is the
+    training/workshop cohort schedule under /training_workshop/<slug>/
+    — 100hr Prenatal YTT, intro sessions, kids yoga summer, etc.
+    Cohort cadence means typically 2-5 upcoming items.
+
+- id: hk-soho-house-hk
+  name: Soho House Hong Kong (member events — public listings only)
+  display_name: Soho House Hong Kong
+  city: Hong Kong Island          # 33 Des Voeux Road West, Sheung Wan
+  category: other
+  homepage: https://www.sohohouse.com
+  kind: static
+  source_priority: 2
+  static_events:
+    - title: Soho House Hong Kong — Member Programme (login required for full schedule)
+      detail_url: https://www.sohohouse.com/houses/soho-house-hong-kong
+      start: 2026-05-26
+      end: 2026-12-31
+  notes: |
+    SCRAPE STATUS: 2026-05-26 re-investigation. Soho House publishes its
+    programme exclusively inside the members-only app (sohohouse.com
+    requires login; /events sub-paths return 404 for guests; no public
+    Eventbrite/Ticketflap mirror). Kept as a static umbrella pointer for
+    discoverability; the actual schedule is genuinely not public. The
+    Zicket organizer page that earlier showed up is also empty. Don't
+    revisit until Soho House launches a public programme page.
+
+# === Other Eventbrite organizer pages PROBED but NOT added (2026-05-26 audit) ===
 # - Art in Place (BaseHall organizer, https://www.eventbrite.com/o/art-in-place-hong-kong-61741595863):
 #   0 current upcoming. Already covered by hk-basehall static umbrella.
-# - Crown Wine Cellars: no dedicated /o/ page; events appear via guest
-#   organizers (Biodyna, etc.) — already aggregator-captured when not blocked.
-# - Hong Kong Maritime Museum: no museum-owned /o/ page; events at the
-#   venue list under third-party organizers (Chloe Poon / NBS / Biodyna).
-# - Centre Stage: not findable as a Hong Kong live-music venue on Eventbrite.
+# - Hong Kong Maritime Museum: covered by id `hk-maritime-museum` above
+#   (playwright_html_list on the official wix-built /all-exhibitions-and-events
+#   page). No museum-owned Eventbrite /o/ page exists; the official site
+#   is the better source anyway.
+# - Centre Stage: re-investigation 2026-05-26 confirms no Hong Kong venue
+#   by this name surfaces on Bing/DDG/Eventbrite/Ticketflap. Likely a
+#   confusion with "Center Stage" (NYC reality TV residence) or
+#   "Centrestage" (HKTDC fashion trade show, which is a trade event, not
+#   a public-events venue). Skip until user clarifies which Centre Stage.
+# - BaseHall: kept as static umbrella (see hk-basehall above). 2026-05-26
+#   re-check: basehall.hk has no programme page; per-event coverage at
+#   BaseHall 02 already arrives via Backstage Comedy + Hong Kong Stories
+#   per-organizer scrapers.
 # - TakeOut Comedy Club: already has its own dedicated scraper; skip.
-# - BaseHall: kept as static umbrella (see hk-basehall above).
 
 # === Film venues (added / audited 2026-05-26) ===
 
