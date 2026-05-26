@@ -2562,6 +2562,31 @@ _TITLE_DENY_KEYWORDS = (
     "story time",
     "story hour",
     "storytime",
+    # Financial / property / MLM noise — not cultural events
+    "property investment",
+    "real estate financing",
+    "real estate investment",
+    "property investing",
+    "property gathering",
+    "investment seminar",
+    "investor seminar",
+    "investor meeting",
+    "investment meetup",
+    "wealth seminar",
+    "wealth workshop",
+    "passive income",
+    "crypto trading",
+    "forex trading",
+    "stock trading workshop",
+    "mlm ",
+    "network marketing",
+    "make money online",
+    "consultation sections",
+    "consultation session",
+    "融資咨詢",   # financing consultation (zh)
+    "物業投資",   # property investment (zh)
+    "地產投資",   # real estate investment (zh)
+    "投資講座",   # investment seminar (zh)
 )
 
 
