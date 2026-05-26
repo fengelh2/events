@@ -166,6 +166,57 @@ kids_keywords:
   - family festival
   - kids festival
   - children's festival
+  # Round-7 museum/workshop signals (2026-05-26) — admit kid-friendly
+  # programs from venues NOT in always_include (M+, Palace Museum, Tai Kwun,
+  # HK Museum of Art, HKU Museum, Asia Society, HK Arts Centre, etc.)
+  # Anything with these in the title is broadly under-10 appropriate.
+  - workshop                # most kid-targeted museum programs
+  - hands-on
+  - hands on
+  - drop-in
+  - drop in
+  - make and take
+  - make-and-take
+  - interactive
+  - guided tour
+  - guided visit
+  - art class
+  - art workshop
+  - craft workshop
+  - science workshop
+  - all ages
+  - all-ages
+  - for all ages
+  - ages 3
+  - ages 4
+  - ages 5
+  - ages 6
+  - ages 7
+  - ages 8
+  - ages 9
+  - ages 10
+  - "age 3"
+  - "age 4"
+  - "age 5"
+  - "age 6"
+  - "age 7"
+  - "age 8"
+  - "age 9"
+  - "age 10"
+  - "ages 3-"
+  - "ages 4-"
+  - "ages 5-"
+  - "ages 6-"
+  - "ages 7-"
+  - "ages 8-"
+  - "ages 9-"
+  - "ages 10-"
+  - primary school
+  - sunday family
+  - saturday family
+  - family day
+  - family weekend
+  - educational
   # Kid characters / brands
   - disney
   - pixar
