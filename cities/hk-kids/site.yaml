@@ -74,6 +74,27 @@ always_include_venues:
   # Family nature venues (programming is family-default, no adult-only sessions)
   - kfbg
   - wetland-park
+  # Round-7 family-friendly museums + libraries + cinemas (2026-05-26)
+  # Drop-in / visual / slow-paced — kid-suitable by default. Specific adult-only
+  # exhibition titles can be excluded via kids_only_keywords if they slip in.
+  - m-plus-museum
+  - mplus-cinema
+  - hk-museum-of-art
+  - hk-palace-museum
+  - hk-palace-museum-events
+  - hk-science-museum
+  - hk-history-museum
+  - hk-heritage-museum
+  - hk-space-museum
+  - hkpl-events                 # public library — story time + workshops
+  - new-town-plaza              # mall events — carnival/family default
+  - harbour-city                # mall events — family default (car shows etc.)
+  - cuhk-art-museum
+  - hku-museum
+  - asia-society-hk             # has many family programs
+  - tai-kwun                    # heritage + family programming
+  - hk-arts-centre              # often runs kid theatre/workshops
+  - hk-park-events              # Hong Kong Park (aviary etc.)
 # Title keywords that promote an event into the kids calendar.
 # DELIBERATELY narrow — don't use broad sport terms (rugby/football/marathon)
 # because they match Men's Pro Championship titles. Use child-specific
