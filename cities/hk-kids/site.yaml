@@ -74,27 +74,18 @@ always_include_venues:
   # Family nature venues (programming is family-default, no adult-only sessions)
   - kfbg
   - wetland-park
-  # Round-7 family-friendly museums + libraries + cinemas (2026-05-26)
-  # Drop-in / visual / slow-paced — kid-suitable by default. Specific adult-only
-  # exhibition titles can be excluded via kids_only_keywords if they slip in.
-  - m-plus-museum
-  - mplus-cinema
-  - hk-museum-of-art
-  - hk-palace-museum
-  - hk-palace-museum-events
-  - hk-science-museum
-  - hk-history-museum
-  - hk-heritage-museum
-  - hk-space-museum
+  # Round-7 family-friendly venues (2026-05-26, refined 2026-05-26 round-2)
+  # Only venues whose programming is OVERWHELMINGLY kid/family by default.
+  # Mixed museums (M+, HK Museum of Art, Palace Museum, Tai Kwun, HKU Museum)
+  # had too many adult shows leaking in ("When Art Meets Horse Racing",
+  # "Heavenly Horses Masterpieces") — REMOVED, rely on kids_keywords instead.
+  - mplus-cinema                # cinema — most films family-suitable
+  - hk-science-museum           # interactive — kid-friendly default
+  - hk-space-museum             # planetarium — kid-friendly default
   - hkpl-events                 # public library — story time + workshops
-  - new-town-plaza              # mall events — carnival/family default
-  - harbour-city                # mall events — family default (car shows etc.)
-  - cuhk-art-museum
-  - hku-museum
-  - asia-society-hk             # has many family programs
-  - tai-kwun                    # heritage + family programming
-  - hk-arts-centre              # often runs kid theatre/workshops
-  - hk-park-events              # Hong Kong Park (aviary etc.)
+  - new-town-plaza              # mall — carnival/family default
+  - harbour-city                # mall — family default (car shows, mascots)
+  - hk-park-events              # HK Park (aviary, sport courts)
 # Title keywords that promote an event into the kids calendar.
 # DELIBERATELY narrow — don't use broad sport terms (rugby/football/marathon)
 # because they match Men's Pro Championship titles. Use child-specific
