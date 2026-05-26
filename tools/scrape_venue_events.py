@@ -757,7 +757,38 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
         page_urls = [f"{url}{sep}{page_param}={p}" for p in range(1, pages + 1)]
     # Eventbrite blocks our default UA with 405; opt-in browser headers for
     # anti-bot sites via `browser_headers: true` on the venue row.
-    if venue_row.get("browser_headers"):
+    # Playwright fallback — when requests-based fetch is anti-bot-blocked
+    # (Eventbrite returns 405 even with full Chrome fingerprint headers, likely
+    # TLS fingerprinting). Real headless Chromium does a real TLS handshake.
+    if venue_row.get("use_playwright"):
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            log.warning("%s: playwright not installed; cannot use_playwright fallback", venue_row["id"])
+            return []
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                context = browser.new_context(
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                               "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    locale=venue_row.get("locale", "en-US"),
+                )
+                pg = context.new_page()
+                for pu in page_urls:
+                    try:
+                        pg.goto(pu, wait_until="domcontentloaded", timeout=60000)
+                        pg.wait_for_timeout(int(venue_row.get("pw_wait_ms", 1500)))
+                        bodies.append(pg.content())
+                    except Exception as exc:
+                        log.warning("%s: playwright fetch failed (%s): %s", venue_row["id"], pu, exc)
+                browser.close()
+        except Exception as exc:
+            log.warning("%s: playwright session failed: %s", venue_row["id"], exc)
+            return []
+        page_urls = []   # signal: don't re-fetch via requests below
+        headers = DEFAULT_HEADERS
+    elif venue_row.get("browser_headers"):
         # Full Chrome fingerprint — Eventbrite tightened beyond plain UA check.
         # Sec-Ch-Ua + Sec-Fetch-* headers mimic a real browser navigation.
         headers = {
