@@ -217,6 +217,87 @@ kids_keywords:
   - family day
   - family weekend
   - educational
+  # Round-8 manual classification keywords (2026-05-26)
+  # Hand-picked from 473 mixed-venue dropped events: titles/programs that ARE
+  # kid-appropriate but weren't matching any prior keyword.
+
+  # HK Phil / Sinfonietta — outreach + family + film-music programs
+  - swire community concert
+  - swire music for everyone
+  - swire symphony under
+  - tutti programme        # HK Phil Jockey Club outreach
+  - hisaishi               # Joe Hisaishi = Studio Ghibli music
+  - nutcracker
+  - sleeping beauty
+  - planet earth
+  - movie music
+  - video game symphony
+  - the magic of musicals
+  - cinematic adventures
+  - wind ensemble community
+  - community concert
+  - animation stories
+  - mcdull                 # HK kid character
+  - know your piano
+  - music for ballet
+  - moonchild
+  - school of dance
+  - john williams          # Star Wars/Harry Potter scores
+  - school of music
+  - side-by-side concert
+  - magic of movie
+
+  # Museums — kid-targeted programs
+  - playscape
+  - design ah              # NHK kids show exhibit
+  - myths and monsters
+  - mini-figures
+  - heavenly horses        # animals are kid-engaging
+  - adventure night
+  - mobile museum
+  - art journey            # kids art outreach
+  - meet mona lisa
+  - tai kwun movie steps   # outdoor family cinema
+  - tai kwun neon          # visual / interactive
+  - pop unboxed
+  - pop culture festival
+  - fifa museum
+  - bruce lee              # iconic, kid-suitable
+
+  # LCSD community programs (variety, choral, annual perf — family-default)
+  - variety show
+  - annual performance
+  - choral concert
+  - funky dance
+  - cantonese operatic
+  - cantonese opera        # cultural exposure
+  - bel canto
+
+  # West Kowloon + HKAPA student/youth showcases
+  - westk funfest
+  - westk cabaret          # cabaret festival open program
+  - hkyaf                  # HK Youth Arts Foundation
+  - journey to the west
+  - three musketeers
+  - voice festival
+  - cello festival
+  - sunset concert         # community outdoor
+
+  # HK Arts Centre / Para Site / comics
+  - summer term short
+  - comix pulse
+  - filmic detours         # screening program (kid-OK)
+
+  # HKCEC family fairs (Pet/Toy etc.)
+  - pet supplies expo
+  - pet expo
+  - 寵物用品展             # pet supplies (zh)
+  - wedding fair          # families often attend
+  - 香港潮州節             # cultural festival
+
+  # Eaton / mixed venue family concerts
+  - velvet express        # specific family band
+
   # Pop culture / fandom (typically family-suitable)
   - comic con
   - comicon
