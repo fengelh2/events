@@ -2392,34 +2392,39 @@
   city: Hong Kong Island
   category: sport
   homepage: http://www.hktkda.com/en/
+  # SCRAPE STATUS: kept as static umbrella.
+  # /en/event/local/ (Local Matches) renders "Total 0 Pages, 0 Records" —
+  # the federation does not publish upcoming competitions on the English
+  # site, only past results via /en/news/. /en/notice/Event_s_Calendar/
+  # exists in the nav but is not populated. http only (https cert error
+  # on bare domain) and the /en/about/activity/ "Coming Events" page is
+  # similarly empty. Re-probe quarterly.
   kind: static
   source_priority: 1
   static_events:
     - title: HKTKDA — Kids Taekwondo Classes + Competition Calendar
-      detail_url: http://www.hktkda.com/en/
+      detail_url: http://www.hktkda.com/en/event/local/
       start: 2026-05-26
       end: 2026-12-31
       audience: kids
 
 - id: hk-judo
-  name: Judo Association of HK, China — kids classes
+  name: Judo Association of HK, China — local competitions
   display_name: HK Judo Association
   city: Hong Kong Island
   category: sport
   homepage: https://www.hkjudo.org/
-  kind: static
+  calendar_url: https://www.hkjudo.org/local_event?locale=en
+  kind: html_list
   source_priority: 1
-  static_events:
-    - title: HK Judo — Kids Classes Timetable
-      detail_url: https://www.hkjudo.org/timetable?locale=en
-      start: 2026-05-26
-      end: 2026-12-31
-      audience: kids
-    - title: HK Judo — Local Competition Calendar
-      detail_url: http://www.hkjudo.org/local_event?locale=en
-      start: 2026-05-26
-      end: 2026-12-31
-      audience: kids
+  selectors:
+    item: table.competition_table
+    date: th
+    title: tr td[colspan="2"]
+  # Dates like "08 NOV 2026" or "10 AUG 2026 - 15 AUG 2026"
+  date_extract_regex: '\d{1,2}\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+\d{4}(?:\s*[-–]\s*\d{1,2}\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+\d{4})?'
+  title_strip_regex:
+    - '^\s*Name:\s*'
 
 - id: hockey-hk-fixtures
   name: Hockey HK — youth fixtures
@@ -2427,11 +2432,26 @@
   city: Hong Kong Island
   category: sport
   homepage: https://www.hockey.org.hk/
+  # SCRAPE STATUS: kept as static umbrella.
+  # MenFixture.asp is a 490KB single page rendering the whole 2025-26 season
+  # (Sep '25 → May '26) as one giant custom-table layout: date headers like
+  # "Sunday, 7 Sep 2025" precede a borderless table of matches with no per-
+  # row class/id — just <td>s in sibling rows. The Junior subset (HKJ teams
+  # in divisions 4/5/6/PB/1B) is interleaved with seniors, not filterable.
+  # html_list selectors cannot bind a row to its date header without custom
+  # state-machine parsing. Not built — the static "see all fixtures" link
+  # to MenFixture.asp + the 3rd Men's Junior AHF Cup landing (Content.asp?
+  # Uid=129) is good enough for sport-fans following the calendar.
   kind: static
   source_priority: 1
   static_events:
-    - title: Hockey HK — Youth Field-Hockey Fixtures + Leagues
+    - title: Hockey HK — Youth Field-Hockey Fixtures (full 2025-26 season)
       detail_url: https://hockey.org.hk/MenFixture.asp
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+    - title: 3rd Men's Junior AHF Cup
+      detail_url: https://hockey.org.hk/Content.asp?Uid=129
       start: 2026-05-26
       end: 2026-12-31
       audience: kids
@@ -2442,6 +2462,14 @@
   city: Kowloon
   category: sport
   homepage: https://www.hkcricket.org/
+  # SCRAPE STATUS: kept as static umbrella.
+  # crickethongkong.com/matches is a Next.js SPA whose Live/Upcoming/Past
+  # tabs all render "There are no UPCOMING matches now" in the static HTML.
+  # The data is fetched via a client-side API call (not discoverable from
+  # the page bundle without execution). hkcricket.org/domestic/club-cricket/
+  # junior-cricket returns 404 (page moved). Re-probe at season start (Sep)
+  # — if the matches API surfaces, switch to playwright_html_list or scrape
+  # the underlying JSON endpoint directly.
   kind: static
   source_priority: 1
   static_events:
@@ -2451,25 +2479,28 @@
       end: 2026-12-31
       audience: kids
     - title: Cricket HK — Junior Cricket Programme
-      detail_url: https://www.hkcricket.org/domestic/club-cricket/junior-cricket
+      detail_url: https://www.hkcricket.org/
       start: 2026-05-26
       end: 2026-12-31
       audience: kids
 
 - id: hk-baseball-youth
-  name: HK Baseball Association — Youth League
+  name: HK Baseball Association — Youth League + events
   display_name: HK Baseball (Youth)
   city: Hong Kong Island
   category: sport
   homepage: https://www.hkbaseball.org/
-  kind: static
+  # Per-season youth-league.html only links to past-season PDF schedules.
+  # The general /events.html feed is where current league + youth-tournament
+  # announcements land (Greater Bay Super League, U10 Wan Cheng Cup, etc.)
+  calendar_url: https://www.hkbaseball.org/html/en/events.html
+  kind: html_list
   source_priority: 1
-  static_events:
-    - title: HK Baseball — Youth League Matches + Events
-      detail_url: https://www.hkbaseball.org/html/en/local-league/youth-league.html
-      start: 2026-05-26
-      end: 2026-12-31
-      audience: kids
+  selectors:
+    item: table.noticeList tr
+    date: td[width="120"]
+    title: td.pr-5 a strong
+    detail_link: td.pr-5 a@href
 
 - id: hkihl-ice-hockey
   name: HK Ice Hockey League — youth divisions
@@ -2477,14 +2508,19 @@
   city: Hong Kong Island
   category: sport
   homepage: https://hkihl.org/
-  kind: static
+  calendar_url: https://hkihl.org/calendar/fixtures-list/
+  # Listing page (SportsPress) shows 85 fixtures but title <a> tags are
+  # empty on the listing — team names only resolve on the per-fixture
+  # detail page (in <title>). Use detail_pages with the slug pattern.
+  kind: detail_pages
   source_priority: 1
-  static_events:
-    - title: HKIHL — Youth Ice-Hockey Fixtures
-      detail_url: https://hkihl.org/calendar/fixtures-list/
-      start: 2026-05-26
-      end: 2026-12-31
-      audience: kids
+  detail_url_pattern: 'https://hkihl\.org/event/[a-z0-9\-]+/'
+  max_details: 90
+  selectors:
+    title: title
+    date: time@datetime
+  title_strip_suffixes:
+    - ' – Hong Kong Ice Hockey League Association'
 
 - id: hkaaa-athletics
   name: HK Athletics Association — junior training
@@ -2492,11 +2528,20 @@
   city: Hong Kong Island
   category: sport
   homepage: https://hkaaa.com/en/
+  # SCRAPE STATUS: kept as static umbrella.
+  # /en/calendar surfaces a JS-driven month grid (clndr_table) with comp_class
+  # colored bars inside <td.day> cells. No per-event row carries an explicit
+  # full date (YYYY-MM-DD lives only in prev/next button attrs for the month
+  # boundaries). Extracting each event would require Playwright + month walk
+  # + cell→date reconstruction from the calendar header. Not worth the
+  # complexity for a single low-traffic federation. Re-evaluate if HKAAA
+  # publishes /en/events as a flat list.
+  # /en/events, /en/event, /en/competitions all 200 but body is a 1.2KB shell.
   kind: static
   source_priority: 1
   static_events:
     - title: HKAAA — Junior Training Course + Competition Calendar
-      detail_url: https://hkaaa.com/en/
+      detail_url: https://hkaaa.com/en/calendar
       start: 2026-05-26
       end: 2026-12-31
       audience: kids
