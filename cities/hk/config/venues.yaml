@@ -2679,3 +2679,133 @@
       start: 2026-05-26
       end: 2026-12-31
       audience: kids
+
+# ============================================================================
+# ADULT-AUDIENCE CULTURE / COMEDY / LIVE MUSIC (added 2026-05-26)
+# High-recurrence venues identified from Eventbrite recurrence data. Goal:
+# capture richer programming + longer time horizons than the citywide
+# Eventbrite aggregator's current-month bias. All four are general/adult
+# audience — they SHOULD show in /hk/ and NOT in /hk-kids/ (no kids_keywords
+# match, not in always_include_venues).
+# ============================================================================
+
+- id: hk-eaton-events
+  name: Eaton HK (Kino + Terrible Baby + Music Room)
+  display_name: Eaton HK
+  city: Kowloon                    # 380 Nathan Road, Jordan
+  category: other                  # mixed: film (Kino), live music (Terrible
+                                   # Baby), comedy (Music Room) — per-event
+                                   # keyword inference refines bucket
+  homepage: https://www.eatonworkshop.com/hotel/hong-kong
+  calendar_url: https://www.eatonworkshop.com/en-us/events-calendar/?location=hong-kong
+  # Calendar is a Vue.js SPA — static HTML carries only `{{e.name}}` template
+  # placeholders. Playwright renders the month grid into .calendar__event nodes.
+  kind: playwright_html_list
+  source_priority: 0
+  locale: en-US
+  wait_for_selector: ".calendar__event__name"
+  extra_wait_ms: 2500
+  selectors:
+    item: ".calendar__event"
+    title: ".calendar__event__name"
+    date: ".calendar__event__time"
+    detail_link: "a.calendar__event__link@href"
+  notes: |
+    Eaton HK hosts Kino (indie film screenings), Terrible Baby (live music),
+    and Music Room (comedy + DJ). The /en-us/events-calendar/?location=hong-kong
+    page is a Vue.js month grid; raw HTML has `{{e.name}}` template tokens.
+    Playwright renders the grid; each .calendar__event card carries name,
+    time, and a deep-link to the event detail.
+
+    LIMITATION (2026-05-26 onboarding): the Vue calendar opens on the
+    current month only. Clicking "next month" requires a Playwright click
+    interaction we don't currently script — so coverage is rolling
+    current-month-only. Daily nightly rebuild catches each event as the
+    month enters view. Re-evaluate if user wants longer time horizon
+    (add per-month iteration with playwright .click() walk).
+
+- id: hk-takeout-comedy
+  name: TakeOut Comedy Club Hong Kong
+  display_name: TakeOut Comedy
+  city: Hong Kong Island          # 34 Elgin Street, Soho, Central
+  category: theatre                # stand-up comedy
+  homepage: https://www.takeoutcomedy.net
+  calendar_url: https://www.takeoutcomedy.net/shows-what-s-happening
+  # Wix Events widget — server-rendered. data-hook attributes are stable
+  # across Wix Events deployments.
+  kind: html_list
+  source_priority: 0
+  selectors:
+    item: '[data-hook="events-card"]'
+    title: '[data-hook="title"]'
+    date: '[data-hook="short-date"]'
+    detail_link: '[data-hook="title"]@href'
+  # Wix short-date format: "Fri, 29 May" — no year. PREFER_DATES_FROM=future
+  # infers correctly (also handles year rollover in Dec→Jan).
+  notes: |
+    Asia's first full-time comedy club (since 2007). Wix Events page lists
+    weekly Friday Night Funnies + special headliner runs (HKICF festival,
+    visiting comics). Detail links go to Eventbrite for most shows, internal
+    /event-details/... for workshops. Some titles have trailing whitespace;
+    the renderer trims.
+
+- id: hk-aftermath
+  name: The Aftermath (Wyndham Street basement — live music + comedy)
+  display_name: The Aftermath
+  city: Hong Kong Island          # LG/F Sunny Building, 57-59 Wyndham Street, Central
+  category: concert                # primarily live music; open-mic comedy weekly
+  homepage: https://www.theaftermath-hk.club/
+  # The own site lists only a couple of featured shows; the full upcoming
+  # schedule lives on the Eventbrite organizer page.
+  calendar_url: https://www.eventbrite.hk/o/the-aftermath-56171828513
+  kind: detail_pages
+  source_priority: 0
+  # Eventbrite renders hrefs as relative ("/e/<slug>-tickets-<id>"); scraper
+  # urljoins against calendar_url, so match the relative form.
+  detail_url_pattern: '/e/[a-z0-9-]+-tickets-\d+'
+  selectors:
+    title: 'meta[property="og:title"]@content'
+    date: 'meta[property="event:start_time"]@content'
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  title_strip_suffixes:
+    - " Tickets, Hong Kong"
+    - " Tickets"
+  notes: |
+    Live indie bands, open-mic comedy (Tuesdays), comedy nights with touring
+    headliners, quiz nights. Own site is a thin Wix landing; the Eventbrite
+    organizer page is the canonical schedule. Follows the aia-vitality-hub
+    pattern: enumerate /e/<slug>-tickets-<id> detail URLs from the organizer
+    listing, extract via OpenGraph meta tags.
+
+- id: hk-basehall
+  name: BaseHall (Central food hall — comedy showcase + DJ + Oktoberfest)
+  display_name: BaseHall
+  city: Hong Kong Island          # LG/F Jardine House (BH01) + 1 Connaught Place (BH02), Central
+  category: other                  # mixed: stand-up showcase, DJ sets, storytelling
+  homepage: https://basehall.hk
+  # basehall.hk itself has NO events page (food-hall focus). Comedy +
+  # storytelling shows are organised by Backstage Comedy + Hong Kong Stories
+  # AT BaseHall 02, listed on Eventbrite per-event. The citywide Eventbrite
+  # aggregator (hk-eventbrite-citywide, source_priority: 1) already captures
+  # these — keep this entry as a static umbrella so users can find the venue
+  # by name and click through to upcoming BaseHall search.
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: BaseHall 02 — Evening Entertainment Programme (comedy, DJ, storytelling)
+      detail_url: https://www.eventbrite.hk/d/hong-kong-sar--central/basehall/
+      start: 2026-05-26
+      end: 2026-12-31
+    - title: Oktoberfest at BaseHall 01 (annual; date TBC each year)
+      detail_url: https://www.eventbrite.hk/o/basehall-21632028691
+      start: 2026-10-01
+      end: 2026-10-31
+  notes: |
+    SCRAPE STATUS: kept as static umbrella (2026-05-26 audit).
+    basehall.hk is a restaurant-listing site with no events page. The actual
+    programme (Saturday Comedy Showcase, Hong Kong Stories storytelling
+    nights, DJ sets, annual Oktoberfest) is organised by Backstage Comedy
+    + Hong Kong Stories + BaseHall, scattered across multiple Eventbrite
+    organiser pages. Per-event coverage already arrives via the citywide
+    aggregator hk-eventbrite-citywide. Re-evaluate if BaseHall publishes
+    its own /events page or consolidates onto a single Eventbrite org URL.
