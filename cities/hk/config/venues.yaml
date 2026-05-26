@@ -2813,3 +2813,165 @@
     organiser pages. Per-event coverage already arrives via the citywide
     aggregator hk-eventbrite-citywide. Re-evaluate if BaseHall publishes
     its own /events page or consolidates onto a single Eventbrite org URL.
+
+# === Per-organizer Eventbrite scrapers (added 2026-05-26) ===
+# Citywide aggregator (hk-eventbrite-citywide) is firmly blocked from
+# GitHub Actions IPs (returns 0 from CI). Per-organizer /o/<slug>-<id>
+# pages are far less aggressively gated and reliably return event detail
+# URLs from CI. Pattern is identical to hk-aftermath above.
+
+- id: hk-backstage-comedy
+  name: Backstage Comedy (Hong Kong stand-up + showcases)
+  display_name: Backstage Comedy
+  city: Hong Kong Island          # shows at BaseHall 02, Fa Gai, other Central rooms
+  category: other                  # stand-up comedy + showcases + panel game shows
+  homepage: https://www.eventbrite.com/o/backstage-comedy-66689832743
+  calendar_url: https://www.eventbrite.com/o/backstage-comedy-66689832743
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/e/[a-z0-9-]+-tickets-\d+'
+  selectors:
+    title: 'meta[property="og:title"]@content'
+    date: 'meta[property="event:start_time"]@content'
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  title_strip_suffixes:
+    - " Tickets, Hong Kong"
+    - " Tickets"
+  notes: |
+    Backstage Comedy programmes stand-up shows + panel game shows + touring
+    comedians (Annie Yang, Carmen Lynch, Dylan Adler, Frankie Akil, etc.)
+    across multiple Central rooms. Organizer page lists 10+ upcoming
+    shows in a typical window. Same pattern as hk-aftermath.
+
+- id: hk-seed-by-farmacy
+  name: SEED by Farmacy (Pok Fu Lam — farm-to-table + workshops)
+  display_name: SEED by Farmacy
+  city: Hong Kong Island          # 100 Cyberport Road Arcade, Pok Fu Lam
+  category: other                  # food workshops, wine dinners, rooftop events
+  homepage: https://www.eventbrite.com/o/seed-by-farmacy-111109976291
+  calendar_url: https://www.eventbrite.com/o/seed-by-farmacy-111109976291
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/e/[a-z0-9-]+-tickets-\d+'
+  selectors:
+    title: 'meta[property="og:title"]@content'
+    date: 'meta[property="event:start_time"]@content'
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  title_strip_suffixes:
+    - " Tickets, Hong Kong"
+    - " Tickets"
+  notes: |
+    Farm-to-table pizza workshops, vertical farm tours, kids workshops,
+    wine pairing dinners, rooftop "coffee rave" pickleball events at the
+    Cyberport SEED venue. 5+ upcoming on the organizer page typically.
+
+- id: hk-the-hive
+  name: The Hive Hong Kong (coworking + community events)
+  display_name: The Hive
+  city: Hong Kong Island          # multiple sites: Sheung Wan, Wan Chai, Causeway Bay + Lai Chi Kok (Kowloon)
+  category: other                  # workshops, entrepreneur talks, community nights
+  homepage: https://www.eventbrite.com/o/the-hive-115626703601
+  calendar_url: https://www.eventbrite.com/o/the-hive-115626703601
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/e/[a-z0-9-]+-tickets-\d+'
+  selectors:
+    title: 'meta[property="og:title"]@content'
+    date: 'meta[property="event:start_time"]@content'
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  title_strip_suffixes:
+    - " Tickets, Hong Kong"
+    - " Tickets"
+  notes: |
+    The Hive coworking community space (multiple HK locations). Hosts
+    workshops, entrepreneur sessions, networking + creative events.
+    Volume varies — often only 1-3 upcoming. Some Hive events also list
+    on a separate "Hive Wirral" / "Hive Noosa" organizer page; this
+    captures the main HK organizer only.
+
+- id: hk-pmq-taste-library
+  name: PMQ Taste Library (food-themed library at PMQ)
+  display_name: PMQ Taste Library
+  city: Hong Kong Island          # PMQ, 35 Aberdeen Street, Central
+  category: other                  # food talks, cookbooks events, workshops
+  homepage: https://www.eventbrite.com/o/pmq-taste-library-48365614863
+  calendar_url: https://www.eventbrite.com/o/pmq-taste-library-48365614863
+  kind: detail_pages
+  source_priority: 0
+  detail_url_pattern: '/e/[a-z0-9-]+-tickets-\d+'
+  selectors:
+    title: 'meta[property="og:title"]@content'
+    date: 'meta[property="event:start_time"]@content'
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  title_strip_suffixes:
+    - " Tickets, Hong Kong"
+    - " Tickets"
+  notes: |
+    Food-themed library inside PMQ (first of its kind in HK). Programmes
+    sharing-tea sessions, cookbook events, food-culture talks. The wider
+    PMQ creative-hub programme is fragmented across many small organizers;
+    this is the most consistent Eventbrite presence under the PMQ umbrella.
+
+# === Eventbrite organizer pages PROBED but NOT added (2026-05-26 audit) ===
+# - The Wanch (https://www.eventbrite.com/o/the-wanch-107956042221):
+#   organizer page currently shows "No upcoming events". Re-check periodically.
+# - Soho House HK / Zicket (https://www.eventbrite.hk/o/soho-house-hong-kong-zicket-113791728061):
+#   0 detail URLs on the page (events list via citywide Soho House search,
+#   not this organizer). Skip.
+# - Anahata Yoga & Wellness (https://www.eventbrite.com/o/anahata-yoga-and-wellnesstina-makris-19355253963):
+#   0 current upcoming detail URLs (training-course cohort cadence; long
+#   gaps between cohorts). Re-check when next TT cohort opens.
+# - Art in Place (BaseHall organizer, https://www.eventbrite.com/o/art-in-place-hong-kong-61741595863):
+#   0 current upcoming. Already covered by hk-basehall static umbrella.
+# - Crown Wine Cellars: no dedicated /o/ page; events appear via guest
+#   organizers (Biodyna, etc.) — already aggregator-captured when not blocked.
+# - Hong Kong Maritime Museum: no museum-owned /o/ page; events at the
+#   venue list under third-party organizers (Chloe Poon / NBS / Biodyna).
+# - Centre Stage: not findable as a Hong Kong live-music venue on Eventbrite.
+# - TakeOut Comedy Club: already has its own dedicated scraper; skip.
+# - BaseHall: kept as static umbrella (see hk-basehall above).
+
+# === Film venues (added / audited 2026-05-26) ===
+
+- id: hkiff-cine-fan
+  name: HKIFF Cine Fan (HKIFF year-round programme)
+  display_name: HKIFF Cine Fan
+  city: Kowloon                    # primarily HK Cultural Centre, Science Museum, K11 Art House
+  category: film
+  homepage: https://cinefan.hkiff.org.hk
+  calendar_url: https://cinefan.hkiff.org.hk/schedule
+  kind: detail_pages
+  source_priority: 0
+  # /movie/<slug>-NN where NN is the 2-digit year/edition tag
+  detail_url_pattern: '/movie/[a-z0-9-]+'
+  selectors:
+    title: "h1"
+    date: ".movie_screening"      # block listing all screenings YYYY-MM-DD (Dow) HH:MM
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  accept_drop_rate: 0.3
+  notes: |
+    HKIFF Cine Fan is the HKIFF Society's year-round monthly programme
+    (May/Jun/Jul retrospectives like "The Cinema of František Vláčil",
+    Cine Fan Summer IFF in August, etc.) — complement to the main HKIFF
+    festival captured by venue id `hkiff`. Schedule page enumerates
+    /movie/<slug>-<edition> URLs; detail h1 = title; .movie_screening
+    block contains "YYYY-MM-DD (Dow) HH:MM" rows per screening — first
+    match is the earliest screening date. Edition tag (e.g. "-26") is
+    part of the slug, not the title.
+
+# === Film venues PROBED but NOT added (2026-05-26 audit) ===
+# - Broadway Cinematheque (https://bc.cinema.com.hk/now-showing/):
+#   listing is fully JS-rendered (raw HTML contains only marketing copy,
+#   no film links). Would need playwright_html_list + selector reverse-
+#   engineering. The mainstream Broadway Circuit listing at
+#   www.cinema.com.hk/en/movie/upcoming is server-rendered but lists ALL
+#   Broadway cinemas (not just Cinematheque-only indie/arthouse). Defer
+#   until either: (a) BC publishes a static now-showing JSON endpoint, or
+#   (b) we accept the wider Broadway Circuit listing with cinema-filter.
+# - Outdoor cinema (West Kowloon / Tamar / Cinema Under the Stars):
+#   no consolidated 2026 schedule findable via search at time of audit.
+#   Asia Society HK already a venue. Watchlist: re-search at start of
+#   summer cycle (May-Jun) when WMA/M+/West Kowloon typically announce.
+# - mplus-cinema: audited; 13 events returned = 13/14 detail URLs on
+#   live listing (1 was the umbrella M+xHKIFF page already covered).
+#   No fix needed — current scraper is complete.
