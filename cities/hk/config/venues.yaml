@@ -2098,7 +2098,7 @@
 - id: hkfa-grassroots
   name: HKFA Jockey Club Youth Football Programme
   display_name: HKFA Youth Football
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://grassroots.hkfa.com/index_en.html
   kind: static
@@ -2113,7 +2113,7 @@
 - id: esf-sports-classes
   name: ESF Sports & Language — kids sport classes
   display_name: ESF Sports (term + holiday)
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://www.esfsla.org.hk/sports/
   kind: static
@@ -2128,7 +2128,7 @@
 - id: apss-soccer-school
   name: Asia Pacific Soccer School
   display_name: APSS Soccer School
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://www.apsoccer.hk/
   kind: static
@@ -2143,7 +2143,7 @@
 - id: hkjc-public-riding
   name: HKJC Public Riding Schools (Pok Fu Lam + Tuen Mun)
   display_name: HKJC Riding Schools
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://corporate.hkjc.com/corporate/english/jc-news-and-activities/jc-equestrian-development/public-riding-schools/pfl/pfl-programms/pfl-lesson.aspx
   kind: static
@@ -2163,7 +2163,7 @@
 - id: harry-wright-swim
   name: Harry Wright International Swim School
   display_name: Harry Wright Swim
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://www.harrywright.com.hk/
   kind: static
@@ -2178,7 +2178,7 @@
 - id: hkba-badminton-courses
   name: HK Badminton Association — training courses
   display_name: HK Badminton Assn (junior)
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: http://www.hkbadmintonassn.org.hk/
   kind: static
@@ -2193,7 +2193,7 @@
 - id: ymca-multisport
   name: YMCA HK — multi-sport classes (badminton, gymnastics, table tennis)
   display_name: YMCA Multi-Sport
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://mcs.ymcahk.org.hk/en/
   kind: static
@@ -2218,7 +2218,7 @@
 - id: trybe-gym-ninja
   name: Trybe HK — gymnastics + ninja warrior (kids)
   display_name: Trybe (gymnastics)
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://www.trybehk.com/
   kind: static
@@ -2233,7 +2233,7 @@
 - id: tennis-hk-junior
   name: HK Tennis — Tennis for All (junior schemes + timetables)
   display_name: HK Tennis (junior)
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://www.tennishk.org/en/training/junior-training/tennis-for-all-training-scheme/
   kind: static
@@ -2253,7 +2253,7 @@
 - id: try-hk-rugby
   name: HSBC Try Rugby — kids intro programme (HKRU)
   display_name: HSBC Try Rugby (kids)
-  city: Hong Kong
+  city: Hong Kong Island
   category: sport
   homepage: https://try.hkrugby.com/
   kind: static
