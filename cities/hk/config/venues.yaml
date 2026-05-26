@@ -893,7 +893,7 @@
   name: Hong Kong Rugby Sevens (annual, kid zone + family carnival)
   display_name: HK Rugby Sevens
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.hksevens.com
   kind: static
   source_priority: 0
@@ -980,7 +980,7 @@
   name: Standard Chartered HK Marathon — Youth Run
   display_name: HK Marathon Youth Run
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.hkmarathon.com
   kind: static
   source_priority: 0
@@ -999,7 +999,7 @@
   name: HKFC Youth 10s (international youth rugby festival, Happy Valley)
   display_name: HKFC Youth 10s
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://hkfcyouth10s.com
   kind: static
   source_priority: 0
@@ -1020,7 +1020,7 @@
   name: Hong Kong Rugby Union (men + women + youth fixtures)
   display_name: HKRFU Fixtures
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.hkrugby.com
   calendar_url: https://www.hkrugby.com/match-centre/calendar
   kind: static
@@ -1195,7 +1195,7 @@
   name: HKRU Asia Rugby Emirates Championship 2026 (HK matches)
   display_name: HKRU Asia Rugby 2026
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.hkrugby.com
   kind: static
   source_priority: 1
@@ -1267,7 +1267,7 @@
   name: Cathay/HSBC Hong Kong Sevens 2027 (placeholder)
   display_name: HK Sevens 2027
   city: Kowloon                    # Kai Tak Sports Park
-  category: other
+  category: sport
   homepage: https://www.hksevens.com
   kind: static
   source_priority: 1
@@ -1381,7 +1381,7 @@
   name: Hong Kong Tennis Association — Tournament Calendar
   display_name: HK Tennis Tournaments
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.tennishk.org
   # The /en/tournament/tournament-calendar/ page is a thin React shell, but
   # its JS hits this WordPress theme template that returns the full JSON
@@ -1467,7 +1467,7 @@
   name: HKFC Rugby (men + women + youth fixtures)
   display_name: HKFC Rugby
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://hkfcrugby.com
   calendar_url: https://hkfcrugby.com/fixtures/
   kind: html_list
@@ -1833,7 +1833,7 @@
   name: Hong Kong China Swimming Association (HKASA — competitions + youth events)
   display_name: HK Swimming
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.hkgswimming.org.hk
   calendar_url: https://www.hkgswimming.org.hk/en/activities
   kind: detail_pages
@@ -1862,7 +1862,7 @@
   name: Hong Kong Sailing Federation (regattas + youth Optimist + 29er camps)
   display_name: HK Sailing Federation
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.sailing.org.hk
   calendar_url: https://www.sailing.org.hk
   kind: detail_pages
@@ -1894,7 +1894,7 @@
   name: Hong Kong Rugby Union (events programme — Summer of Rugby, Nations Cup)
   display_name: HKRU Events
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.hkrugby.com
   calendar_url: https://www.hkrugby.com/event
   kind: detail_pages
@@ -1965,7 +1965,7 @@
   name: HKRU Summer of Rugby 2026 (mini + youth rugby festivals)
   display_name: HKRU Summer of Rugby
   city: Hong Kong Island
-  category: other
+  category: sport
   homepage: https://www.hkrugby.com
   kind: static
   source_priority: 1
