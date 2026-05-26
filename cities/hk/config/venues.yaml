@@ -2101,6 +2101,13 @@
   city: Hong Kong Island
   category: sport
   homepage: https://grassroots.hkfa.com/index_en.html
+  # SCRAPE STATUS: kept as static umbrella (2026-05-26 re-audit).
+  # grassroots.hkfa.com unreachable from this env (TLS handshake failure
+  # — `SSL: WRONG_VERSION_NUMBER` from requests/curl; WebFetch returned
+  # ECONNREFUSED). Site is also a portal/CMS layout (mostly imagery +
+  # navigation) — historically no per-session date list on the landing
+  # page. Re-audit when reachable; sub-pages likely need detail_pages or
+  # static hand-curation from the printable season schedule PDF.
   kind: static
   source_priority: 1
   static_events:
@@ -2116,6 +2123,13 @@
   city: Hong Kong Island
   category: sport
   homepage: https://www.esfsla.org.hk/sports/
+  # SCRAPE STATUS: kept as static umbrella (2026-05-26 re-audit).
+  # www.esfsla.org.hk unreachable from this env (DNS resolution failed
+  # for both www and apex; WebFetch returned ECONNREFUSED). Cannot
+  # confirm whether class-finder exposes dated sessions or only term
+  # codes. Re-audit when reachable; if it's the same booking widget as
+  # ESF Explore, dates live behind a JS class-search and would need
+  # playwright_html_list or an API tap.
   kind: static
   source_priority: 1
   static_events:
@@ -2569,13 +2583,23 @@
   city: New Territories
   category: sport
   homepage: https://hongkongsurfinglesson.com/
+  # SCRAPE STATUS: kept as static umbrella (2026-05-26 audit).
+  # The 2026 Surfkids page (/2026surfkids/) lists camp seasons in prose
+  # only — "Easter (Mar-Apr)", "Summer (Jun-Aug)", "Mid-Term (Oct)",
+  # "Winter (Dec)" — with NO individual session dates anywhere in the
+  # HTML. The concrete per-camp dates live exclusively in the image
+  # `web_2026-surf-camp-date-copy.jpg`. The booking system page
+  # (/surf-camp-booking/) exposes opaque "A-M Group" / "N-U Group" SKUs
+  # with prices but no calendar dates. WooCommerce product detail pages
+  # would need OCR or manual transcription. Re-audit when they publish
+  # an HTML camp schedule.
   kind: static
   source_priority: 1
   static_events:
-    - title: SurfHK — Surfkids 2026 (3-day + 1-day camps, Big Wave Bay)
+    - title: SurfHK — Surfkids 2026 (Easter / Summer / Mid-Term / Winter camps, Big Wave Bay)
       detail_url: https://hongkongsurfinglesson.com/2026surfkids/
       start: 2026-05-26
-      end: 2026-09-30
+      end: 2026-12-31
       audience: kids
 
 - id: hk-ballet-academy
@@ -2584,13 +2608,46 @@
   city: Hong Kong Island
   category: sport
   homepage: https://hkballet.com/
+  # SCRAPE STATUS: hand-listed static_events (2026-05-26 audit).
+  # Programme-card listing at /en/explore-and-engage/workshops-classes is
+  # a JS-rendered grid (no datable HTML on the listing). Each programme
+  # detail page DOES carry an explicit date + time + venue + fee in clean
+  # prose. Three masterclasses + one year-end performance had discrete
+  # dates at audit time; the two year-long term programmes (CBTP2526,
+  # Pre-Ballet 2526, Sept 2025–Jun 2026) are kept as umbrella entries.
+  # Re-audit each semester — masterclass slate changes ~quarterly.
   kind: static
   source_priority: 1
   static_events:
-    - title: HK Ballet Academy — Kids Workshops + Term Classes + Summer Intensive
-      detail_url: https://hkballet.com/en/explore-and-engage/workshops-classes
+    - title: Ballet Masterclass with Mark Annear (ages 13+, 7+ yrs training)
+      detail_url: https://hkballet.com/en/explore-and-engage/workshops-classes-programme/ballet-masterclass-with-mark-annear-2026
+      start: 2026-03-07T10:00
+      end: 2026-03-07T11:30
+      audience: kids
+    - title: Ballet Masterclass with Alessandra Pasquali (ages 13+, RAD Advanced 1+)
+      detail_url: https://hkballet.com/en/explore-and-engage/workshops-classes-programme/ballet-masterclass-with-alessandra-2026
+      start: 2026-05-24T11:00
+      end: 2026-05-24T12:30
+      audience: kids
+    - title: Ballet Masterclass with Tirion Law (ages 13+, 7+ yrs training)
+      detail_url: https://hkballet.com/en/explore-and-engage/workshops-classes-programme/ballet-masterclass-with-tirion-2026
+      start: 2026-05-30T10:00
+      end: 2026-05-30T11:30
+      audience: kids
+    - title: HK Academy of Ballet 25/26 Year-end Performance — La Fille Mal Gardée
+      detail_url: https://hkballet.com/en/explore-and-engage/workshops-classes-programme/academy-2526-la-fille-mal-gardee
+      start: 2026-05-16
+      end: 2026-05-17
+      audience: kids
+    - title: Classical Ballet Training Programme 2025/26 (ages 6+, weekly, Sept–Jun)
+      detail_url: https://hkballet.com/en/explore-and-engage/workshops-classes-programme/CBTP2526
       start: 2026-05-26
-      end: 2026-12-31
+      end: 2026-06-30
+      audience: kids
+    - title: Pre-Ballet Foundation Programme 2025/26 (ages 4–5, weekly, Sept–Jun)
+      detail_url: https://hkballet.com/en/explore-and-engage/workshops-classes-programme/pre-ballet-2526
+      start: 2026-05-26
+      end: 2026-06-30
       audience: kids
 
 - id: hkyba-ballet
