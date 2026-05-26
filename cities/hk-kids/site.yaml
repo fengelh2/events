@@ -217,6 +217,19 @@ kids_keywords:
   - family day
   - family weekend
   - educational
+  # Pop culture / fandom (typically family-suitable)
+  - comic con
+  - comicon
+  - comic-con
+  - cosplay
+  - anime
+  - manga
+  - pokemon
+  - pokémon
+  - toy fair
+  - toy expo
+  - game fair
+  - book fair
   # Kid characters / brands
   - disney
   - pixar
