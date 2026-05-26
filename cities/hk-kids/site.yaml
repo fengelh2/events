@@ -52,6 +52,25 @@ always_include_venues:
   - trybe-gym-ninja
   - tennis-hk-junior
   - try-hk-rugby
+  # Round-6 kids-sport (2026-05-26)
+  - lcsd-comm-rec-sports
+  - ryze-hk
+  - bounce-hk
+  - cityplaza-ice-palace
+  - vermcity-climbing
+  - just-climb
+  - attic-v-climbing
+  - hktkda-taekwondo
+  - hk-judo
+  - hockey-hk-fixtures
+  - cricket-hk-junior
+  - hk-baseball-youth
+  - hkihl-ice-hockey
+  - hkaaa-athletics
+  - surf-hk-kids
+  - hk-ballet-academy
+  - hkyba-ballet
+  - megaice-skating
   # Family nature venues (programming is family-default, no adult-only sessions)
   - kfbg
   - wetland-park

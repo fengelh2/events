@@ -39,6 +39,25 @@ kids_only_venues:
   - trybe-gym-ninja
   - tennis-hk-junior
   - try-hk-rugby
+  # Round-6 kids-sport (2026-05-26)
+  - lcsd-comm-rec-sports
+  - ryze-hk
+  - bounce-hk
+  - cityplaza-ice-palace
+  - vermcity-climbing
+  - just-climb
+  - attic-v-climbing
+  - hktkda-taekwondo
+  - hk-judo
+  - hockey-hk-fixtures
+  - cricket-hk-junior
+  - hk-baseball-youth
+  - hkihl-ice-hockey
+  - hkaaa-athletics
+  - surf-hk-kids
+  - hk-ballet-academy
+  - hkyba-ballet
+  - megaice-skating
 # Title keywords that signal a kid-only event (drops from adult HK even if
 # venue isn't pure-kid). Conservative — only patterns that are unambiguously
 # kid-only ("Storytime for Toddlers", "Preschool", "Mini Rugby U6", etc.).

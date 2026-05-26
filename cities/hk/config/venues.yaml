@@ -2269,3 +2269,299 @@
       start: 2026-05-25
       end: 2026-12-31
       audience: kids
+
+# ===========================================================================
+# Round-6 kids-sport venues (2026-05-26) — extended kids-class providers
+# Trampoline/ninja, ice skating, climbing, martial arts, athletics, surf,
+# dance, LCSD CommRecret, league fixtures for hockey/cricket/baseball/ice.
+# Same static-umbrella pattern as round-5.
+# ===========================================================================
+- id: lcsd-comm-rec-sports
+  name: LCSD Community Recreation & Sports Programmes (citywide, all districts)
+  display_name: LCSD CommRec Sports
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.lcsd.gov.hk/clpss/en/search/leisure/srchCommRecretSprtProgsForm.do
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: LCSD — Community Recreation & Sports Programmes (paid, all districts)
+      detail_url: https://www.lcsd.gov.hk/clpss/en/search/leisure/srchCommRecretSprtProgsForm.do
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+    - title: LCSD — Free Community Programmes (next 7 days, all districts)
+      detail_url: https://www.lcsd.gov.hk/clpss/en/search/leisure/freeCommProgsSrchByNextSevenDaysForm.do
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: ryze-hk
+  name: Ryze HK — trampoline park (kids)
+  display_name: Ryze (trampoline)
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.ryzehongkong.com/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Ryze — Little Leapers + KidJump (trampoline, ages 3+)
+      detail_url: https://www.ryzehongkong.com/activities/
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: bounce-hk
+  name: BOUNCE Inc HK — trampoline park (kids)
+  display_name: BOUNCE Inc
+  city: Kowloon
+  category: sport
+  homepage: https://www.bouncehk.com/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: BOUNCE Inc — Trampoline sessions (kids + family)
+      detail_url: https://www.bouncehk.com/
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: cityplaza-ice-palace
+  name: Cityplaza Ice Palace + HK Skating School
+  display_name: Cityplaza Ice Palace
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.cityplaza.com/en/ice-palace
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Cityplaza Ice Palace — Kids Skating Programmes (terms + holiday)
+      detail_url: https://www.cityplaza.com/en/ice-palace/ice-skating-programmes
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: vermcity-climbing
+  name: Verm City — climbing + Clip 'n Climb (kids)
+  display_name: Verm City (climbing)
+  city: Kowloon
+  category: sport
+  homepage: https://www.vermcity.com/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Verm City — Clip 'n Climb + Kids Climbing Courses
+      detail_url: https://www.vermcity.com/
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: just-climb
+  name: Just Climb — kids climbing courses
+  display_name: Just Climb
+  city: Hong Kong Island
+  category: sport
+  homepage: https://justclimb.hk/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Just Climb — Teen/Kid Climb (8-level kids course, citywide branches)
+      detail_url: https://justclimb.hk/en/teenkidclimb/
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: attic-v-climbing
+  name: Attic V — climbing classes (kids)
+  display_name: Attic V
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.atticv.com.hk/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Attic V — Fun Kids Climbing (ages 6+)
+      detail_url: https://www.atticv.com.hk/classes
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: hktkda-taekwondo
+  name: HK Taekwondo Association
+  display_name: HK Taekwondo Assn
+  city: Hong Kong Island
+  category: sport
+  homepage: http://www.hktkda.com/en/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HKTKDA — Kids Taekwondo Classes + Competition Calendar
+      detail_url: http://www.hktkda.com/en/
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: hk-judo
+  name: Judo Association of HK, China — kids classes
+  display_name: HK Judo Association
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.hkjudo.org/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HK Judo — Kids Classes Timetable
+      detail_url: https://www.hkjudo.org/timetable?locale=en
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+    - title: HK Judo — Local Competition Calendar
+      detail_url: http://www.hkjudo.org/local_event?locale=en
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: hockey-hk-fixtures
+  name: Hockey HK — youth fixtures
+  display_name: Hockey HK (youth)
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.hockey.org.hk/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Hockey HK — Youth Field-Hockey Fixtures + Leagues
+      detail_url: https://hockey.org.hk/MenFixture.asp
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: cricket-hk-junior
+  name: Cricket HK — junior leagues (U13/U15/U17)
+  display_name: Cricket HK (junior)
+  city: Kowloon
+  category: sport
+  homepage: https://www.hkcricket.org/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: Cricket HK — Junior League Matches (U13/U15/U17)
+      detail_url: https://www.crickethongkong.com/matches
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+    - title: Cricket HK — Junior Cricket Programme
+      detail_url: https://www.hkcricket.org/domestic/club-cricket/junior-cricket
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: hk-baseball-youth
+  name: HK Baseball Association — Youth League
+  display_name: HK Baseball (Youth)
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.hkbaseball.org/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HK Baseball — Youth League Matches + Events
+      detail_url: https://www.hkbaseball.org/html/en/local-league/youth-league.html
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: hkihl-ice-hockey
+  name: HK Ice Hockey League — youth divisions
+  display_name: HKIHL (youth)
+  city: Hong Kong Island
+  category: sport
+  homepage: https://hkihl.org/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HKIHL — Youth Ice-Hockey Fixtures
+      detail_url: https://hkihl.org/calendar/fixtures-list/
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: hkaaa-athletics
+  name: HK Athletics Association — junior training
+  display_name: HKAAA (junior)
+  city: Hong Kong Island
+  category: sport
+  homepage: https://hkaaa.com/en/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HKAAA — Junior Training Course + Competition Calendar
+      detail_url: https://hkaaa.com/en/
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+    - title: HK Athletics Series 2026 (Kai Tak Sports Park)
+      detail_url: https://www.kaitaksportspark.com.hk/events-tickets
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: surf-hk-kids
+  name: SurfHK — Surfkids camps
+  display_name: SurfHK (kids)
+  city: New Territories
+  category: sport
+  homepage: https://hongkongsurfinglesson.com/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: SurfHK — Surfkids 2026 (3-day + 1-day camps, Big Wave Bay)
+      detail_url: https://hongkongsurfinglesson.com/2026surfkids/
+      start: 2026-05-26
+      end: 2026-09-30
+      audience: kids
+
+- id: hk-ballet-academy
+  name: HK Ballet — Academy (workshops + classes)
+  display_name: HK Ballet Academy
+  city: Hong Kong Island
+  category: sport
+  homepage: https://hkballet.com/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HK Ballet Academy — Kids Workshops + Term Classes + Summer Intensive
+      detail_url: https://hkballet.com/en/explore-and-engage/workshops-classes
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: hkyba-ballet
+  name: HK Youth Ballet Academy
+  display_name: HK Youth Ballet
+  city: Hong Kong Island
+  category: sport
+  homepage: https://www.hkybacademy.com/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: HK Youth Ballet Academy — Kids Ballet Classes
+      detail_url: https://www.hkybacademy.com/classes
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
+
+- id: megaice-skating
+  name: MegaIce (MegaBox) — skating school + events
+  display_name: MegaIce
+  city: Kowloon
+  category: sport
+  homepage: https://www.megaice.com.hk/
+  kind: static
+  source_priority: 1
+  static_events:
+    - title: MegaIce — Skating School + Hockey Programme (kids)
+      detail_url: https://www.megaice.com.hk/
+      start: 2026-05-26
+      end: 2026-12-31
+      audience: kids
