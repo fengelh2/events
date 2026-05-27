@@ -211,10 +211,16 @@
   category: museum_exhibition
   homepage: https://www.nortonsimon.org
   calendar_url: https://www.nortonsimon.org/events
-  kind: unknown
+  kind: static
   source_priority: 0
+  static_events: []
   notes: |
-    Tier-2; not yet probed. Onboard after the Tier-1 four are stable.
+    Static umbrella 2026-05-28. Cloudflare bot challenge (403 to plain GET;
+    Playwright domcontentloaded times out >25s on /events/ + /calendar/). Even
+    when the page returns, the calendar is a JS widget with no server-rendered
+    event markup. No /wp-json/tribe/, no .ics, no JSON-LD events. Re-onboard
+    if NS exposes an iCal feed or a Tessitura subdomain (norton-simon doesn't
+    appear to use Tessitura at all — admission is free and timed).
 
 # ============================================================================
 # DEFERRED — TIER-1 venues pending parser features
@@ -330,35 +336,65 @@
   city: Central LA
   category: theatre
   homepage: https://www.centertheatregroup.org
-  kind: unknown
+  kind: static
   source_priority: 0
+  static_events: []
   notes: |
-    DTLA (Central LA). queue-it bot wall blocks plain HTTP. Will require
-    Playwright OR the Tessitura subdomain (my.centertheatregroup.org) once
-    probed.
+    Static umbrella 2026-05-28. queue-it bot wall blocks both the homepage and
+    tickets.centertheatregroup.org (302 → ctgla.queue-it.net challenge page).
+    queue-it can't be bypassed with stealth Playwright — it's the same
+    technology Ticketmaster uses for high-demand drops. Re-onboard if/when CTG
+    publishes a public season URL outside the queue-it perimeter (their
+    seasonal PDFs do, but parsing those isn't in scope).
 
 - id: geffen-playhouse
   name: Geffen Playhouse
   city: Westside
   category: theatre
   homepage: https://www.geffenplayhouse.org
-  kind: unknown
+  calendar_url: https://www.geffenplayhouse.org/shows/
+  kind: html_list
   source_priority: 0
-  notes: Westwood (Westside). Tessitura at my.geffenplayhouse.org.
+  selectors:
+    item: "div.show-card"
+    title: ".show-details"
+  accept_drop_rate: 0.5
+  date_from_title: true
+  # Format "06.10 — 07.12.2026" (MM.DD — MM.DD.YYYY). The start date has no
+  # year, so we capture the END date (always full MM.DD.YYYY) and let that
+  # represent the run. Renders the closing performance as the event date —
+  # the show actually runs for ~4 weeks before; acceptable for v1.
+  date_from_title_pattern: '\d{1,2}\.\d{1,2}\.\d{4}'
+  notes: |
+    Westwood (Westside). /shows/ renders 6 `div.show-card` blocks (the cards
+    themselves are divs; only the homepage uses `a.show-card` wrappers).
+    Date sits in `.show-details p.uk-h1` as "06.10 — 07.12.2026". We use
+    date_from_title range mode to capture the run; site.yaml date_order MDY
+    handles the parsing. Tessitura subdomain (secure.geffenplayhouse.org)
+    DOES expose TNEW pages but its /events listing renders empty — the
+    public /shows page is the cleanest source. Onboarded 2026-05-28.
 
 - id: wallis-annenberg
   name: Wallis Annenberg Center for the Performing Arts
   city: Westside
   category: mixed
   homepage: https://thewallis.org
-  calendar_url: https://thewallis.org/events
-  kind: unknown
+  calendar_url: https://thewallis.org/wallis_calendar
+  kind: playwright_html_list
   source_priority: 0
+  selectors:
+    item: "tr.list-cal-row"
+    title: ".event_title"
+    date: "td:first-child"
+    detail_link: "a@href"
   notes: |
-    Beverly Hills (Westside). Tessitura confirmed at tickets.thewallis.org
-    with TNEW v15+ template. The `tn-event-listing-view` HTML is structured
-    and scrapeable — would be the first venue to use the planned TNEW
-    adapter.
+    Beverly Hills (Westside). Calendar widget on /wallis_calendar (FullCalendar
+    JS) renders both grid AND list views; we read the list view's
+    `tr.list-cal-row` rows. Each row's first `<td>` carries "May 7, 2026" plus
+    a `<br>` then "7:30 PM" — dateparser eats both. ~12 rows per page (one
+    per performance, includes recurring runs). Re-probed 2026-05-28. The
+    `tickets.thewallis.org` Tessitura subdomain has TNEW markup too but
+    `/events` returns 404 — the public calendar URL is more reliable.
 
 - id: american-cinematheque
   name: American Cinematheque (Egyptian / Aero / Los Feliz)
@@ -366,107 +402,230 @@
   category: film
   homepage: https://americancinematheque.com
   calendar_url: https://americancinematheque.com/feed/
-  kind: unknown
+  kind: static
   source_priority: 0
+  static_events: []
   notes: |
-    Hollywood + Santa Monica + Los Feliz (mostly Central LA; Aero is
-    Westside). WordPress RSS feed live. Need a `kind: rss` parser path
-    (parse `<item>` elements, extract title + pubDate + link). Easy add;
-    haven't built it yet because events-nrw didn't need it.
+    Static umbrella 2026-05-28. Two paths investigated, both blocked:
+    (1) /feed/ is a WordPress RSS of editorial posts (festival announcements,
+        not individual screenings). pubDate is post-publication time, not the
+        screening date. No `kind: rss` parser exists yet, and the feed doesn't
+        carry per-screening dates anyway.
+    (2) /now-showing/ uses a Vuetify v-calendar widget — events come from a
+        JS `monthSelection` build, not server-rendered cards. `showMore`
+        elements appear but carry no parseable date in attributes.
+    Re-onboard if AmCin publishes an iCal or moves to a server-rendered
+    schedule grid.
 
 - id: the-broad
   name: The Broad
   city: Central LA
   category: museum_exhibition
   homepage: https://www.thebroad.org
-  kind: unknown
+  calendar_url: https://www.thebroad.org/events
+  kind: html_list
   source_priority: 0
-  notes: DTLA (Central LA). Free-admission contemporary; ticketed events.
+  selectors:
+    item: "a.card-main"
+    title: ".card-main__heading"
+    date: ".card-main__date"
+    detail_link: "@href"
+  detail_link_base: https://www.thebroad.org
+  accept_drop_rate: 0.5
+  notes: |
+    DTLA (Central LA). Public /events page server-renders ~4 upcoming program
+    cards with `a.card-main` wrappers. Date text is "Saturday, Jun 20, 2026 |
+    1:00 pm - 5:00 pm" — dateparser handles it. Multi-date programs (Yoko
+    series) collapse all dates into one `.card-main__date` block; we get the
+    first date only, which is acceptable for v1. The Broad's ticketing
+    subdomain (ticketing.thebroad.org) carries 7 more event-listing-item rows
+    (Yoko exhibition timeslots) but the SSL cert is mismatched, blocking
+    direct fetches. Onboarded 2026-05-28.
 
 - id: moca
   name: MOCA (Grand Avenue + Geffen Contemporary)
   city: Central LA
   category: museum_exhibition
   homepage: https://www.moca.org
-  kind: unknown
+  calendar_url: https://www.moca.org/programs
+  kind: static
   source_priority: 0
-  notes: DTLA + Little Tokyo (Central LA).
+  static_events: []
+  notes: |
+    Static umbrella 2026-05-28. /calendar and /events both 404; /programs is
+    the only listing page and it returns a custom CMS layout where each
+    "article.middle" block holds an exhibition OR a member-only program with
+    extremely inconsistent date phrasing ("May 4 – May 10", "Closed May 3 /
+    Opened Oct 23", or no date at all). Mixed exhibit/program content with no
+    parseable date pattern across all cards. Re-onboard if MOCA moves to a
+    standard CMS or adds JSON-LD.
 
 - id: huntington
   name: The Huntington Library, Art Museum, and Botanical Gardens
   city: Pasadena & East
   category: museum_exhibition
   homepage: https://www.huntington.org
-  kind: unknown
+  calendar_url: https://www.huntington.org/calendar
+  kind: static
   source_priority: 0
-  notes: San Marino (Pasadena & East).
+  static_events: []
+  notes: |
+    Static umbrella 2026-05-28. Next.js SPA — /calendar, /whats-on, /events,
+    /whats-happening all return HTTP 404 to scrapers (the page is
+    client-rendered after a __next_error__ shell). Even Playwright with
+    domcontentloaded + 5s wait yielded zero repeating event classes. No
+    public iCal / RSS / Tribe REST. Re-onboard if Huntington exposes a
+    `_next/data/<buildId>/calendar.json` like Academy Museum does.
 
 - id: skirball
   name: Skirball Cultural Center
   city: Westside
   category: museum_exhibition
   homepage: https://www.skirball.org
-  kind: unknown
+  calendar_url: https://www.skirball.org/calendar
+  kind: static
   source_priority: 0
-  notes: Sepulveda Pass (mapped to Westside — closer to Westside cultural circuit).
+  static_events: []
+  notes: |
+    Static umbrella 2026-05-28. /calendar uses a Drupal "skirball-calendar"
+    layout where each day is one `.skirball-calendar--results` block holding
+    a `<header>` with the date and a nested `<ol>` of multiple events. The
+    html_list parser doesn't support sibling/parent date lookup — you'd need
+    to pick `li.row` as item and walk up to the header `.event-datestamp`
+    (split into Month + day-number `<strong>`). Re-onboard once the html_list
+    parser gains a `date_from_ancestor_selector` capability, or once Skirball
+    exposes an iCal export.
 
 - id: la-master-chorale
   name: LA Master Chorale
   city: Central LA
   category: concert
   homepage: https://www.lamasterchorale.org
-  kind: unknown
+  calendar_url: https://tickets.lamasterchorale.org/events
+  kind: playwright_html_list
   source_priority: 0
-  notes: DTLA / Disney Hall (Central LA).
+  selectors:
+    item: ".tn-prod-list-item__perf-list-item"
+    title: ".tn-performance-title"
+    date: ".tn-prod-list-item__perf-date"
+    date_time: ".tn-prod-list-item__perf-time"
+    detail_link: ".tn-prod-list-item__perf-anchor@href"
+  date_format: "%A, %B %d, %Y %I:%M %p"
+  accept_drop_rate: 0.4
+  notes: |
+    DTLA / Disney Hall (Central LA). Tessitura TNEW listing on the public
+    tickets subdomain. We grab the per-performance rows
+    (.tn-prod-list-item__perf-list-item) rather than the parent .tn-prod-list-item
+    so that multi-night runs become multiple events. ~12-15 performance rows
+    per season. Requires Playwright — the page hydrates from JS, plain GET
+    returns the shell only. Onboarded 2026-05-28.
 
 - id: laco
   name: LA Chamber Orchestra (LACO)
   city: Pasadena & East
   category: concert
   homepage: https://laco.org
-  kind: unknown
+  calendar_url: https://www.laco.org/events/
+  kind: html_list
   source_priority: 0
-  notes: Glendale (Pasadena & East).
+  selectors:
+    item: "article.mc_event"
+    title: "h2.event__title"
+    date: ".event_perf__date"
+    detail_link: "h2.event__title a@href"
+  date_format: "%a, %b %d"
+  accept_drop_rate: 0.4
+  notes: |
+    Glendale + cross-venue (Pasadena & East). LACO performs at Huntington,
+    Wallis, Zipper Hall, Hollywood Bowl etc. ~16 article.mc_event cards on
+    /events. Each card holds multiple `li.event_perf` rows; `_select_text`'s
+    `select_one` picks the FIRST perf's `.event_perf__date` (e.g. "Sat, May
+    30"). Year inferred via PREFER_DATES_FROM=future. Time is dropped (perf
+    times live in a separate sibling span — `_select_text` can't combine them
+    without `date_time` selector support outside month_context mode). Events
+    render at midnight; acceptable for v1, matching New Beverly's pattern.
+    Onboarded 2026-05-28.
 
 - id: long-beach-symphony
   name: Long Beach Symphony
   city: Greater LA
   category: concert
   homepage: https://www.longbeachsymphony.org
-  kind: unknown
+  calendar_url: https://longbeachsymphony.org/calendar/
+  kind: html_list
   source_priority: 0
-  notes: Long Beach (Greater LA).
+  selectors:
+    item: "article.event"
+    title: ".event-title"
+    date: ".date"
+    detail_link: ".event-title a@href"
+  accept_drop_rate: 0.4
+  notes: |
+    Long Beach (Greater LA). Custom WordPress theme; /calendar/ renders
+    ~17 article.event cards with .event-title + .date sub-elements. Date
+    format "Jun 06, 2026 7:30 PM" — dateparser handles MDY. A few rows have
+    placeholder text like "Summer Series! Explore the many dates..." instead
+    of a real date — those drop, hence accept_drop_rate 0.4. Onboarded 2026-05-28.
 
-- id: pasadena-symphony
-  name: Pasadena Symphony
-  city: Pasadena & East
-  category: concert
-  homepage: https://www.pasadenasymphony-pops.org
-  kind: unknown
-  source_priority: 0
+# pasadena-symphony — defined above as tribe_rest. The duplicate `unknown`
+# stub previously at this location has been removed 2026-05-28.
 
 - id: the-soraya
   name: The Soraya
   city: Greater LA
   category: mixed
   homepage: https://www.thesoraya.org
-  kind: unknown
+  calendar_url: https://thesoraya.org/en/whats-on/
+  kind: playwright_html_list
   source_priority: 0
-  notes: Northridge / CSUN (Greater LA — San Fernando Valley).
+  selectors:
+    item: ".c-event-card"
+    title: ".c-event-card__title"
+    date: ".c-event-card__daterange"
+    detail_link: ".c-event-card__permalink@href"
+  accept_drop_rate: 0.4
+  notes: |
+    Northridge / CSUN (Greater LA — San Fernando Valley). The /en/calendar/
+    URL is a JS-only widget with no rendered cards; /en/whats-on/ is the
+    season-listing version that does render `.c-event-card` blocks (~9 per
+    page). Requires Playwright because the cards are lazy-rendered. Date
+    format "Sep 26, 2026" or date range — dateparser handles both.
+    Onboarded 2026-05-28.
 
 - id: royce-hall
   name: Royce Hall (CAP UCLA)
   city: Westside
   category: mixed
   homepage: https://cap.ucla.edu
-  kind: unknown
+  calendar_url: https://cap.ucla.edu/calendar
+  kind: static
   source_priority: 0
-  notes: Westwood / UCLA (Westside).
+  static_events: []
+  notes: |
+    Static umbrella 2026-05-28. CAP UCLA's /calendar is a Drupal "Views"
+    page that AJAX-loads results into `.on-our-stages` after the user
+    interacts with the filter form (no results render on initial page load
+    even with Playwright + 6s wait). The exposed-form approach (POST to
+    /views/ajax with the right view_name + display_id) is non-trivial and
+    would need its own parser kind. Re-onboard once we add a Drupal-Views-
+    AJAX parser, or once UCLA exposes a JSON-LD aggregator.
 
 - id: a-noise-within
   name: A Noise Within
   city: Pasadena & East
   category: theatre
   homepage: https://www.anoisewithin.org
-  kind: unknown
+  calendar_url: https://www.anoisewithin.org/event-calendar/
+  kind: static
   source_priority: 0
+  static_events: []
+  notes: |
+    Static umbrella 2026-05-28. /event-calendar/ DOES expose 21
+    `.calendar-instance-popup` performance blocks server-side, but the date
+    is split across two fields: `.calendar-instance-date` holds only "Sun 03"
+    (weekday + day-number) while the month + year live on the parent
+    `<div data-month="05-2026">` attribute. The html_list parser doesn't
+    support attribute-sourced or ancestor-attribute dates, so we'd lose 100%
+    of items to parse failures. Re-onboard once the parser gains
+    `date_from_ancestor_attr` support, OR scrape /season/ individual show
+    pages each of which embeds full dates in JSON-LD (more work).
