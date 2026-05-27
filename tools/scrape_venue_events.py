@@ -74,6 +74,54 @@ log = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 45  # bumped from 20s — Discover LA et al. occasionally time out
 DEFAULT_HEADERS = parse_ical.DEFAULT_HEADERS
 
+# Standard Chrome-on-Windows UA used across all Playwright launch sites.
+# Standardised on Chrome 124 (previously a mix of 120/124/126).
+_UA_WINDOWS_CHROME = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
+# Cookie-banner selectors tried in order; first hit wins. Shared across all
+# Playwright paths that pass `dismiss_cookies: true`.
+_COOKIE_DISMISS_SELECTORS = [
+    "button:has-text('Accept all')",
+    "button:has-text('Allow all')",
+    "button:has-text('I agree')",
+    "button:has-text('Akzeptieren')",
+    "[data-testid='uc-accept-all-button']",
+    "#uc-btn-accept-banner",
+    "button.uc-btn-accept",
+    "#CybotCookiebotDialogBodyButtonAccept",
+]
+
+
+def _dismiss_cookies(page) -> None:
+    """Try each known cookie-banner selector; stop at first successful click.
+    Silently swallows misses — banners are best-effort."""
+    for selector in _COOKIE_DISMISS_SELECTORS:
+        try:
+            page.click(selector, timeout=1500)
+            break
+        except Exception:
+            pass
+
+
+def _emit_drop_warning(venue_id: str, selected: int, emitted: int, threshold: float) -> None:
+    """Log a WARNING when >threshold of selected items got silently dropped.
+    No-op when selected < 3 (too noisy on tiny pages) or when emitted >= selected.
+    Mirrors the original inline check in _scrape_html_list."""
+    MIN_ITEMS_FOR_WARN = 3
+    if selected < MIN_ITEMS_FOR_WARN or selected <= emitted:
+        return
+    dropped = selected - emitted
+    drop_rate = dropped / selected
+    if drop_rate > threshold:
+        log.warning(
+            "DROP: %s selected %d items, emitted only %d (%.0f%% dropped) "
+            "— likely silent date-parse failure or selector mismatch",
+            venue_id, selected, emitted, drop_rate * 100,
+        )
+
 
 @dataclass
 class Event:
@@ -293,16 +341,7 @@ def _scrape_playwright_html_list(venue_row: dict, session=None) -> list[Event]:
 
     # Realistic UA for stealth path; cheaper Linux UA for the legacy path so we
     # don't change behaviour for venues already onboarded.
-    if use_stealth and Stealth is not None:
-        default_ua = (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-        )
-    else:
-        default_ua = (
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-        )
+    default_ua = _UA_WINDOWS_CHROME
     user_agent = venue_row.get("user_agent", default_ua)
 
     html_text: Optional[str] = None
@@ -329,21 +368,7 @@ def _scrape_playwright_html_list(venue_row: dict, session=None) -> list[Event]:
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
             if do_cookies:
-                for selector in [
-                    "button:has-text('Accept all')",
-                    "button:has-text('Allow all')",
-                    "button:has-text('I agree')",
-                    "button:has-text('Akzeptieren')",
-                    "[data-testid='uc-accept-all-button']",
-                    "#uc-btn-accept-banner",
-                    "button.uc-btn-accept",
-                    "#CybotCookiebotDialogBodyButtonAccept",
-                ]:
-                    try:
-                        page.click(selector, timeout=1500)
-                        break
-                    except Exception:
-                        pass
+                _dismiss_cookies(page)
             if wait_for:
                 try:
                     page.wait_for_selector(wait_for, timeout=timeout_ms)
@@ -386,6 +411,10 @@ def _scrape_playwright_html_list(venue_row: dict, session=None) -> list[Event]:
         )
         if ev is not None:
             out.append(ev)
+    _emit_drop_warning(
+        venue_row["id"], len(items), len(out),
+        float(venue_row.get("accept_drop_rate", 0.30)),
+    )
     log.info("%s: %d events from playwright_html_list", venue_row["id"], len(out))
     return out
 
@@ -452,23 +481,13 @@ def _scrape_playwright_detail_pages(venue_row: dict, session=None) -> list[Event
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 context = browser.new_context(
-                    user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+                    user_agent=_UA_WINDOWS_CHROME,
                     locale=venue_row.get("locale", "en-US"),
                 )
                 page = context.new_page()
                 page.goto(listing_url, wait_until="domcontentloaded", timeout=timeout_ms)
                 if do_cookies:
-                    for selector in [
-                        "button:has-text('Accept all')",
-                        "button:has-text('Allow all')",
-                        "button:has-text('I agree')",
-                        "[data-testid='uc-accept-all-button']",
-                    ]:
-                        try:
-                            page.click(selector, timeout=1500)
-                            break
-                        except Exception:
-                            pass
+                    _dismiss_cookies(page)
                 if wait_for:
                     try:
                         page.wait_for_selector(wait_for, timeout=timeout_ms)
@@ -528,7 +547,7 @@ def _scrape_playwright_detail_pages(venue_row: dict, session=None) -> list[Event
                 # Helper to render one URL with a fresh context
                 def _render(url: str) -> Optional[str]:
                     ctx = browser.new_context(
-                        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+                        user_agent=_UA_WINDOWS_CHROME,
                         locale=venue_row.get("locale", "en-US"),
                         viewport={"width": 1366, "height": 900},
                     )
@@ -566,7 +585,7 @@ def _scrape_playwright_detail_pages(venue_row: dict, session=None) -> list[Event
                 else:
                     # Shared context — fast path for non-bot-walled sites
                     ctx = browser.new_context(
-                        user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+                        user_agent=_UA_WINDOWS_CHROME,
                         locale=venue_row.get("locale", "en-US"),
                     )
                     page = ctx.new_page()
@@ -640,6 +659,10 @@ def _scrape_playwright_detail_pages(venue_row: dict, session=None) -> list[Event
             source=venue_row["id"],
             audience=_infer_audience(title),
         ))
+    _emit_drop_warning(
+        venue_row["id"], len(detail_urls), len(out),
+        float(venue_row.get("accept_drop_rate", 0.30)),
+    )
     log.info("%s: %d events from playwright_detail_pages", venue_row["id"], len(out))
     return out
 
@@ -810,8 +833,7 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 context = browser.new_context(
-                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                               "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    user_agent=_UA_WINDOWS_CHROME,
                     locale=venue_row.get("locale", "en-US"),
                 )
                 pg = context.new_page()
@@ -898,6 +920,7 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
     seen_urls: set[str] = set()
     is_aggregator = venue_row.get("city") == "__aggregator__"
     out: list[Event] = []
+    total_unique_candidates = 0
     for block in re.findall(r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>', text, re.DOTALL):
         try:
             data = _json.loads(block)

@@ -438,6 +438,18 @@ def _attr(e, name):
     return getattr(e, name, None)
 
 
+def _safe_url(u: Optional[str]) -> str:
+    """Allow only http(s), relative, or fragment URLs. Blocks javascript:/data:
+    XSS-vector schemes that html.escape doesn't strip."""
+    if not u:
+        return "#"
+    s = str(u).strip()
+    low = s.lower()
+    if low.startswith(("http://", "https://", "/", "#", "mailto:")):
+        return s
+    return "#"
+
+
 def _dt_attr(e, name) -> Optional[datetime]:
     """Read a datetime field; if it's an ISO string (from a dict round-trip), parse it."""
     v = _attr(e, name)
@@ -1107,7 +1119,7 @@ def _render_featured_card(ev, now: datetime, fresh_keys: Optional[set] = None) -
     venue_name_raw = _attr(ev, "venue_name") or ""
     venue = html.escape(venue_name_raw)
     city = html.escape(_attr(ev, "city") or "")
-    url = html.escape(_attr(ev, "url") or "#")
+    url = html.escape(_safe_url(_attr(ev, "url")))
     raw_desc = _attr(ev, "description") or ""
     description = html.escape(_clean_description(raw_desc, venue_name_raw))[:240]
     category_raw = _attr(ev, "category") or "other"
@@ -1192,7 +1204,7 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
     title = _attr(ev, "title") or ""
     venue = html.escape(_attr(ev, "venue_name") or "")
     city = html.escape(_attr(ev, "city") or "")
-    url = html.escape(_attr(ev, "url") or "#")
+    url = html.escape(_safe_url(_attr(ev, "url")))
     category_raw = _attr(ev, "category") or "other"
     category = CATEGORY_LABELS.get(category_raw, "")
     cat_slug = _slug(category_raw)

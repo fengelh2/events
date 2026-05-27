@@ -289,11 +289,12 @@ def main() -> int:
         always = set(site.get("always_include_venues") or [])
         before = len(all_events)
         def _is_kid_event(e):
-            if getattr(e, "audience", "general") == "adults":
+            aud = (getattr(e, "audience", "general") or "general").lower()
+            if aud == "adults":
                 return False  # hard veto
             if getattr(e, "source", "") in always or getattr(e, "venue_id", "") in always:
                 return True
-            if getattr(e, "audience", "general") == "kids":
+            if aud == "kids":
                 return True
             if pat and pat.search(getattr(e, "title", "") or ""):
                 return True
@@ -305,7 +306,7 @@ def main() -> int:
         # where kids events are an opt-in extra) is wrong here. Promote to
         # "general" so they render as first-class rows.
         for _e in all_events:
-            if getattr(_e, "audience", "general") in ("kids", "active"):
+            if (getattr(_e, "audience", "general") or "").lower() in ("kids", "active"):
                 try:
                     _e.audience = "general"
                 except Exception:
@@ -324,7 +325,7 @@ def main() -> int:
         def _is_adult_event(e):
             if getattr(e, "source", "") in kids_only or getattr(e, "venue_id", "") in kids_only:
                 return False
-            if getattr(e, "audience", "general") == "kids":
+            if (getattr(e, "audience", "general") or "").lower() == "kids":
                 return False
             if pat and pat.search(getattr(e, "title", "") or ""):
                 return False
