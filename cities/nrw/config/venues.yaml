@@ -784,7 +784,14 @@
   calendar_url: https://www.tonhalle.de/eigenveranstaltungen-der-tonhalle
   kind: unknown
   source_priority: 0
-  notes: Spot-check showed no JSON-LD. Check for .ics — many concert halls on TYPO3 expose it.
+  notes: |
+    Inertia.js SPA — no static HTML, no .ics. Public JSON API DISCOVERED at
+    https://www.tonhalle.de/api/events?size=2000 returning ~1905 records.
+    Schema: {events: [{title, isoDateStrings: ["ISO"], link, ...}]}.
+    Cannot be onboarded with current flat_json_feed kind because the start
+    date lives in a list (`isoDateStrings.0`) and `_dig` doesn't support
+    array indexing. TODO: either add list support to _dig, or extend
+    flat_json_feed with a "first-isodate" mode. Until then: skip.
 
 - id: dhaus
   name: Düsseldorfer Schauspielhaus
@@ -815,7 +822,12 @@
   calendar_url: https://www.sieshoeke.com/exhibitions
   kind: unknown
   source_priority: 0
-  notes: Private gallery — vernissage dates often only on "current exhibitions" page or Instagram. Best-effort.
+  notes: |
+    Server-rendered `li.Grid_item` with title + ENGLISH date copy
+    ("Opening May 29th, 6 – 9 pm / May 29th – Jun 27th, 2026"). Onboarding
+    blocked because NRW is configured `lang: de` and dateparser drops the
+    English strings. Would require a per-venue `lang: en` override the
+    current scraper doesn't support.
 
 - id: konrad-fischer
   name: Konrad Fischer Galerie
@@ -1205,9 +1217,20 @@
   city: Duisburg
   category: concert
   homepage: https://www.duisburger-philharmoniker.de
-  calendar_url: https://www.duisburger-philharmoniker.de/spielplan
-  kind: unknown
+  calendar_url: https://www.duisburger-philharmoniker.de/konzertkalender/
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "article.konzert"
+    title: "span.datKoTitel a"
+    date: "span.monatTag"
+    detail_link: "span.datKoTitel a"
+  date_prefer: future
+  notes: |
+    WordPress site. URL is `/konzertkalender/`, NOT `/spielplan/` (404).
+    Date "21. August" lacks year; date_prefer:future + DMY locale gives 2026.
+    Will wrap to next-year when month is in past — acceptable for a 12-month
+    rolling concert list.
 
 # ============================================================================
 # BOCHUM
@@ -1237,8 +1260,18 @@
   category: museum_exhibition
   homepage: https://www.kunstmuseumbochum.de
   calendar_url: https://www.kunstmuseumbochum.de/ausstellungen
-  kind: unknown
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "article:has(time.updated)"
+    title: "h2 a"
+    date: "time.updated"
+    detail_link: "h2 a"
+  date_extract_regex: '\d{1,2}\.\s*\w+\s*\d{4}(?:\s*\d{1,2}:\d{2})?(?:\s*[­–—-]+\s*\d{1,2}\.\s*\w+\s*\d{4}(?:\s*\d{1,2}:\d{2})?)?'
+  notes: |
+    WordPress site. `<time class="updated">` carries "DD. Monat YYYY — DD. Monat YYYY"
+    using a soft-hyphen-prefixed em-dash. Regex tolerates both. Includes permanent
+    Sammlung (start 2020) — past start date is fine since end is in future.
 
 # ============================================================================
 # DORTMUND
@@ -1250,8 +1283,17 @@
   category: mixed
   homepage: https://www.theaterdo.de
   calendar_url: https://www.theaterdo.de/spielplan/
-  kind: unknown
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "div.event"
+    title: "div.event__info h2"
+    date: "div.event__date"
+    detail_link: "div.event__info a"
+    description: "div.event__details p"
+  notes: |
+    Server-rendered "div.event" cards. event__date wraps month/day/weekday spans
+    that dateparser handles natively ("Mai 2026 28 Donnerstag" → 2026-05-28).
   produces_venue_ids:
     - oper-dortmund
     - ballett-dortmund
@@ -1264,17 +1306,39 @@
   category: concert
   homepage: https://www.konzerthaus-dortmund.de
   calendar_url: https://www.konzerthaus-dortmund.de/de/programm/spielplan/
-  kind: unknown
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "div.card.grid.kd"
+    title: "p.h2"
+    date: "ul.timebox"
+    detail_link: "a[aria-label='Zur Detailseite dieser Veranstaltung']"
+  date_extract_regex: '\d{2}\.\d{2}\.\d{4}\s+\d{2}\.\d{2}'
+  notes: |
+    Server-rendered "card grid kd" tiles. Date lives in <ul class="timebox">
+    as "Do 28.05.2026 20.00 Uhr" — regex picks "28.05.2026 20.00". Detail
+    URL is on the trailing empty <a aria-label="Zur Detailseite...">.
 
 - id: museum-ostwall
   name: Museum Ostwall im Dortmunder U
   city: Dortmund
   category: museum_exhibition
   homepage: https://dortmunder-u.de/museum-ostwall/
-  calendar_url: https://dortmunder-u.de/museum-ostwall/ausstellungen/
-  kind: unknown
+  calendar_url: https://dortmunder-u.de/museum-ostwall/
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "article.tile"
+    title: "h2.tile__title"
+    date_start: "time:nth-of-type(1)@datetime"
+    date_end: "time:nth-of-type(2)@datetime"
+    detail_link: "a.tile__thumbnail-mask"
+  notes: |
+    Switched calendar_url from /ausstellungen/ (JS-only) to the parent
+    /museum-ostwall/ which server-renders 18 tiles (ausstellungen +
+    veranstaltungen + führungen). <time datetime="YYYY-MM-DD"> pair
+    yields machine-readable start+end. Some tiles only have one <time>
+    (single-day events) — those still pass since date_end is optional.
 
 # ============================================================================
 # MÜLHEIM A.D. RUHR
@@ -1317,8 +1381,21 @@
   category: museum_exhibition
   homepage: https://www.gasometer.de
   calendar_url: https://www.gasometer.de/de/ausstellungen.html
-  kind: unknown
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "li.gob_exhibition-list__item"
+    title: "a"
+    detail_link: "a"
+  date_from_title: true
+  date_from_title_mode: range
+  date_from_title_pattern: '(\d{1,2}\.\d{1,2}\.\d{4})\s*[-–—]\s*(\d{1,2}\.\d{1,2}\.\d{4})'
+  accept_drop_rate: 0.99
+  notes: |
+    Plain link list "Title (DD.MM.YYYY - DD.MM.YYYY)". Only the CURRENT
+    exhibition has a real date range; archive items (~19) use "(2024/2025)"
+    style without parseable dates and are silently dropped. High drop rate
+    is expected and normal — that's why accept_drop_rate is 0.99.
 
 # ============================================================================
 # GELSENKIRCHEN
@@ -1368,9 +1445,22 @@
   city: Wuppertal
   category: museum_exhibition
   homepage: https://www.von-der-heydt-museum.de
-  calendar_url: https://www.von-der-heydt-museum.de/ausstellungen
-  kind: unknown
+  calendar_url: https://www.von-der-heydt-museum.de/besuchen/ausstellungen/aktuell/
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "div.jet-listing-grid__item"
+    title: "h3.jet-listing-dynamic-field__content"
+    date: "div.elementor"
+    detail_link: "a[href*='/ausstellungen/']"
+  date_extract_regex: '\d{1,2}\.\s*(?:Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+\d{4}\s*[–—-]\s*\d{1,2}\.\s*(?:Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+\d{4}|\d{1,2}\.\s*(?:Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+\d{4}'
+  notes: |
+    WordPress + Elementor + JetEngine. Switched calendar_url to /aktuell/.
+    Title from first <h3.jet-listing-dynamic-field__content>. Date selector
+    pulls all text from .elementor wrapper and regex picks the German date
+    (skipping the "Bis " prefix that defeats dateparser). 2/4 cards parse;
+    others use vague phrasing like "ab Frühjahr 2027".
+  accept_drop_rate: 0.6
 
 # ============================================================================
 # KREFELD
@@ -1382,8 +1472,18 @@
   category: museum_exhibition
   homepage: https://kunstmuseenkrefeld.de
   calendar_url: https://kunstmuseenkrefeld.de/ausstellungen
-  kind: unknown
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "li.exhibition_page__thumbnail"
+    title: "div.exhibition_page__thumbnail__title"
+    date_start: "time.from@datetime"
+    date_end: "time.to@datetime"
+    detail_link: "a.exhibition_page__thumbnail__link"
+  notes: |
+    Modulor CMS. <time class="from"/"to" datetime="YYYY-MM-DD"> pair in
+    .exhibition_page__thumbnail__date_range gives ISO dates. 5 thumbs cover
+    the two Krefeld houses (Kaiser-Wilhelm-Museum + Haus Lange/Esters).
   produces_venue_ids:
     - kaiser-wilhelm-museum
     - haus-lange
@@ -1417,8 +1517,19 @@
   category: museum_exhibition
   homepage: https://clemens-sels-museum-neuss.de
   calendar_url: https://clemens-sels-museum-neuss.de/ausstellungen
-  kind: unknown
+  kind: html_list
   source_priority: 0
+  selectors:
+    item: "div.m-exhibition-thumb"
+    title: "div.m-exhibition-thumb__title h2"
+    date_start: "div.a-exhibition-meta__duration time:nth-of-type(1)@datetime"
+    date_end: "div.a-exhibition-meta__duration time:nth-of-type(2)@datetime"
+    detail_link: "a"
+  notes: |
+    Kirby CMS. <time datetime="ISO"> pair inside .a-exhibition-meta__duration
+    yields machine-readable start + end. 5 current exhibitions shown; the
+    archive (97 thumbs) is rendered into separate .m-exhibition-thumb-archive
+    blocks and intentionally not selected.
 
 # ============================================================================
 # REGIONAL AGGREGATORS (lower priority — used to fill gaps + cross-check)
@@ -1445,4 +1556,9 @@
   calendar_url: https://www.visitessen.de/veranstaltungen
   kind: unknown
   source_priority: 9
-  notes: City tourism aggregator, lower priority than venue's own site.
+  notes: |
+    Intentionally left as kind: unknown — this entry duplicates the
+    `visitessen` row above (kind: et4_search against pages.visitessen.de),
+    which already covers the city tourism aggregator. Removing the row
+    would orphan historical seen_events references, so we keep it as a
+    permanent skip. Do NOT onboard.
