@@ -595,7 +595,7 @@
   name: Ota Fine Arts (Singapore)
   city: Singapore
   region: "West & North"
-  category: vernissage
+  category: museum_exhibition
   homepage: https://www.otafinearts.com
   calendar_url: https://www.otafinearts.com/
   kind: html_list
@@ -617,7 +617,7 @@
   name: Cuturi Gallery
   city: Singapore
   region: "City Centre"
-  category: vernissage
+  category: museum_exhibition
   homepage: https://www.cuturigallery.com
   calendar_url: https://www.cuturigallery.com/exhibitions/
   kind: html_list
@@ -637,7 +637,7 @@
   name: Yeo Workshop
   city: Singapore
   region: "West & North"
-  category: vernissage
+  category: museum_exhibition
   homepage: https://www.yeoworkshop.com
   calendar_url: https://www.yeoworkshop.com/exhibitions/
   kind: html_list
@@ -656,7 +656,7 @@
   name: Sundaram Tagore Singapore
   city: Singapore
   region: "City Centre"
-  category: vernissage
+  category: museum_exhibition
   homepage: https://www.sundaramtagore.com
   calendar_url: https://www.sundaramtagore.com/exhibitions
   kind: playwright_html_list
@@ -669,7 +669,7 @@
   name: Mizuma Gallery (Singapore)
   city: Singapore
   region: "West & North"
-  category: vernissage
+  category: museum_exhibition
   homepage: https://www.mizuma.sg
   calendar_url: https://www.mizuma.sg/exhibitions/
   kind: html_list
@@ -688,7 +688,7 @@
   name: FOST Gallery
   city: Singapore
   region: "West & North"
-  category: vernissage
+  category: museum_exhibition
   homepage: https://www.fostgallery.com
   calendar_url: https://www.fostgallery.com/2025
   kind: html_list
@@ -707,7 +707,7 @@
   name: Objectifs — Centre for Photography & Film
   city: Singapore
   region: "City Centre"
-  category: vernissage
+  category: museum_exhibition
   homepage: https://www.objectifs.com.sg
   calendar_url: https://www.objectifs.com.sg/upcoming/
   kind: playwright_html_list
@@ -952,7 +952,7 @@
 - id: sifa
   name: Singapore International Festival of Arts
   city: "City Centre"
-  category: festival
+  category: other
   homepage: https://www.sifa.sg
   calendar_url: https://www.sifa.sg/programme
   kind: detail_pages
@@ -1200,7 +1200,7 @@
   name: Singapore Tyler Print Institute
   display_name: STPI Creative Workshop & Gallery
   city: City Centre
-  category: art
+  category: museum_exhibition
   homepage: https://www.stpi.com.sg
   calendar_url: https://www.stpi.com.sg/whats-on
   kind: detail_pages
@@ -1226,7 +1226,7 @@
   name: Gardens by the Bay
   display_name: Gardens by the Bay
   city: City Centre
-  category: art         # mixed: exhibitions + horticulture displays + family
+  category: museum_exhibition  # exhibitions + horticulture displays + family
   homepage: https://www.gardensbythebay.com.sg
   calendar_url: https://www.gardensbythebay.com.sg/en/things-to-do/calendar-of-events.html
   kind: playwright_detail_pages

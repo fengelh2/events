@@ -132,6 +132,10 @@ def _stamp_first_seen(events: list, state_path: Path) -> dict:
     """
     today_iso = date.today().isoformat()
     bootstrap_iso = (date.today() - timedelta(days=SEEN_BOOTSTRAP_OFFSET_DAYS)).isoformat()
+    # Bootstrap is keyed strictly on FILE absence. An empty/corrupted-to-{} state
+    # file must NOT trigger a fresh bootstrap, or every event would re-stamp
+    # today and the NEW badge would re-fire across the entire calendar.
+    first_run = not state_path.exists()
     state: dict[str, str] = {}
     try:
         if state_path.exists():
@@ -139,8 +143,6 @@ def _stamp_first_seen(events: list, state_path: Path) -> dict:
     except (OSError, json.JSONDecodeError) as exc:
         log.warning("seen_events.json unreadable, treating as empty: %s", exc)
         state = {}
-
-    first_run = not state
     keys_now = set()
     new_count = 0
     for ev in events:

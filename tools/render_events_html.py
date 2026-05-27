@@ -416,9 +416,17 @@ def _is_visible(e, now: datetime, horizon: datetime) -> bool:
     en = _end(e)
     if s is None:
         return False
-    # Ongoing exhibitions: end is in the future even if start is in the past
+    # Ongoing exhibitions: end is in the future even if start is in the past.
+    # Cap end at horizon+365d so placeholder values like 2099-12-31 don't make
+    # an event visible forever — it will age out once start drifts past horizon.
     if en is not None and en >= now:
-        return en <= horizon + timedelta(days=365)  # keep multi-month shows visible
+        end_cap = horizon + timedelta(days=365)
+        capped_end = min(en, end_cap)
+        if capped_end < now:
+            return False
+        # Still require the start to be within a sane future window so a
+        # long-past start + placeholder end doesn't linger indefinitely.
+        return s <= end_cap
     # Single-day or short events: must be future-ish (one day buffer for tonight)
     return now - timedelta(days=1) <= s <= horizon
 

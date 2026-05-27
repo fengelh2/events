@@ -810,7 +810,7 @@
 - id: sies-hoeke
   name: Galerie Sies + Höke
   city: Düsseldorf
-  category: vernissage
+  category: museum_exhibition
   homepage: https://www.sieshoeke.com
   calendar_url: https://www.sieshoeke.com/exhibitions
   kind: unknown
@@ -820,7 +820,7 @@
 - id: konrad-fischer
   name: Konrad Fischer Galerie
   city: Düsseldorf
-  category: vernissage
+  category: museum_exhibition
   homepage: https://konradfischergalerie.de
   calendar_url: https://konradfischergalerie.de/exhibitions
   kind: unknown

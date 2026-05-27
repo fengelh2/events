@@ -6,13 +6,35 @@ in parallel. Reports broken URLs grouped by city + host, writes JSON.
 Run after build_all.py. Doesn't fail the build — just records.
 """
 from __future__ import annotations
-import argparse, json, re, sys, time
+import argparse, json, re, sys, threading, time
+from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from collections import Counter, defaultdict
 from urllib.parse import urlparse
 
 import requests
+
+# Per-host concurrency cap. 20 workers can all pile onto one slow host
+# (e.g. Esplanade) and saturate it — leading to false-positive timeouts.
+# A semaphore keyed by hostname bounds in-flight requests per host.
+PER_HOST_CONCURRENCY = 3
+_HOST_SEMAPHORES: dict[str, threading.Semaphore] = {}
+_HOST_SEM_LOCK = threading.Lock()
+
+
+def _host_semaphore(host: str) -> threading.Semaphore:
+    with _HOST_SEM_LOCK:
+        sem = _HOST_SEMAPHORES.get(host)
+        if sem is None:
+            sem = threading.Semaphore(PER_HOST_CONCURRENCY)
+            _HOST_SEMAPHORES[host] = sem
+        return sem
+
+
+# Exceptions worth one retry — a single network blip shouldn't condemn a URL
+# and trigger the investigator to auto-replace a working link.
+_TRANSIENT_EXC = (requests.ConnectionError, requests.Timeout)
+_RETRY_BACKOFF_S = 1.0
 
 REPO_ROOT = Path(__file__).parent.parent
 DIST = REPO_ROOT / "dist"
@@ -44,8 +66,9 @@ def extract_links(html: str) -> set[str]:
     return links
 
 
-def probe(url: str) -> tuple[str, int, str]:
-    host = urlparse(url).netloc.lower()
+def _probe_once(url: str) -> tuple[int, str | None]:
+    """Single network attempt. Returns (status_code, err_msg).
+    err_msg is None on success (regardless of HTTP status)."""
     try:
         r = requests.head(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
         code = r.status_code
@@ -53,8 +76,29 @@ def probe(url: str) -> tuple[str, int, str]:
             r = requests.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True, stream=True)
             code = r.status_code
             r.close()
+        return code, None
     except requests.RequestException as exc:
-        return url, 0, str(exc)[:60]
+        return 0, str(exc)[:60]
+
+
+def probe(url: str) -> tuple[str, int, str]:
+    host = urlparse(url).netloc.lower()
+    # Cap concurrent requests to a single host so one slow host doesn't
+    # eat the whole worker pool and trigger spurious timeouts.
+    with _host_semaphore(host):
+        code, err = _probe_once(url)
+        # One retry on transient network errors before declaring failure.
+        if err is not None:
+            # Only retry the genuinely transient cases (connection reset,
+            # read timeout). Other RequestExceptions (e.g. SSLError, InvalidURL)
+            # are not worth retrying.
+            transient = any(name in err.lower() for name in
+                            ("timeout", "timed out", "connection", "reset"))
+            if transient:
+                time.sleep(_RETRY_BACKOFF_S)
+                code, err = _probe_once(url)
+        if err is not None:
+            return url, 0, err
 
     if code in OK_CODES:
         return url, code, "ok"

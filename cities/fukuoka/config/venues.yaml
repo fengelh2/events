@@ -221,7 +221,7 @@
 - id: hakata-gion-yamakasa
   name: Hakata Gion Yamakasa 博多祇園山笠
   city: Hakata
-  category: festival
+  category: other
   homepage: https://www.hakata-yamakasa.net
   calendar_url: https://www.hakata-yamakasa.net/
   kind: static
@@ -263,7 +263,7 @@
 - id: hakata-dontaku
   name: Hakata Dontaku 博多どんたく港まつり
   city: Tenjin & Daimyō               # Meiji-dōri parade route, central
-  category: festival
+  category: other
   homepage: https://www.dontaku.fukunet.or.jp
   calendar_url: https://www.dontaku.fukunet.or.jp/
   kind: static
@@ -496,7 +496,7 @@
 - id: fukuoka-annual-festivals
   name: Fukuoka Annual Festivals (curated)
   city: Around Fukuoka
-  category: festival
+  category: other
   homepage: https://yokanavi.com/event/
   kind: static
   source_priority: 1
@@ -750,7 +750,7 @@
 - id: united-cinemas-canal-city
   name: United Cinemas Canal City 13
   city: Hakata                        # Canal City Hakata complex
-  category: cinema
+  category: film
   homepage: https://www.unitedcinemas.jp/canalcity/
   calendar_url: https://www.unitedcinemas.jp/canalcity/daily.php
   kind: html_list
