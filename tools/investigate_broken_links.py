@@ -200,6 +200,12 @@ def investigate(broken_url: str, ctx: dict | None) -> dict:
         topical_match = bool(broken_segments) and any(s in cand_segs for s in broken_segments)
         if is_same_host and broken_segments and not topical_match:
             continue  # same host but unrelated path
+        # Trusted off-hosts (Eventbrite, Facebook, etc.) must ALSO share a
+        # topical token with the broken URL. Otherwise a malicious or unrelated
+        # page on eventbrite.com that merely matches the venue slug could be
+        # auto-promoted as a patch. Mirrors the same-host topical_match gate.
+        if is_trusted_off and broken_segments and not topical_match:
+            continue  # trusted off-host but unrelated path — refuse
         score = 1
         if expect and expect.lower() in body.lower():
             score += 3
