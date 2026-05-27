@@ -1759,6 +1759,46 @@
     Hong Kong 2025") that lack a <time> element and get dropped silently;
     accept_drop_rate=0.5 covers them.
 
+# ----- Time Out Hong Kong — weekly weekend roundup (complement to monthly) -----
+- id: timeout-hk-weekend
+  name: Time Out Hong Kong (this weekend roundup)
+  display_name: Time Out HK (Weekend)
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.timeout.com/hong-kong
+  # "This weekend" article — slug is stable across weeks (Time Out re-publishes
+  # the same URL with rotating content). Cards are <article> blocks with an
+  # <h3> title and an "Until DD Mon YYYY" date label as plain text (no <time>
+  # element — that's the monthly page's structure).
+  calendar_url: https://www.timeout.com/hong-kong/things-to-do/things-to-do-in-hong-kong-this-weekend
+  kind: html_list
+  source_priority: 2
+  selectors:
+    item: "article"
+    title: "h3"
+    # Date sits in the last tag-pill <li> of each card, prefixed "Until ".
+    date: "li:last-of-type"
+    detail_link: "a@href"
+  # Regex matches the date INSIDE the "Until …" prefix — group 0 is just the
+  # "DD Mon YYYY" portion so dateparser doesn't choke on the English word.
+  date_extract_regex: '(?<=Until\s)\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}'
+  accept_drop_rate: 0.5
+  notes: |
+    Verified 2026-05-27: 23 article cards present, 15 yield clean events
+    via li:last-of-type → "Until DD Mon YYYY" extraction (pop-ups,
+    exhibitions, seasonal activations; remaining 8 are evergreen guide
+    cards without a date pill). Complements timeout-hk-month — the weekend page
+    catches one-off shows that don't make it onto the monthly roundup.
+    Date selector points at the whole <article> so the regex can find the
+    "Until ..." run-date wherever Time Out renders it. URL slug
+    (.../this-weekend) is stable; no monthly rotation needed.
+    Probed and DROPPED in same session: Foodie HK (no /events page),
+    HKFP /category/lifestyle/ (HTTP 429 bot-walled), Coconuts /events/
+    (pan-Asia, only 3 HK mentions on a 64-article page), Lifestyle Asia
+    /hk/events/ (HTTP 403 walled), TheLoop HK (Cloudflare 202 challenge),
+    Tatler /the-scene + /whats-on/hong-kong (404 / no event listings),
+    SCMP /lifestyle (articles only, no structured event cards).
+
 # ----- New Town Plaza — mall happenings via detail-page walk -----
 - id: new-town-plaza
   name: New Town Plaza (Sha Tin — mall happenings + Snoopy World tie-ins)
