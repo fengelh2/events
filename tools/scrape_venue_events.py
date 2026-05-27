@@ -1633,7 +1633,6 @@ def _scrape_sistic_api(venue_row: dict, session=None) -> list[Event]:
         'https://www.sistic.com.sg/events/{alias}'
       drop_genres: list[str] of primary_genre values to skip (case-insensitive)
     """
-    import json as _json
     sess = session or requests
     base = venue_row["calendar_url"]
     sep = "&" if "?" in base else "?"
@@ -2840,7 +2839,7 @@ def load_venues(path: str | Path) -> list[dict]:
 
 
 # ─── helpers for German aggregator parsers (et4, toubiz) ────────────────────
-import html as _html  # noqa: E402
+# (_html already imported above at L1024)
 
 
 def _tribe_slug(s: str) -> str:
