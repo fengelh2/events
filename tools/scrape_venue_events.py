@@ -290,6 +290,10 @@ def _scrape_detail_pages(venue_row: dict, session=None) -> list[Event]:
                 audience=_infer_audience(title),
             )
         )
+    _emit_drop_warning(
+        venue_row["id"], len(detail_urls), len(out),
+        float(venue_row.get("accept_drop_rate", 0.30)),
+    )
     return out
 
 
@@ -951,6 +955,7 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
             if not ev_url or ev_url in seen_urls:
                 continue
             seen_urls.add(ev_url)
+            total_unique_candidates += 1
 
             title = _clean_title(ev.get("name") or "")
             start = _parse_jsonld_dt(ev.get("startDate"))
@@ -1020,6 +1025,10 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
                     audience=_infer_audience(title),
                 )
             )
+    _emit_drop_warning(
+        venue_row["id"], total_unique_candidates, len(out),
+        float(venue_row.get("accept_drop_rate", 0.30)),
+    )
     log.info("%s: %d unique events from json_ld_aggregator", venue_row["id"], len(out))
     return out
 
@@ -2032,21 +2041,14 @@ def _scrape_html_list(venue_row: dict, session=None) -> list[Event]:
             if ev is not None:
                 out.append(ev)
 
-    # WARNING when >30% of selected items got dropped (usually silent
+    # WARNING when >threshold of selected items got dropped (usually silent
     # date-parse failure or selector mismatch). Mirrors events-nrw c297828.
     # Per-venue `accept_drop_rate: 0.5` raises the threshold for venues
     # with legitimate intentional drops (closure notices, placeholders).
-    DROP_WARN_THRESHOLD = float(venue_row.get("accept_drop_rate", 0.30))
-    MIN_ITEMS_FOR_WARN = 3
-    if total_items >= MIN_ITEMS_FOR_WARN and total_items > len(out):
-        dropped = total_items - len(out)
-        drop_rate = dropped / total_items
-        if drop_rate > DROP_WARN_THRESHOLD:
-            log.warning(
-                "DROP: %s selected %d items, emitted only %d (%.0f%% dropped) "
-                "— likely silent date-parse failure or selector mismatch",
-                venue_row["id"], total_items, len(out), drop_rate * 100,
-            )
+    _emit_drop_warning(
+        venue_row["id"], total_items, len(out),
+        float(venue_row.get("accept_drop_rate", 0.30)),
+    )
     return out
 
 
