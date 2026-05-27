@@ -35,11 +35,16 @@ from zoneinfo import ZoneInfo
 # day in display.
 # Locale/timezone — overridden per-city via configure_locale() before scraping.
 _LOCAL_TZ = ZoneInfo("Asia/Singapore")
-_HK_TZ = _LOCAL_TZ  # back-compat alias used throughout the file
 
 
 _LANGUAGE = "en"  # overridden per-city via configure_locale()
 _LANGUAGES = ["en"]  # full list (may be multi-language for mixed-script cities)
+
+# Default DATE_ORDER. Overridden per-city by configure_locale().
+# US convention is MM/DD/YYYY (LA). HK/SG/NRW use DMY. Fukuoka uses YMD.
+# dateparser tries to detect format from input first; explicit setting
+# disambiguates ambiguous strings like "5/12/2026".
+_DATE_PARSER_BASE_SETTINGS = {"DATE_ORDER": "DMY"}
 
 
 def configure_locale(timezone_name: str, date_order: str = "DMY", language="en") -> None:
@@ -49,9 +54,8 @@ def configure_locale(timezone_name: str, date_order: str = "DMY", language="en")
     `language` may be a single str ("en") or a list (["ja","en"]) when the
     city mixes scripts (Fukuoka has Japanese + English dates side-by-side).
     """
-    global _LOCAL_TZ, _HK_TZ, _DATE_PARSER_BASE_SETTINGS, _DATE_PARSER_KW, _LANGUAGE, _LANGUAGES
+    global _LOCAL_TZ, _DATE_PARSER_BASE_SETTINGS, _DATE_PARSER_KW, _LANGUAGE, _LANGUAGES
     _LOCAL_TZ = ZoneInfo(timezone_name)
-    _HK_TZ = _LOCAL_TZ
     _DATE_PARSER_BASE_SETTINGS = {"DATE_ORDER": date_order}
     if isinstance(language, str):
         langs = [language]
@@ -121,6 +125,109 @@ def _emit_drop_warning(venue_id: str, selected: int, emitted: int, threshold: fl
             "— likely silent date-parse failure or selector mismatch",
             venue_id, selected, emitted, drop_rate * 100,
         )
+
+
+def _display(venue_row: dict) -> str:
+    """Resolve the human-friendly venue display name with fallback to internal name.
+    Replaces the `venue_row.get("display_name") or venue_row["name"]` idiom
+    that appears ~20x throughout this file."""
+    return venue_row.get("display_name") or venue_row["name"]
+
+
+def _make_event(
+    venue_row: dict,
+    title: str,
+    start,
+    end,
+    url: str,
+    category: Optional[str] = None,
+    audience: Optional[str] = None,
+    **overrides,
+) -> "Event":
+    """Construct an Event with the project's common defaults filled from venue_row.
+
+    Defaults applied unless overridden:
+      venue_id     = venue_row["id"]
+      venue_name   = _display(venue_row)
+      city         = venue_row.get("city", "")
+      source       = venue_row["id"]
+      audience     = audience kwarg, else _infer_audience(title)
+      category     = category kwarg, else _normalize_base_category(venue_row.get("category","other"))
+      description  = None
+    `**overrides` are spread into Event(...) last and win over the defaults
+    (lets callers swap venue_id, venue_name, city, description, price, etc.)."""
+    defaults = dict(
+        title=title,
+        start=start,
+        end=end,
+        venue_id=venue_row["id"],
+        venue_name=_display(venue_row),
+        city=venue_row.get("city", ""),
+        category=category if category is not None else _normalize_base_category(venue_row.get("category", "other")),
+        url=url,
+        description=None,
+        source=venue_row["id"],
+        audience=audience if audience is not None else _infer_audience(title),
+    )
+    defaults.update(overrides)
+    return Event(**defaults)
+
+
+def _assemble_from_detail_soup(
+    soup: "BeautifulSoup",
+    url: str,
+    venue_row: dict,
+    sel: dict,
+    title_default_selector: str = "title",
+) -> Optional["Event"]:
+    """Extract a single Event from an already-fetched detail-page soup.
+
+    Shared by `_scrape_detail_pages` (plain requests) and
+    `_scrape_playwright_detail_pages` (rendered DOM). Honours every venue-row
+    knob both call sites historically respected:
+      selectors.title / .date, title_strip_suffixes, date_extract_regex,
+      date_find_all, skip_if_title_matches, date_format, date_prefer.
+    Returns None when the row should be dropped (parse failure, title/date
+    missing, title hits a skip regex)."""
+    title = _select_text(soup, sel.get("title", title_default_selector))
+    title = _clean_title(title)
+    for suffix in venue_row.get("title_strip_suffixes") or []:
+        title = re.sub(re.escape(suffix), "", title, flags=re.IGNORECASE).strip()
+    date_text = _select_text(soup, sel.get("date"))
+    extract_re = venue_row.get("date_extract_regex")
+    if extract_re and date_text:
+        if venue_row.get("date_find_all"):
+            matches = re.findall(extract_re, date_text)
+            if matches:
+                date_text = matches[0] if len(matches) == 1 else f"{matches[0]} – {matches[-1]}"
+        else:
+            m = re.search(extract_re, date_text)
+            if m:
+                date_text = m.group(0)
+    if not title or not date_text:
+        log.debug("  %s: skip (title=%r date=%r)", url, title[:40], date_text[:40])
+        return None
+    for pat in venue_row.get("skip_if_title_matches") or []:
+        if re.search(pat, title):
+            title = ""
+            break
+    if not title:
+        return None
+    start, end = _parse_date_range(date_text, venue_row.get("date_format"),
+                                   date_prefer=venue_row.get("date_prefer", "future"))
+    if start is None:
+        log.debug("  %s: failed to parse date %r", url, date_text)
+        return None
+    return _make_event(
+        venue_row, title, start, end, url,
+        category=_infer_category(title, venue_row, venue_name=_display(venue_row)),
+    )
+
+
+def _normalize_base_category(cat: Optional[str]) -> str:
+    """Collapse the legacy `mixed` category to `other`.
+    Centralises the `"mixed" -> "other"` mapping repeated 8x in this file."""
+    return "other" if cat == "mixed" else (cat or "other")
 
 
 @dataclass
@@ -251,45 +358,9 @@ def _scrape_detail_pages(venue_row: dict, session=None) -> list[Event]:
             log.debug("  %s: detail fetch failed: %s", url, exc)
             continue
         page = BeautifulSoup(r.content, "html.parser")
-        title = _select_text(page, sel.get("title", "title"))
-        title = _clean_title(title)
-        for suffix in venue_row.get("title_strip_suffixes") or []:
-            title = re.sub(re.escape(suffix), "", title, flags=re.IGNORECASE).strip()
-        date_text = _select_text(page, sel.get("date"))
-        extract_re = venue_row.get("date_extract_regex")
-        if extract_re and date_text:
-            m = re.search(extract_re, date_text)
-            if m:
-                date_text = m.group(0)
-        if not title or not date_text:
-            continue
-        for pat in venue_row.get("skip_if_title_matches") or []:
-            if re.search(pat, title):
-                title = ""
-                break
-        if not title:
-            continue
-        start, end = _parse_date_range(date_text, venue_row.get("date_format"),
-                                       date_prefer=venue_row.get("date_prefer", "future"))
-        if start is None:
-            log.debug("  %s: failed to parse date %r", url, date_text)
-            continue
-        out.append(
-            Event(
-                title=title,
-                start=start,
-                end=end,
-                venue_id=venue_row["id"],
-                venue_name=venue_row.get("display_name") or venue_row["name"],
-                city=venue_row.get("city", ""),
-                category=_infer_category(title, venue_row,
-                                        venue_name=venue_row.get("display_name") or venue_row["name"]),
-                url=url,
-                description=None,
-                source=venue_row["id"],
-                audience=_infer_audience(title),
-            )
-        )
+        ev = _assemble_from_detail_soup(page, url, venue_row, sel, title_default_selector="title")
+        if ev is not None:
+            out.append(ev)
     _emit_drop_warning(
         venue_row["id"], len(detail_urls), len(out),
         float(venue_row.get("accept_drop_rate", 0.30)),
@@ -620,49 +691,9 @@ def _scrape_playwright_detail_pages(venue_row: dict, session=None) -> list[Event
                 log.debug("  %s: detail fetch failed: %s", url, exc)
                 continue
             soup = BeautifulSoup(r.content, "html.parser")
-        title = _select_text(soup, sel.get("title", "h1"))
-        title = _clean_title(title)
-        for suffix in venue_row.get("title_strip_suffixes") or []:
-            title = re.sub(re.escape(suffix), "", title, flags=re.IGNORECASE).strip()
-        date_text = _select_text(soup, sel.get("date"))
-        extract_re = venue_row.get("date_extract_regex")
-        if extract_re and date_text:
-            if venue_row.get("date_find_all"):
-                matches = re.findall(extract_re, date_text)
-                if matches:
-                    date_text = matches[0] if len(matches) == 1 else f"{matches[0]} – {matches[-1]}"
-            else:
-                m = re.search(extract_re, date_text)
-                if m:
-                    date_text = m.group(0)
-        if not title or not date_text:
-            log.debug("  %s: skip (title=%r date=%r)", url, title[:40], date_text[:40])
-            continue
-        for pat in venue_row.get("skip_if_title_matches") or []:
-            if re.search(pat, title):
-                title = ""
-                break
-        if not title:
-            continue
-        start, end = _parse_date_range(date_text, venue_row.get("date_format"),
-                                        date_prefer=venue_row.get("date_prefer", "future"))
-        if start is None:
-            log.debug("  %s: failed to parse date %r", url, date_text)
-            continue
-        out.append(Event(
-            title=title,
-            start=start,
-            end=end,
-            venue_id=venue_row["id"],
-            venue_name=venue_row.get("display_name") or venue_row["name"],
-            city=venue_row.get("city", ""),
-            category=_infer_category(title, venue_row,
-                                    venue_name=venue_row.get("display_name") or venue_row["name"]),
-            url=url,
-            description=None,
-            source=venue_row["id"],
-            audience=_infer_audience(title),
-        ))
+        ev = _assemble_from_detail_soup(soup, url, venue_row, sel, title_default_selector="h1")
+        if ev is not None:
+            out.append(ev)
     _emit_drop_warning(
         venue_row["id"], len(detail_urls), len(out),
         float(venue_row.get("accept_drop_rate", 0.30)),
@@ -693,21 +724,13 @@ def _scrape_static(venue_row: dict) -> list[Event]:
             log.warning("%s: static_events entry skipped (bad start=%r)", venue_row["id"], start_raw)
             continue
         category = item.get("category") or venue_row.get("category", "other")
-        out.append(
-            Event(
-                title=title,
-                start=start,
-                end=end,
-                venue_id=venue_row["id"],
-                venue_name=venue_row.get("display_name") or venue_row["name"],
-                city=venue_row.get("city", ""),
-                category=category,
-                url=item.get("detail_url") or venue_row.get("homepage", "#"),
-                description=_clean_title(item.get("description") or "") or None,
-                source=venue_row["id"],
-                audience=item.get("audience", "general"),
-            )
-        )
+        out.append(_make_event(
+            venue_row, title, start, end,
+            url=item.get("detail_url") or venue_row.get("homepage", "#"),
+            category=category,
+            audience=item.get("audience", "general"),
+            description=_clean_title(item.get("description") or "") or None,
+        ))
     return out
 
 
@@ -973,7 +996,7 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
 
             loc = ev.get("location") or {}
             venue_name_jsonld = (loc.get("name") if isinstance(loc, dict) else None) or ""
-            venue_name = _clean_title(venue_name_jsonld) or venue_row.get("display_name") or venue_row["name"]
+            venue_name = _clean_title(venue_name_jsonld) or _display(venue_row)
 
             if is_aggregator:
                 # Per-event zoning + category from companion HTML data-attrs.
@@ -995,9 +1018,7 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
                 raw_cat = attrs.get("category", "")
                 if raw_cat in deny_cats:
                     continue
-                base_cat = cat_map.get(raw_cat) or venue_row.get("category", "other")
-                if base_cat == "mixed":
-                    base_cat = "other"
+                base_cat = _normalize_base_category(cat_map.get(raw_cat) or venue_row.get("category", "other"))
                 # Aggregator → venue unknown; trust title/venue keywords to refine.
                 category = _infer_category(title, venue_row, stage_default=base_cat, venue_name=venue_name)
             else:
@@ -1005,26 +1026,15 @@ def _scrape_json_ld_aggregator(venue_row: dict, session=None) -> list[Event]:
                 # declared category. Title keyword overlay is risky here: it
                 # false-positives on marketing copy ("cosmic opera" tour names).
                 zone = venue_row.get("city") or default_zone
-                category = venue_row.get("category", "other")
-                if category == "mixed":
-                    category = "other"
-                venue_name = venue_row.get("display_name") or venue_row["name"]
+                category = _normalize_base_category(venue_row.get("category", "other"))
+                venue_name = _display(venue_row)
 
-            out.append(
-                Event(
-                    title=title,
-                    start=start,
-                    end=end,
-                    venue_id=venue_row["id"],
-                    venue_name=venue_name or venue_row.get("display_name") or venue_row["name"],
-                    city=zone,
-                    category=category,
-                    url=ev_url,
-                    description=None,
-                    source=venue_row["id"],
-                    audience=_infer_audience(title),
-                )
-            )
+            out.append(_make_event(
+                venue_row, title, start, end, url=ev_url,
+                category=category,
+                venue_name=venue_name or _display(venue_row),
+                city=zone,
+            ))
     _emit_drop_warning(
         venue_row["id"], total_unique_candidates, len(out),
         float(venue_row.get("accept_drop_rate", 0.30)),
@@ -1043,8 +1053,8 @@ def _parse_jsonld_dt(s) -> Optional[datetime]:
         return None
     # JSON-LD is supposed to carry TZ; assume LA wall-clock if naive.
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=_HK_TZ)
-    return dt.astimezone(_HK_TZ)
+        dt = dt.replace(tzinfo=_LOCAL_TZ)
+    return dt.astimezone(_LOCAL_TZ)
 
 
 # ─── tribe events REST API path ─────────────────────────────────────────────
@@ -1160,25 +1170,14 @@ def _tribe_to_event(raw: dict, venue_row: dict, venue_filter: str | None = None)
         venue_id = vid_overrides[venue_name]
     else:
         venue_id = venue_row["id"]
-    venue_name = venue_name or venue_row.get("display_name") or venue_row["name"]
+    venue_name = venue_name or _display(venue_row)
 
     # Single-venue source: trust the venue's declared category. Title overlay
     # is risky for the same reason as the json_ld single-venue path.
-    category = venue_row.get("category", "other")
-    if category == "mixed":
-        category = "other"
-    return Event(
-        title=title,
-        start=start,
-        end=end,
-        venue_id=venue_id,
-        venue_name=venue_name,
-        city=venue_row.get("city", ""),
-        category=category,
-        url=url,
-        description=None,
-        source=venue_row["id"],
-        audience=_infer_audience(title),
+    category = _normalize_base_category(venue_row.get("category", "other"))
+    return _make_event(
+        venue_row, title, start, end, url,
+        category=category, venue_id=venue_id, venue_name=venue_name,
     )
 
 
@@ -1318,14 +1317,14 @@ def _algolia_hit_to_event(h: dict, venue_row: dict, url_prefix: str = "") -> Opt
             start_ms = dates[0]
         else:
             return None
-    start = datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc).astimezone(_HK_TZ)
+    start = datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc).astimezone(_LOCAL_TZ)
     end = (
-        datetime.fromtimestamp(end_ms / 1000, tz=timezone.utc).astimezone(_HK_TZ)
+        datetime.fromtimestamp(end_ms / 1000, tz=timezone.utc).astimezone(_LOCAL_TZ)
         if isinstance(end_ms, (int, float)) and end_ms > 0 else None
     )
 
     venue_name = _clean_title(_html_decode(h.get("Venue") or "")) or (
-        venue_row.get("display_name") or venue_row["name"]
+        _display(venue_row)
     )
     rel_url = h.get("KenticoUrl") or ""
     if rel_url.startswith("/") and url_prefix:
@@ -1345,24 +1344,10 @@ def _algolia_hit_to_event(h: dict, venue_row: dict, url_prefix: str = "") -> Opt
     if algolia_cat:
         category = algolia_cat
     else:
-        base_cat = venue_row.get("category", "other")
-        if base_cat == "mixed":
-            base_cat = "other"
+        base_cat = _normalize_base_category(venue_row.get("category", "other"))
         category = _infer_category(title, venue_row, stage_default=base_cat, venue_name=venue_name)
 
-    return Event(
-        title=title,
-        start=start,
-        end=end,
-        venue_id=venue_row["id"],
-        venue_name=venue_name,
-        city=venue_row.get("city", ""),
-        category=category,
-        url=url,
-        description=None,
-        source=venue_row["id"],
-        audience=_infer_audience(title),
-    )
+    return _make_event(venue_row, title, start, end, url, category=category, venue_name=venue_name)
 
 
 # ─── flat JSON feed path ────────────────────────────────────────────────────
@@ -1496,27 +1481,13 @@ def _scrape_nextjs_contentful(venue_row: dict, session=None) -> list[Event]:
             url = url_pattern.replace("{slug}", slug)
         else:
             url = venue_row.get("homepage", "#")
-        category = venue_row.get("category", "other")
-        if category == "mixed":
-            category = "other"
-        venue_name = venue_row.get("display_name") or venue_row["name"]
+        category = _normalize_base_category(venue_row.get("category", "other"))
+        venue_name = _display(venue_row)
         key = (title, start)
         if key in seen:
             continue
         seen.add(key)
-        out.append(Event(
-            title=title,
-            start=start,
-            end=end,
-            venue_id=venue_row["id"],
-            venue_name=venue_name,
-            city=venue_row.get("city", ""),
-            category=category,
-            url=url,
-            description=None,
-            source=venue_row["id"],
-            audience=_infer_audience(title),
-        ))
+        out.append(_make_event(venue_row, title, start, end, url, category=category, venue_name=venue_name))
 
     log.info("%s: %d events from nextjs_contentful", venue_row["id"], len(out))
     return out
@@ -1588,7 +1559,7 @@ def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
         seen_urls.add(url_str)
 
         venue_name = _clean_title(_html_decode(_dig(raw, venue_path) or "")) if venue_path else ""
-        venue_name = venue_name or venue_row.get("display_name") or venue_row["name"]
+        venue_name = venue_name or _display(venue_row)
 
         # Category — concatenate any tag/category names + title for keyword pass.
         category_hints = title
@@ -1597,24 +1568,10 @@ def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
             if isinstance(cats, list):
                 names = [c.get("name") for c in cats if isinstance(c, dict) and c.get("name")]
                 category_hints = title + " " + " ".join(names)
-        base_cat = venue_row.get("category", "other")
-        if base_cat == "mixed":
-            base_cat = "other"
+        base_cat = _normalize_base_category(venue_row.get("category", "other"))
         category = _infer_category(category_hints, venue_row, stage_default=base_cat, venue_name=venue_name)
 
-        out.append(Event(
-            title=title,
-            start=start,
-            end=end,
-            venue_id=venue_row["id"],
-            venue_name=venue_name,
-            city=venue_row.get("city", ""),
-            category=category,
-            url=url_str,
-            description=None,
-            source=venue_row["id"],
-            audience=_infer_audience(title),
-        ))
+        out.append(_make_event(venue_row, title, start, end, url_str, category=category, venue_name=venue_name))
 
     log.info("%s: %d events from flat_json_feed", venue_row["id"], len(out))
     return out
@@ -1725,28 +1682,17 @@ def _scrape_sistic_api(venue_row: dict, session=None) -> list[Event]:
             if url_str in seen_urls:
                 continue
             seen_urls.add(url_str)
-            venue_name = _clean_title(_html_decode(raw.get("venue_name") or "")) or venue_row.get("display_name") or venue_row["name"]
+            venue_name = _clean_title(_html_decode(raw.get("venue_name") or "")) or _display(venue_row)
             category_hints = f"{title} {genre}"
-            base_cat = venue_row.get("category", "mixed")
-            if base_cat == "mixed":
-                base_cat = "other"
+            base_cat = _normalize_base_category(venue_row.get("category", "mixed"))
             category = _infer_category(category_hints, venue_row, stage_default=base_cat, venue_name=venue_name)
             # Per-event venue id (so chip shows actual venue, not "SISTIC") +
             # per-event region (so events distribute across district chips).
             sub_vid = "sistic-" + re.sub(r"[^a-z0-9]+", "-", venue_name.lower()).strip("-") if venue_name else venue_row["id"]
             sub_city = _sistic_venue_region(venue_name)
-            out.append(Event(
-                title=title,
-                start=start,
-                end=end,
-                venue_id=sub_vid,
-                venue_name=venue_name,
-                city=sub_city,
-                category=category,
-                url=url_str,
-                description=None,
-                source=venue_row["id"],
-                audience=_infer_audience(title),
+            out.append(_make_event(
+                venue_row, title, start, end, url_str,
+                category=category, venue_id=sub_vid, venue_name=venue_name, city=sub_city,
             ))
         first += limit
         if total and first >= total:
@@ -1770,8 +1716,8 @@ def _parse_tribe_dt(s, naive_is_utc: bool = False) -> Optional[datetime]:
     except ValueError:
         return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc if naive_is_utc else _HK_TZ)
-    return dt.astimezone(_HK_TZ)
+        dt = dt.replace(tzinfo=timezone.utc if naive_is_utc else _LOCAL_TZ)
+    return dt.astimezone(_LOCAL_TZ)
 
 
 # Marketing-ribbon suffixes Tribe sites bake into the title via
@@ -1804,14 +1750,14 @@ def _coerce_to_dt(v) -> Optional[datetime]:
     if v is None:
         return None
     if isinstance(v, datetime):
-        return (v if v.tzinfo else v.replace(tzinfo=_HK_TZ)).astimezone(_HK_TZ)
+        return (v if v.tzinfo else v.replace(tzinfo=_LOCAL_TZ)).astimezone(_LOCAL_TZ)
     from datetime import date as _date
     if isinstance(v, _date):
-        return datetime(v.year, v.month, v.day, tzinfo=_HK_TZ)
+        return datetime(v.year, v.month, v.day, tzinfo=_LOCAL_TZ)
     if isinstance(v, str):
         try:
             dt = datetime.fromisoformat(v)
-            return (dt if dt.tzinfo else dt.replace(tzinfo=_HK_TZ)).astimezone(_HK_TZ)
+            return (dt if dt.tzinfo else dt.replace(tzinfo=_LOCAL_TZ)).astimezone(_LOCAL_TZ)
         except ValueError:
             return None
     return None
@@ -1900,19 +1846,12 @@ def _assemble_from_ical(raw: dict, ics_url: str, venue_row: dict, detail_map: di
     detail_url = raw.get("url") or _detail_url_from_map(ics_url, detail_map) \
         or venue_row["calendar_url"]
 
-    return Event(
-        title=title,
-        start=raw["start"],
-        end=raw.get("end"),
-        venue_id=venue_id,
-        venue_name=venue_name,
-        city=city,
+    return _make_event(
+        venue_row, title, raw["start"], raw.get("end"), detail_url,
         category=_infer_category(title, venue_row, stage_default=stage_default_category),
-        url=detail_url,
+        venue_id=venue_id, venue_name=venue_name, city=city,
         description=_clean_title(raw.get("description") or "") or None,
         price=None,
-        source=venue_row["id"],
-        audience=_infer_audience(title),
     )
 
 
@@ -1975,7 +1914,7 @@ def _resolve_stage(location: str, title: str, venue_row: dict) -> tuple[str, str
     # Use the location string as the display name when present (even short
     # ones like "Box" are informative). Else fall back to the venue's short
     # display name from `display_name`, or `name` if no short form is set.
-    fallback_name = location if location else (venue_row.get("display_name") or venue_row["name"])
+    fallback_name = location if location else (_display(venue_row))
     return (venue_row["id"], fallback_name, venue_row["city"], None)
 
 
@@ -2225,19 +2164,11 @@ def _assemble_from_html_item(
 
     category = _infer_category(title, venue_row, stage_default=stage_default_category)
 
-    return Event(
-        title=title,
-        start=start,
-        end=end,
-        venue_id=venue_id,
-        venue_name=venue_name,
-        city=city,
+    return _make_event(
+        venue_row, title, start, end, detail_url,
         category=category,
-        url=detail_url,
-        description=description,
-        price=None,
-        source=venue_row["id"],
-        audience=_infer_audience(title),
+        venue_id=venue_id, venue_name=venue_name, city=city,
+        description=description, price=None,
     ), new_prev_day
 
 
@@ -2291,14 +2222,6 @@ def _select_attr(node, selector: Optional[str], attr: str) -> str:
 
 
 # ─── date parsing ────────────────────────────────────────────────────────────
-
-
-_DATE_PARSER_BASE_SETTINGS = {
-    # US convention is MM/DD/YYYY. Opposite of the German project's DMY.
-    # Note: dateparser tries to detect format from input first; explicit
-    # MDY just disambiguates "5/12/2026" → May 12, not Dec 5.
-    "DATE_ORDER": "DMY",
-}
 
 
 def _date_parser_kw(date_prefer: str = "future") -> dict:
@@ -2386,12 +2309,12 @@ def _parse_one(text: str, explicit_format: Optional[str] = None,
             # Substitute the current year and roll forward one if the resulting
             # date is already in the past (matching PREFER_DATES_FROM=future).
             if "%Y" not in explicit_format and "%y" not in explicit_format:
-                today = datetime.now(_HK_TZ)
-                candidate = dt.replace(year=today.year, tzinfo=_HK_TZ)
+                today = datetime.now(_LOCAL_TZ)
+                candidate = dt.replace(year=today.year, tzinfo=_LOCAL_TZ)
                 if date_prefer == "future" and candidate.date() < today.date():
                     candidate = candidate.replace(year=today.year + 1)
                 return candidate
-            return dt.replace(tzinfo=_HK_TZ)
+            return dt.replace(tzinfo=_LOCAL_TZ)
         except ValueError:
             pass
 
@@ -2404,9 +2327,9 @@ def _parse_one(text: str, explicit_format: Optional[str] = None,
     try:
         dt = datetime.fromisoformat(text)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=_HK_TZ)
+            dt = dt.replace(tzinfo=_LOCAL_TZ)
         else:
-            dt = dt.astimezone(_HK_TZ)
+            dt = dt.astimezone(_LOCAL_TZ)
         return dt
     except ValueError:
         pass
@@ -2420,16 +2343,16 @@ def _parse_one(text: str, explicit_format: Optional[str] = None,
     # leading digit as a Reiwa-era year (e.g. "5月22日" → 2122-05-21). Prepend
     # current year so it parses as a normal calendar date.
     if "ja" in _LANGUAGES and re.fullmatch(r"\s*\d{1,2}月\d{1,2}日(?:\([^)]+\))?\s*", text):
-        today = datetime.now(_HK_TZ)
+        today = datetime.now(_LOCAL_TZ)
         text = f"{today.year}年{text.strip()}"
 
     parsed = dateparser.parse(text, **_date_parser_kw(date_prefer))
     if parsed is None:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=_HK_TZ)
+        parsed = parsed.replace(tzinfo=_LOCAL_TZ)
     else:
-        parsed = parsed.astimezone(_HK_TZ)
+        parsed = parsed.astimezone(_LOCAL_TZ)
     return parsed
 
 
@@ -2931,22 +2854,22 @@ def _et4_to_event(raw, venue_row, split_by_venue=True, vid_overrides=None,
         venue_id = overrides.get(venue_name) or f"{venue_row['id']}-{_tribe_slug(venue_name)}"
     else:
         venue_id = venue_row["id"]
-        if not venue_name: venue_name = venue_row.get("display_name") or venue_row["name"]
+        if not venue_name: venue_name = _display(venue_row)
     cats = raw.get("categories") or []
     raw_cat = cats[0] if cats else ""
     cat_map = venue_row.get("category_map") or _ET4_CATEGORY_MAP
     deny_cats = set(venue_row.get("deny_categories") or _ET4_DENY_CATEGORIES)
     if raw_cat in deny_cats: return None
-    category = cat_map.get(raw_cat) or venue_row.get("category", "other")
-    if category == "mixed": category = "other"
+    category = _normalize_base_category(cat_map.get(raw_cat) or venue_row.get("category", "other"))
     category = _infer_category(title, venue_row, stage_default=category)
     city = (raw.get("city") or venue_row.get("city") or "").strip()
     skip_cities = [c.lower() for c in (venue_row.get("skip_cities") or [])]
     if skip_cities and city.lower() in skip_cities: return None
-    return Event(title=title, start=start, end=end, venue_id=venue_id,
-                 venue_name=venue_name or venue_row["name"], city=city,
-                 category=category, url=url, description=None,
-                 source=venue_row["id"], audience=_infer_audience(title))
+    return _make_event(
+        venue_row, title, start, end, url,
+        category=category,
+        venue_id=venue_id, venue_name=venue_name or venue_row["name"], city=city,
+    )
 
 
 def _scrape_et4_search(venue_row, session=None):
@@ -3050,17 +2973,19 @@ def _toubiz_to_event(raw, venue_row, allowed, cat_map, deny_cats, vid_overrides,
         venue_id = f"{venue_row['id']}-{_tribe_slug(venue_name)}"
     else:
         venue_id = venue_row["id"]
-        venue_name = venue_row.get("display_name") or venue_row["name"]
+        venue_name = _display(venue_row)
     addr_city = ((addr or {}).get("city") or "").strip()
     base_city = (venue_row.get("city") or "").strip()
     if addr_city and base_city and addr_city.lower().startswith(base_city.lower()):
         city = base_city
     else:
         city = addr_city or base_city
-    return Event(title=title, start=start, end=None, venue_id=venue_id,
-                 venue_name=venue_name or venue_row["name"], city=city,
-                 category=category, url=venue_row.get("calendar_url", venue_row.get("homepage", "#")),
-                 description=None, source=venue_row["id"], audience=_infer_audience(title))
+    return _make_event(
+        venue_row, title, start, None,
+        url=venue_row.get("calendar_url", venue_row.get("homepage", "#")),
+        category=category,
+        venue_id=venue_id, venue_name=venue_name or venue_row["name"], city=city,
+    )
 
 
 def _scrape_toubiz_api(venue_row, session=None):
