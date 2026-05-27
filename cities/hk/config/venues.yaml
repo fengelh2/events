@@ -118,18 +118,25 @@
   extra_wait_ms: 2500
   selectors:
     item: "a[href*='/production/']"
-    title: "h1 em"                     # h1 has <small>presenter</small><em>Title</em>
+    title: "h1"                        # use full h1; strip presenter prefix below
     date: "label"
     detail_link: "@href"
+  # Some cards have <h1><small>Presenter</small><em>Title</em></h1>, others have
+  # bare <h1>Title</h1> (no em). Selecting `h1 em` silently drops the bare ones
+  # (e.g. Stellalou's Wonderful Wishes 2026). Use full h1 + regex strip instead.
+  title_strip_regex:
+    - '^.*?\bProudly Presents\b\s*'    # "...Proudly Presents " prefix
+    - '^.*?\bPresents\b\s*'            # generic "...Presents " fallback
   # Date formats: "30 APR – 31 MAY 2026" or "JUL 2025 - 2026" (month-only).
   date_extract_regex: '\d{1,2}\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+\d{4}'
   accept_drop_rate: 0.5
   notes: |
-    /en/see-hkb listing. Each production anchor wraps an h1 with two
-    children: <small>presenter</small> + <em>title</em>. The em selector
-    gives just the production name; the label gives the date range.
-    Productions occasionally lack an <em> (announcement card without
-    title) — accept_drop_rate covers that.
+    /en/see-hkb listing. Only the currently-announced productions are listed
+    here — the hkballet.com site does not publish a forward season page, so
+    Nutcracker / Romeo & Juliet / Swan Lake will appear only as HKB announces
+    them. Title selector is `h1` (not `h1 em`) because cards without a sponsor
+    have a bare h1 with no <em>; the title_strip_regex peels off the
+    "<presenter> Proudly Presents " prefix when present.
 
 - id: opera-hk
   name: Opera Hong Kong
@@ -2916,22 +2923,8 @@
 # Previous Eventbrite-only audit had marked these "no upcoming events", but
 # the venues do publish schedules on their own sites. Wired up here.
 
-- id: hk-the-wanch
-  name: The Wanch (Wan Chai live music venue)
-  display_name: The Wanch
-  city: Hong Kong Island          # 54 Jaffe Road, Wan Chai
-  category: concert                # live music — rock/funk/acoustic gigs nearly nightly
-  homepage: https://www.thewanch.hk
-  calendar_url: https://www.thewanch.hk/?post_type=tribe_events&ical=1&eventDisplay=list
-  kind: ical
-  source_priority: 0
-  notes: |
-    The Wanch runs The Events Calendar (Tribe) on WordPress. Public .ics
-    endpoint exposes the full upcoming list (30+ events in a typical week
-    — open mics, themed nights, showcases). No org-page on Eventbrite.
-    Direct iCal beats the Eventbrite organizer path that the previous
-    audit flagged "no upcoming events" (organizer page is stale; the
-    venue books direct).
+# The Wanch — REMOVED 2026-05-26 per user request (nightlife/open-mic events
+# not desired in this calendar).
 
 - id: hk-crown-wine-cellars
   name: Crown Wine Cellars (Shouson Hill — wine tastings + dinners)
