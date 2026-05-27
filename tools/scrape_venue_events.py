@@ -264,6 +264,9 @@ def _scrape_playwright_html_list(venue_row: dict, session=None) -> list[Event]:
       timeout_ms:        page-load timeout (default 45000)
       extra_wait_ms:     fixed wait after load/scroll (default 3000)
       locale:            browser locale (default 'en-US')
+      use_stealth:       bool, default false — apply playwright-stealth evasions
+                         (needed for Cloudflare-protected sites like Klook/KKday)
+      viewport:          {width, height} dict (default 1366x768)
     """
     try:
         from playwright.sync_api import sync_playwright
@@ -271,21 +274,58 @@ def _scrape_playwright_html_list(venue_row: dict, session=None) -> list[Event]:
         log.warning("%s: playwright not installed; skipping", venue_row["id"])
         return []
 
+    use_stealth = bool(venue_row.get("use_stealth", False))
+    Stealth = None
+    if use_stealth:
+        try:
+            from playwright_stealth import Stealth as _StealthCls
+            Stealth = _StealthCls
+        except ImportError:
+            log.warning("%s: playwright-stealth not installed; falling back to plain playwright", venue_row["id"])
+
     url = venue_row["calendar_url"]
     wait_for = venue_row.get("wait_for_selector")
     do_scroll = bool(venue_row.get("scroll", True))
     do_cookies = bool(venue_row.get("dismiss_cookies", True))
     timeout_ms = int(venue_row.get("timeout_ms", 45000))
     extra_wait_ms = int(venue_row.get("extra_wait_ms", 3000))
+    viewport_cfg = venue_row.get("viewport") or {"width": 1366, "height": 768}
+
+    # Realistic UA for stealth path; cheaper Linux UA for the legacy path so we
+    # don't change behaviour for venues already onboarded.
+    if use_stealth and Stealth is not None:
+        default_ua = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        )
+    else:
+        default_ua = (
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+        )
+    user_agent = venue_row.get("user_agent", default_ua)
 
     html_text: Optional[str] = None
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+            launch_kwargs = {"headless": True}
+            if use_stealth and Stealth is not None:
+                # Reduce automation fingerprint at the browser-flag level too.
+                launch_kwargs["args"] = [
+                    "--disable-blink-features=AutomationControlled",
+                ]
+            browser = p.chromium.launch(**launch_kwargs)
+            context_kwargs = dict(
+                user_agent=user_agent,
                 locale=venue_row.get("locale", "en-US"),
+                viewport=viewport_cfg,
             )
+            context = browser.new_context(**context_kwargs)
+            if use_stealth and Stealth is not None:
+                try:
+                    Stealth().apply_stealth_sync(context)
+                except Exception as exc:
+                    log.warning("%s: stealth apply failed: %s", venue_row["id"], exc)
             page = context.new_page()
             page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
             if do_cookies:

@@ -3174,19 +3174,21 @@
   city: Hong Kong Island
   category: other
   homepage: https://www.klook.com/en-HK/city/16-hong-kong/
-  # SCRAPE STATUS: static umbrella (2026-05-27 probe).
-  # Klook is Cloudflare-walled at the network layer. curl + plain
-  # requests get 403. Headless Playwright loads only a 1.5KB challenge
-  # interstitial that never resolves to product JSON-LD within the
-  # 6-second wait budget. Headed Playwright also fails — the page
-  # navigation churns so fast that Page.content() raises "Unable to
-  # retrieve content because the page is navigating and changing the
-  # content". Klook would need a stealth-Playwright (undetected /
-  # playwright-stealth) wrapper, which is out of scope for the events
-  # project's current tooling. Kept as static umbrella for now — Klook
-  # has Candlelight HK, theme-park overlays, escape rooms, immersive
-  # pop-ups that are valuable but not currently extractable.
-  # Re-audit when adding a stealth-Playwright kind to the scraper.
+  # SCRAPE STATUS: static umbrella (2026-05-27 probe + stealth retry).
+  # Original 2026-05-27 probe called the 1.5KB interstitial "Cloudflare";
+  # the stealth-Playwright retry the same day proved it's actually
+  # **DataDome CAPTCHA** (`geo.captcha-delivery.com` iframe + DataDome
+  # cookie). DataDome is a tougher anti-bot than CF — playwright-stealth
+  # (all evasions on, realistic Win64 UA, en-HK locale, 1366x768 viewport,
+  # AutomationControlled flag stripped) was probed both headless AND
+  # headed against /city/16-hong-kong/, /coureg/16-things-to-do-in-hong-kong/,
+  # and /experiences/list/hong-kong-things-to-do/ — every URL still
+  # served the DataDome interstitial, no JSON-LD ever rendered. Stealth
+  # is insufficient here; bypass would need residential proxies or a
+  # paid CAPTCHA solver (out of scope). The `use_stealth: true` flag
+  # IS now wired into `_scrape_playwright_html_list` (see scrape_venue_events.py
+  # — useful for future DataDome-free CF-only sites), but Klook stays
+  # static. Re-audit if Klook drops DataDome or we add proxy support.
   kind: static
   source_priority: 2
   static_events:
@@ -3202,9 +3204,12 @@
   category: other
   homepage: https://www.kkday.com/en-hk/city/hong_kong
   # SCRAPE STATUS: static umbrella (2026-05-27 probe).
-  # Same Cloudflare wall as Klook. curl: 403. Headless Playwright:
-  # 1.5KB challenge interstitial. Out of reach without stealth tooling.
-  # Kept as static umbrella for visibility.
+  # Same anti-bot wall as Klook — both sit behind DataDome (not CF,
+  # despite the original probe note). Stealth-Playwright was NOT
+  # re-probed against kkday directly, but the network signature is
+  # identical to Klook (403 to curl, 1.5KB interstitial to headless
+  # Playwright). Stealth bypass would need proxies/solver — out of
+  # scope. Kept as static umbrella for visibility.
   kind: static
   source_priority: 2
   static_events:
