@@ -3060,3 +3060,155 @@
 # - mplus-cinema: audited; 13 events returned = 13/14 detail URLs on
 #   live listing (1 was the umbrella M+xHKIFF page already covered).
 #   No fix needed — current scraper is complete.
+
+# ===========================================================================
+# ROUND-N GENERAL-PURPOSE CITYWIDE AGGREGATORS (2026-05-27)
+# ===========================================================================
+# Goal: catch the "weird stuff" that doesn't fit one venue — Candlelight
+# concerts, escape rooms, immersive pop-ups, comic con, theme-park overlays,
+# editorial "things to do this weekend" roundups.
+#
+# Probe results (2026-05-27):
+#   - Klook HK (klook.com/en-HK/city/16-hong-kong/) → HARD-BLOCKED.
+#     curl: 403. Headless Playwright: 1.5KB Cloudflare challenge page,
+#     no JSON-LD ever rendered. Even headed-Chromium can't keep the page
+#     content stable long enough to read. Skipped; revisit only with a
+#     stealth-Playwright (playwright-stealth / undetected) tool which is
+#     out of scope for this batch (would require new dep + tools/ change).
+#   - KKday HK (kkday.com/en-hk/city/hong_kong) → same Cloudflare wall.
+#     Skipped, same reason as Klook.
+#   - Tatler Asia /sections/whats-on → 404. Tatler has no dated HK
+#     events index; only editorial articles under /lifestyle/entertainment.
+#     Onboarded as a static umbrella for monthly manual refresh.
+#   - Sassy Hong Kong /events/ → ajax results behind Cloudflare-protected
+#     internal endpoint; static HTML only renders 2 "featured" event cards
+#     plus a JS-driven month calendar (.have_event cells link to date
+#     queries, not detail URLs). Onboarded as static umbrella pointing to
+#     the live "Things To Do This Weekend" article (updated weekly by
+#     Sassy editors). Comprehensive scrape blocked.
+#   - Honeycombers HK /whats-on-hong-kong/ → clean Schema.org Event
+#     microdata via .hc-event-card blocks; 5 featured events on the
+#     index page. html_list parser eats it directly. THE WIN of this
+#     batch.
+
+- id: honeycombers-hk
+  name: Honeycombers Hong Kong — What's On
+  display_name: Honeycombers HK
+  city: __aggregator__              # per-event venue varies citywide
+  category: other                   # title-keyword inference refines
+  homepage: https://thehoneycombers.com/hong-kong/
+  calendar_url: https://thehoneycombers.com/hong-kong/whats-on-hong-kong/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: ".hc-event-card"
+    title: ".event-title h3 a"
+    date: "meta[itemprop='startDate']@content"
+    detail_link: ".event-title h3 a@href"
+  # startDate format: "2025-11-02T07:30 pm+08:00" — non-strict ISO with
+  # space + lowercase am/pm. Strip the time suffix so DMY parser doesn't
+  # reinterpret "2025-08-01T12:00 am+08:00" as 2025-01-08.
+  date_extract_regex: '\d{4}-\d{2}-\d{2}'
+  notes: |
+    Editorial what's-on aggregator with proper Schema.org Event microdata.
+    Each .hc-event-card contains <meta itemprop="startDate" content="...">
+    + name + url + location. Index page (/whats-on-hong-kong/) shows ~5
+    featured events; deeper pages (this-week/, this-month/) ALSO appear
+    to return the same ~5 (likely JS-paginated; static HTML capped).
+    That's fine — Honeycombers is curation-led, not exhaustive. Use the
+    index. Re-audit if event count drops to 0 (means they changed markup).
+
+    Per-event city is multi-zone (TST/Central/Kowloon/etc.) — venue uses
+    `__aggregator__` and relies on title-keyword auto-classification.
+    Renderer will show under the per-event city chip.
+
+- id: sassy-hk-weekend
+  name: Sassy Hong Kong — Things To Do This Weekend
+  display_name: Sassy HK Weekend
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.sassyhongkong.com
+  # SCRAPE STATUS: static umbrella (2026-05-27 probe).
+  # /events/ is Cloudflare-protected and the visible event-card list on
+  # the static HTML is only the 2 "featured" cards plus a JS month
+  # calendar with no detail URLs. The internal ajax results endpoint
+  # (?sfid=88907&sf_action=get_data&sf_data=results) returns 403 to
+  # curl AND to headless Playwright. Sassy's editors maintain a
+  # weekly-refreshed "Things To Do This Weekend" article that is the
+  # single most useful artefact of their events team — point at it.
+  # Monthly manual re-audit recommended (article title changes month
+  # to month, but slug is stable).
+  kind: static
+  source_priority: 2
+  static_events:
+    - title: Sassy HK — Things To Do This Weekend (rolling)
+      detail_url: https://www.sassyhongkong.com/hong-kong-events-weekend-activities-things-to-do-whats-on/
+      start: 2026-05-27
+      end: 2026-12-31
+
+- id: tatler-asia-whats-on
+  name: Tatler Asia — What's On (Hong Kong)
+  display_name: Tatler HK
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.tatlerasia.com
+  # SCRAPE STATUS: static umbrella (2026-05-27 probe).
+  # Tatler Asia has no dated events index — /sections/whats-on returns
+  # 404, and the closest content lives in editorial articles scattered
+  # across /lifestyle/entertainment, /dining, /lifestyle/arts. No
+  # JSON-LD event list, no consolidated landing page. Onboarded as a
+  # static umbrella to the entertainment section so it surfaces in the
+  # HK calendar; the cell links out to Tatler's editorial coverage of
+  # current openings (Candlelight, museum gala nights, immersive shows).
+  kind: static
+  source_priority: 2
+  static_events:
+    - title: Tatler Asia — Hong Kong Entertainment & What's On
+      detail_url: https://www.tatlerasia.com/lifestyle/entertainment
+      start: 2026-05-27
+      end: 2026-12-31
+
+- id: klook-hk
+  name: Klook Hong Kong
+  display_name: Klook HK
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.klook.com/en-HK/city/16-hong-kong/
+  # SCRAPE STATUS: static umbrella (2026-05-27 probe).
+  # Klook is Cloudflare-walled at the network layer. curl + plain
+  # requests get 403. Headless Playwright loads only a 1.5KB challenge
+  # interstitial that never resolves to product JSON-LD within the
+  # 6-second wait budget. Headed Playwright also fails — the page
+  # navigation churns so fast that Page.content() raises "Unable to
+  # retrieve content because the page is navigating and changing the
+  # content". Klook would need a stealth-Playwright (undetected /
+  # playwright-stealth) wrapper, which is out of scope for the events
+  # project's current tooling. Kept as static umbrella for now — Klook
+  # has Candlelight HK, theme-park overlays, escape rooms, immersive
+  # pop-ups that are valuable but not currently extractable.
+  # Re-audit when adding a stealth-Playwright kind to the scraper.
+  kind: static
+  source_priority: 2
+  static_events:
+    - title: Klook Hong Kong — Things To Do (Candlelight, immersive, attractions)
+      detail_url: https://www.klook.com/en-HK/city/16-hong-kong/
+      start: 2026-05-27
+      end: 2026-12-31
+
+- id: kkday-hk
+  name: KKday Hong Kong
+  display_name: KKday HK
+  city: Hong Kong Island
+  category: other
+  homepage: https://www.kkday.com/en-hk/city/hong_kong
+  # SCRAPE STATUS: static umbrella (2026-05-27 probe).
+  # Same Cloudflare wall as Klook. curl: 403. Headless Playwright:
+  # 1.5KB challenge interstitial. Out of reach without stealth tooling.
+  # Kept as static umbrella for visibility.
+  kind: static
+  source_priority: 2
+  static_events:
+    - title: KKday Hong Kong — Tours, Experiences, Tickets
+      detail_url: https://www.kkday.com/en-hk/city/hong_kong
+      start: 2026-05-27
+      end: 2026-12-31
