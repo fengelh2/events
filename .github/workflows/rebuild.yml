@@ -50,13 +50,20 @@ jobs:
           ONLY=""
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "scheduled/manual → full rebuild"
+          elif [ "${{ github.actor }}" = "github-actions[bot]" ]; then
+            # Bot's own auto: seen_events/cache commit — avoid scope-drift where
+            # only that city's data triggers a rebuild that skips the others.
+            echo "bot author → full rebuild (avoids self-induced scope drift)"
           else
             CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-            if echo "$CHANGED" | grep -qE "^tools/(scrape_venue_events|render_events_html|rebuild_calendar|build_all|parse_ical|check_links|investigate_broken_links|apply_link_patch)\.py$"; then
+            # Filter out the data/ files (CI itself writes these on every build);
+            # scope-detection should respond to config/site.yaml changes only.
+            CHANGED=$(echo "$CHANGED" | grep -v -E "^cities/[^/]+/data/" || true)
+            if echo "$CHANGED" | grep -qE "^tools/.*\.py$"; then
               echo "shared tools changed → full rebuild"
             elif echo "$CHANGED" | grep -qE "^\.github/workflows/"; then
               echo "workflow changed → full rebuild"
-            elif echo "$CHANGED" | grep -qE "^cities/[^/]+/(config|site\.yaml|data)"; then
+            elif echo "$CHANGED" | grep -qE "^cities/[^/]+/(config|site\.yaml)"; then
               CITIES=$(echo "$CHANGED" | grep -oE "^cities/[^/]+" | sort -u | sed 's|cities/||' | tr '\n' ' ')
               echo "city configs changed: $CITIES"
               ONLY="--only $CITIES"

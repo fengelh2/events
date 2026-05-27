@@ -25,7 +25,10 @@ def apply_replacements(patches: list[dict], dry_run: bool) -> int:
         for p in items:
             old, new = p["old"], p["new"]
             if old in text:
-                text = text.replace(old, new)
+                # Only replace first occurrence — same URL may legitimately appear
+                # in multiple venue blocks (e.g. homepage + calendar_url); patch
+                # entries are scoped to one venue at a time.
+                text = text.replace(old, new, 1)
                 n += 1
                 print(f"  ✓ {p['city']}/{p['venue_id']}: {old[:60]} → {new[:60]}")
             else:

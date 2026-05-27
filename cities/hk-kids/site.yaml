@@ -80,7 +80,7 @@ always_include_venues:
   # had too many adult shows leaking in ("When Art Meets Horse Racing",
   # "Heavenly Horses Masterpieces") — REMOVED, rely on kids_keywords instead.
   - mplus-cinema                # cinema — most films family-suitable
-  - hk-science-museum           # interactive — kid-friendly default
+  - hk-science-museum-kids      # interactive — kid-friendly default (real venue id)
   - hk-space-museum             # planetarium — kid-friendly default
   - hkpl-events                 # public library — story time + workshops
   - new-town-plaza              # mall — carnival/family default

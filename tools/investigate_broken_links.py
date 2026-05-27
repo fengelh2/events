@@ -93,7 +93,10 @@ def ddg_search(query: str, limit: int = 5) -> list[str]:
 
 
 def host_of(url: str) -> str:
-    return urlparse(url).netloc.lower().lstrip("www.")
+    # lstrip strips characters (so "www2.x" → "2.x", "wwww.foo" → "foo"); use
+    # a proper prefix removal.
+    h = urlparse(url).netloc.lower()
+    return h[4:] if h.startswith("www.") else h
 
 
 def load_venue_index() -> dict:
@@ -143,7 +146,10 @@ def investigate(broken_url: str, ctx: dict | None) -> dict:
     # Layer 1: same-host path variants
     candidates = [origin + p for p in COMMON_PATHS]
     # Layer 2: alt TLDs based on host base + venue name slug
-    base = parsed.netloc.lstrip("www.").split(".")[0]
+    netloc = parsed.netloc
+    if netloc.startswith("www."):
+        netloc = netloc[4:]
+    base = netloc.split(".")[0]
     name_slug = _slug(name.split()[0]) if name else ""
     for nm in {base, name_slug}:
         if not nm: continue

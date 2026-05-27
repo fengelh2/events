@@ -1,15 +1,17 @@
 # events
 
-Unified cultural-events calendar for **Hong Kong**, **Los Angeles**, **NRW** (Essen + Düsseldorf), and **Singapore**. One repo, four sub-pages, rebuilt nightly.
+Unified cultural-events calendar for **Hong Kong**, **HK Kids** (sub-calendar over HK), **Los Angeles**, **NRW** (Essen + Düsseldorf), **Singapore**, and **Fukuoka**. One repo, six sub-pages, rebuilt nightly.
 
 **Live:** https://fengelh2.github.io/events/
 
 | City | URL |
 |---|---|
 | 🇨🇳 Hong Kong | https://fengelh2.github.io/events/hk/ |
+| 👶 HK Kids | https://fengelh2.github.io/events/hk-kids/ |
 | 🇺🇸 Los Angeles | https://fengelh2.github.io/events/la/ |
 | 🇩🇪 NRW | https://fengelh2.github.io/events/nrw/ |
 | 🇸🇬 Singapore | https://fengelh2.github.io/events/singa/ |
+| 🇯🇵 Fukuoka | https://fengelh2.github.io/events/fukuoka/ |
 
 Each page has a top-bar city switcher to jump between calendars. Filters: **Where** (region) · **What** (category) · **When** (this week / weekend / month / next) · **Venues** (multi-select). Free-text search + favorites + "NEW since last visit" badges. Mobile-first, no JS frameworks.
 

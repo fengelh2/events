@@ -136,7 +136,9 @@ def main() -> int:
     write_landing(discover_cities())  # landing always lists all cities
 
     print(f"\n=== Done: {len(sites) - fails}/{len(sites)} cities built ===")
-    return 0  # always succeed — partial deploy is better than no deploy
+    # Partial failure → exit 0 (deploy good cities, gh-pages restore covers rest).
+    # Total failure → exit 1 (mark CI red; don't silently deploy stale dist).
+    return 1 if fails == len(sites) else 0
 
 
 if __name__ == "__main__":

@@ -1,103 +1,70 @@
 # Workflow: onboard a new venue
 
-**Trigger:** A new venue is added to `config/venues.yaml` with `kind: unknown`. Or an existing venue's `kind` is set but breaking.
+**Trigger:** Adding a new venue, or fixing an existing one whose `kind` is broken.
 
-**Goal:** Discover the cheapest viable extraction strategy for this venue's calendar, in this order: iCal → JSON-LD → handwritten selectors. Update the venue's row in `venues.yaml` in place. **Do not create a new file; do not write a per-venue scraper.**
+**Goal:** Find the cheapest viable extraction strategy. Update the venue's row in `cities/<code>/config/venues.yaml` in place. Do NOT create a new file; do NOT write a per-venue scraper.
 
-## Inputs
+## Extraction-strategy order (try cheapest first)
 
-- One row from `projects/events-nrw/config/venues.yaml`.
-- The venue's `calendar_url` (or, if missing, a guess based on conventions: `/spielplan`, `/programm`, `/veranstaltungen`, `/ausstellungen`, `/kalender`, `/termine`).
+1. **iCal (`kind: ical`)** — venue exposes `/?ical=1` or `*.ics`. WordPress Tribe Events plugin commonly does.
+2. **JSON-LD aggregator (`kind: json_ld_aggregator`)** — page has `<script type="application/ld+json">` Event blocks. Most modern listing pages.
+3. **Server-rendered list (`kind: html_list`)** — repeating card structure with CSS-selectable title + date.
+4. **Detail pages (`kind: detail_pages`)** — listing has stable URL patterns; selectors on the detail page.
+5. **JavaScript-rendered (`kind: playwright_html_list` or `playwright_detail_pages`)** — last resort. Slower CI.
+6. **Specialist parsers** — `tribe_rest`, `sistic_api`, `et4_search`, `toubiz_api`, `algolia_calendar`, `nextjs_contentful`, `flat_json_feed` — use the existing one if the venue runs the same CMS as a sibling.
 
-## Steps
+## Anti-bot escalation
 
-### 1. Probe for iCal (preferred — no parsing needed)
+If a site returns 403/405/CAPTCHA:
+1. Add `browser_headers: true` (full Chrome fingerprint)
+2. If still blocked + it's `json_ld_aggregator`: add `use_playwright: true`
+3. If still blocked + it's `playwright_html_list`: add `use_stealth: true`
+4. If still blocked → DataDome territory; document why + keep as static umbrella
 
-```bash
-# Fetch the calendar page
-curl -sL "$CALENDAR_URL" > /tmp/probe.html
-
-# Look for .ics URLs — both linked and constructed
-grep -Eo '[^"]*\.ics' /tmp/probe.html | sort -u
-grep -Eoi '(href|src)="[^"]*ical[^"]*"' /tmp/probe.html | sort -u
-
-# TYPO3 spiritec convention (Theater Essen + likely other NRW theatres):
-# look for /kalender-eintrag/{id}/ical-{date}-{id}.ics
-grep -Eo '/kalender-eintrag/\d+/ical-\d{4}-\d{2}-\d{2}-\d+\.ics' /tmp/probe.html
-```
-
-If you find `.ics` URLs, fetch one. Confirm it parses as RFC 5545 (`BEGIN:VCALENDAR` / `BEGIN:VEVENT` / `DTSTART` / `SUMMARY`). Then update `venues.yaml`:
+## Required fields (every venue)
 
 ```yaml
-kind: ical
-ical_pattern: '<the regex you matched>'    # used by tools/scrape_venue_events.py to extract URLs from the listing page
+- id: city-prefix-slug             # lowercase-hyphen
+  name: Full venue name
+  display_name: Short label         # optional; defaults to name
+  city: <chip value>                # e.g. "Hong Kong Island", or "__aggregator__" for multi-zone
+  category: concert|theatre|ballet|opera|film|exhibition|sport|other
+  homepage: https://...
+  calendar_url: https://...
+  kind: <parser kind>
+  source_priority: 0|1|2
+  # ...kind-specific fields (selectors, regex, etc.)
 ```
 
-**Stop here.** No further selectors needed.
-
-### 2. Probe for JSON-LD `Event` (cheap upside)
+## Test commands
 
 ```bash
-# Look for embedded structured data
-grep -A 200 'application/ld\+json' /tmp/probe.html | grep -E '"@type"\s*:\s*"Event"'
+# Local scrape probe
+python tools/scrape_venue_events.py --venue-id <id> --venues-path cities/<code>/config/venues.yaml
+
+# Limit during dev
+python tools/scrape_venue_events.py --venue-id <id> --venues-path cities/<code>/config/venues.yaml --limit 5
+
+# Full city rebuild (uses cache where possible)
+python tools/rebuild_calendar.py --site-yaml cities/<code>/site.yaml --out /tmp/test.html
 ```
 
-If found, also fetch a couple of detail pages (deeper-linked event URLs) and check for JSON-LD there — sometimes the listing page has nothing but each detail page is rich.
+## For a view-city venue (kid-friendly target in hk-kids)
 
-If a detail page has `"@type":"Event"` with `startDate`, `endDate`, `name`, `location`, update:
+If the venue should appear in `hk-kids` AND be excluded from adult `hk`:
+1. Add the venue to `cities/hk/config/venues.yaml` as normal
+2. Add the venue id to `cities/hk-kids/site.yaml` → `always_include_venues:`
+3. Add the same id to `cities/hk/site.yaml` → `kids_only_venues:`
 
-```yaml
-kind: json_ld
-selectors:
-  detail_link: 'a.event-link'   # CSS selector that finds detail-page URLs from the listing page
-```
+The two lists are mirrors and MUST stay in sync.
 
-The shared scraper handles JSON-LD parsing via `extruct` once `kind: json_ld` is set.
+## Drop-warning behaviour
 
-### 3. Handwritten selectors (the default fallback)
+`_scrape_html_list` warns when >30% of selected items get dropped (typically silent date-parse failure). Override per-venue with `accept_drop_rate: 0.5` if drops are legitimate (closure notices, placeholders). Other parsers currently don't emit this warning — outstanding cleanup item.
 
-Open the calendar URL in a browser. Use DevTools to identify:
+## Common gotchas
 
-- **Item selector** — repeating element for each event in the listing.
-- **Title selector** — relative to the item.
-- **Date string selector** — relative to the item.
-- **Detail link selector** — relative to the item.
-- **Date format** — German formats are typical: `21. Juni 2026`, `Sa, 14.05.2026 19:30`, `14.05.–30.06.2026` (range for exhibitions). Capture the literal Python format string for `dateparser`/`strptime`.
-
-Update:
-
-```yaml
-kind: html_list
-selectors:
-  item: 'article.event-card'
-  title: 'h3.event-title'
-  date: '.event-date'
-  detail_link: 'a.event-link'
-date_format: '%d. %B %Y'    # or "german_natural" if dateparser is doing the work
-```
-
-### 4. Validate
-
-Run a one-off probe to confirm the venue produces ≥1 future event:
-
-```bash
-python tools/scrape_venue_events.py --venue-id <id> --once --dry-run
-```
-
-Expected output: a list of upcoming events with title + start datetime + URL. If empty or wrong, fix the selectors and rerun. **Do not commit broken selectors and rely on the nightly run to catch them.**
-
-### 5. Edge cases — flag these in `notes:` rather than coding around them
-
-- **Listing requires JS** — set `requires_js: true`. The shared scraper falls back to Playwright. (Add Playwright to project deps before flipping this.)
-- **Listing is paginated with "load more"** — set `pagination: load_more` and add `pagination_param:` if the URL changes. Most venues with <100 upcoming events fit on the first page.
-- **Multi-stage house** (TUP, Wuppertaler Bühnen, Theater Dortmund) — populate `produces_venue_ids:` and add a `stage_resolver` regex/keyword map in `notes:`. The merger uses this to route each event to the right `venue_id`.
-- **Vernissages on private galleries (Sies+Höke, Konrad Fischer)** — these often only appear on Instagram or buried in "Aktuelles" pages. Best-effort. If the website has nothing structured, leave `kind: unknown` and skip — don't write fragile selectors that break monthly.
-
-## Output
-
-- Updated `venues.yaml` row with `kind` set to a real value.
-- Optionally: a new entry in `venue_aliases.json` if the venue's name varies between its own site and aggregators (RuhrBühnen, visitessen).
-
-## Self-improvement
-
-If you discover a German CMS pattern that's reused across many venues (e.g., spiritec / TYPO3 calendar modules expose `.ics` consistently), document the pattern in this workflow under "Probe for iCal" so the next onboarding attempt knows to try it first. Don't make the discovery silently — update the SOP.
+- **DATE_ORDER** must match the venue's source format. HK/SG/NRW = DMY, LA = MDY, Fukuoka = YMD. Set at city level (`site.yaml`), not per-venue.
+- **`lang: de` on NRW** — without it, German dates silently fail 100% of items.
+- **Eventbrite** — needs `browser_headers: true` AND `use_playwright: true` AND `pw_wait_ms: 2000`. Plain Chrome UA gets 405 from CI.
+- **Discover LA timeout**: 487 events, takes >20s. Don't lower `DEFAULT_TIMEOUT` below 45s.

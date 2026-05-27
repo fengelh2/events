@@ -1002,6 +1002,10 @@
   calendar_url: https://www.eventbrite.sg/d/singapore--singapore/all-events/
   kind: json_ld_aggregator
   source_priority: 1
+  browser_headers: true             # Eventbrite blocks default UA with 405
+  use_playwright: true              # 2026-05-26: TLS fingerprinting blocks
+                                     # even full Chrome headers; needs real Chromium.
+  pw_wait_ms: 2000
   # 20 events from page 1 alone via JSON-LD ItemList. Eventbrite emits
   # 20 events per JSON-LD block and paginates with `?page=N` up to 60+ pages
   # (1000+ total events). Single-URL parser only catches page 1 (20 events).
@@ -1069,6 +1073,9 @@
   calendar_url: https://www.eventbrite.sg/d/singapore--singapore/all-events/?page=2
   kind: json_ld_aggregator
   source_priority: 2
+  browser_headers: true
+  use_playwright: true
+  pw_wait_ms: 2000
   # +20 events. Page 2 of Eventbrite. Trivially extensible to /p3, /p4, ...
   notes: |
     Sibling of `eventbrite-sg` for page 2. Render-side dedup on URL handles
@@ -1085,6 +1092,9 @@
   calendar_url: https://www.eventbrite.sg/d/singapore--singapore/all-events/?page=3
   kind: json_ld_aggregator
   source_priority: 2
+  browser_headers: true
+  use_playwright: true
+  pw_wait_ms: 2000
 
 - id: honeycombers-sg
   name: Honeycombers Singapore — Event Calendar
