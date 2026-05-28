@@ -2353,6 +2353,21 @@ def _parse_one(text: str, explicit_format: Optional[str] = None,
         parsed = parsed.replace(tzinfo=_LOCAL_TZ)
     else:
         parsed = parsed.astimezone(_LOCAL_TZ)
+    # Year-inference safety net: when the input text carried no explicit year
+    # token, dateparser's PREFER_DATES_FROM=future only rolls forward when the
+    # candidate is strictly < today. A would-be weekly-recurring "Fri Apr 26"
+    # that landed in the last few days gets stamped as already-past and is
+    # silently dropped by render filters. Roll those near-past unspecified-year
+    # dates to next year so they render as the upcoming occurrence.
+    if date_prefer == "future" and not re.search(r"\b(19|20|21)\d{2}\b", text):
+        today = datetime.now(_LOCAL_TZ)
+        delta_days = (today.date() - parsed.date()).days
+        if 0 < delta_days <= 7:
+            try:
+                parsed = parsed.replace(year=parsed.year + 1)
+            except ValueError:
+                # Feb 29 → non-leap next year; fall back to Mar 1
+                parsed = parsed.replace(month=3, day=1, year=parsed.year + 1)
     return parsed
 
 

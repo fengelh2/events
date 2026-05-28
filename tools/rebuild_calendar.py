@@ -254,9 +254,7 @@ def _dedup_cross_source(events: list, venues: list) -> list:
 
 def _event_seen_key(ev) -> str:
     """Stable cross-rebuild identity: venue + normalised title + start date."""
-    title = (ev.title or "").lower().strip()
-    title = re.sub(r"[^\w\s]", " ", unicodedata.normalize("NFKC", title), flags=re.UNICODE)
-    title = re.sub(r"\s+", " ", title).strip()
+    title = _normalize_title(ev.title)
     start_date = ev.start.date().isoformat() if ev.start else ""
     return f"{ev.venue_id}|{title}|{start_date}"
 
@@ -420,6 +418,47 @@ def main() -> int:
     # timeout-hk-weekend, …) re-list events that venue-direct scrapers also
     # carry. Drop the lower-priority duplicate. See _dedup_cross_source.
     all_events = _dedup_cross_source(all_events, venues)
+
+    # Year-inference safety net: drop events whose start is more than ~1 year
+    # in the past UNLESS they have a still-future end date (legitimate
+    # multi-year ongoing exhibitions, e.g. "Central Magistracy 2024 → 2029").
+    # A start that old with no end (or an already-past end) is almost always a
+    # year-inference bug (parser stamped a partial date with last year's year
+    # token, or a stale "Fri Apr 26" rolled to the wrong year).
+    _today = date.today()
+    _cutoff = _today.replace(year=_today.year - 1)
+    _now_dt = datetime.now(timezone.utc)
+    def _start_date(ev):
+        s = getattr(ev, "start", None) if not isinstance(ev, dict) else ev.get("start")
+        if s is None: return None
+        if isinstance(s, str):
+            try: return datetime.fromisoformat(s).date()
+            except ValueError: return None
+        return s.date() if hasattr(s, "date") else s
+    def _end_dt(ev):
+        e = getattr(ev, "end", None) if not isinstance(ev, dict) else ev.get("end")
+        if e is None: return None
+        if isinstance(e, str):
+            try: return datetime.fromisoformat(e)
+            except ValueError: return None
+        return e
+    _before = len(all_events)
+    def _keep(ev):
+        sd = _start_date(ev)
+        if sd is None or sd >= _cutoff:
+            return True
+        ed = _end_dt(ev)
+        # Keep only if end is still in the future (genuine ongoing exhibition)
+        if ed is not None:
+            ed_aware = ed if ed.tzinfo else ed.replace(tzinfo=timezone.utc)
+            if ed_aware >= _now_dt:
+                return True
+        return False
+    all_events = [e for e in all_events if _keep(e)]
+    _dropped = _before - len(all_events)
+    if _dropped:
+        log.warning("dropped %d events with start before %s (likely year-inference errors)",
+                    _dropped, _cutoff.isoformat())
 
     # Audience filter:
     #   audience_filter: kids   → keep events that are kid-relevant.
