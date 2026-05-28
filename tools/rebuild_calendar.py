@@ -30,6 +30,7 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 import render_events_html  # noqa: E402
 import scrape_venue_events  # noqa: E402
+import zero_yield_tracker  # noqa: E402
 
 log = logging.getLogger("rebuild_calendar")
 
@@ -112,6 +113,143 @@ def _load_cache(cache_path: Path, config_hash: str) -> list | None:
 
 def _iso(v):
     return v.isoformat() if v else None
+
+
+def _normalize_title(t: str) -> str:
+    """Lowercase, NFKC, strip punctuation, collapse whitespace.
+    Shared by _event_seen_key and cross-source dedup so the two stay consistent.
+    """
+    t = (t or "").lower().strip()
+    t = re.sub(r"[^\w\s]", " ", unicodedata.normalize("NFKC", t), flags=re.UNICODE)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _dedup_cross_source(events: list, venues: list) -> list:
+    """Drop duplicates that appear via both venue-direct AND aggregator sources.
+
+    Match rule: (normalized_title, normalized_city) with start dates within 2 days.
+    Keep rule: lowest `source_priority` from venues.yaml (lower number = better);
+    tie-break favours the source==venue_id event (true venue-direct over
+    aggregator-attributed). Same-source events are never merged (preserves
+    LCSD-style recurring shows at sister venues which all share a title).
+
+    Hard guard: events with different `venue_id` are NOT merged either, UNLESS
+    one of the colliding events comes from a source that is itself an
+    aggregator (source != venue_id). That keeps "Oldies Concert" at lcsd-stth
+    vs lcsd-tmth as 2 distinct events while still collapsing the
+    visitessen-attributed copy of a tup-essen event.
+
+    Cache hash unaffected — this runs after _save_cache.
+    """
+    from rapidfuzz.distance import Levenshtein
+    from collections import defaultdict
+
+    # Build priority map: venue_id -> source_priority (default 0 = best)
+    prio: dict[str, int] = {}
+    for v in venues:
+        vid = v.get("id")
+        if vid:
+            prio[vid] = int(v.get("source_priority", 0))
+
+    def _ev_get(e, k, default=""):
+        return (e.get(k, default) if isinstance(e, dict) else getattr(e, k, default)) or default
+
+    def _date(e):
+        s = _ev_get(e, "start", None)
+        if not s:
+            return None
+        from datetime import datetime as _dt
+        if hasattr(s, "date"):
+            return s.date()
+        try:
+            return _dt.fromisoformat(s).date()
+        except Exception:
+            return None
+
+    def _norm_city(c: str) -> str:
+        c = (c or "").lower().strip()
+        # __aggregator__ is a magic value meaning "no canonical city" — never
+        # treat as a real city match anchor.
+        if c in ("", "__aggregator__"):
+            return ""
+        return c
+
+    # Bucket by (normalized_title, normalized_city). Within bucket, cluster
+    # events whose dates are within 2 days of each other.
+    buckets: dict[tuple[str, str], list[int]] = defaultdict(list)
+    norm_titles: list[str] = []
+    dates: list = []
+    for i, e in enumerate(events):
+        nt = _normalize_title(_ev_get(e, "title", ""))
+        nc = _norm_city(_ev_get(e, "city", ""))
+        d = _date(e)
+        norm_titles.append(nt)
+        dates.append(d)
+        if not nt or d is None or len(nt) < 6:
+            continue  # too weak a signal — never dedup
+        buckets[(nt, nc)].append(i)
+
+    drop: set[int] = set()
+    before = len(events)
+    for (_nt, _nc), idxs in buckets.items():
+        if len(idxs) < 2:
+            continue
+        # Cluster within +/-2 days
+        idxs_sorted = sorted(idxs, key=lambda i: dates[i])
+        cluster: list[int] = []
+
+        def _flush(cl: list[int]) -> None:
+            if len(cl) < 2:
+                return
+            # Only dedup if cluster contains >=2 distinct sources AND
+            # at least one is aggregator-attributed (source != venue_id)
+            # OR cluster spans multiple sources where the venue_id is shared.
+            sources = {_ev_get(events[i], "source", "") for i in cl}
+            if len(sources) < 2:
+                return
+            vids = {_ev_get(events[i], "venue_id", "") for i in cl}
+            has_aggregator_attr = any(
+                _ev_get(events[i], "source", "") != _ev_get(events[i], "venue_id", "")
+                for i in cl
+            )
+            # If every event has source==venue_id AND venue_ids differ,
+            # these are genuinely different physical venues with the same
+            # show title (LCSD pattern) — don't merge.
+            if not has_aggregator_attr and len(vids) > 1:
+                return
+
+            def _score(i: int) -> tuple:
+                src = _ev_get(events[i], "source", "")
+                vid = _ev_get(events[i], "venue_id", "")
+                # Priority on SOURCE (the emitting venue). Default 0.
+                p = prio.get(src, prio.get(vid, 0))
+                direct = 0 if src and src == vid else 1  # 0 = direct, 1 = attributed
+                start = dates[i] or date.max
+                return (p, direct, start)
+
+            keep = min(cl, key=_score)
+            for i in cl:
+                if i != keep:
+                    drop.add(i)
+
+        for i in idxs_sorted:
+            if not cluster:
+                cluster.append(i)
+                continue
+            if dates[i] and dates[cluster[-1]] and (dates[i] - dates[cluster[-1]]).days <= 2:
+                cluster.append(i)
+            else:
+                _flush(cluster)
+                cluster = [i]
+        _flush(cluster)
+
+    if drop:
+        kept = [e for i, e in enumerate(events) if i not in drop]
+        log.info("cross-source dedup: %d -> %d events (%d duplicate copies dropped)",
+                 before, len(kept), len(drop))
+        return kept
+    log.info("cross-source dedup: %d events, none merged", before)
+    return events
 
 
 def _event_seen_key(ev) -> str:
@@ -270,8 +408,18 @@ def main() -> int:
 
         log.info("scraped %d venues OK, %d failed, %d skipped (kind=unknown)", ok, len(failed), skipped)
         log.info("raw events: %d", len(all_events))
-        # Persist scrape to cache for the next render-only build
+        # Persist scrape to cache for the next render-only build.
+        # NOTE: cache is saved BEFORE cross-source dedup so the cache hash logic
+        # stays purely a function of scraped output. Dedup is a render-time
+        # post-process — its decisions are cheap to recompute and depend on
+        # venues.yaml priorities (already part of config_hash).
         _save_cache(cache_path, all_events, config_hash)
+
+    # ─── Cross-source deduplication ──────────────────────────────────────
+    # Aggregator sources (visitessen, sistic, discover-los-angeles,
+    # timeout-hk-weekend, …) re-list events that venue-direct scrapers also
+    # carry. Drop the lower-priority duplicate. See _dedup_cross_source.
+    all_events = _dedup_cross_source(all_events, venues)
 
     # Audience filter:
     #   audience_filter: kids   → keep events that are kid-relevant.
@@ -384,7 +532,16 @@ def main() -> int:
         log.warning("chip audit failed: %s", exc)
 
     # Freshness check — warn if any configured venue produced 0 events.
-    _emit_freshness_warnings(venues, venue_events=_per_venue_counts(all_events))
+    _counts = _per_venue_counts(all_events)
+    _emit_freshness_warnings(venues, venue_events=_counts)
+
+    # Persistent zero-yield tracker — escalates silent scraper drift across builds.
+    # State lives next to seen_events.json so it travels with the city.
+    try:
+        _streak_path = Path(args.seen).parent / "zero_yield_streak.json"
+        zero_yield_tracker.update_and_alert(venues, _counts, _streak_path)
+    except Exception as exc:
+        log.warning("zero-yield tracker failed: %s", exc)
 
     # Summary report
     print()
