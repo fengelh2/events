@@ -144,12 +144,32 @@ def _dedup_cross_source(events: list, venues: list) -> list:
     from rapidfuzz.distance import Levenshtein
     from collections import defaultdict
 
-    # Build priority map: venue_id -> source_priority (default 0 = best)
+    # Build priority map: venue_id -> source_priority (default 0 = best).
+    # Aggregator venues (city == "__aggregator__" or kind in AGGREGATOR_KINDS)
+    # get an automatic AGGREGATOR_PENALTY when they didn't set an explicit
+    # source_priority. Without this, sources like `discover-los-angeles` or
+    # `visitessen` (priority 0 by default) would tie with venue-direct
+    # scrapes and the tie-break would pick the wrong winner.
+    # Explicit `source_priority:` in venues.yaml still overrides.
+    AGGREGATOR_PENALTY = 5
+    AGGREGATOR_KINDS = {
+        "json_ld_aggregator",  # discover-los-angeles
+        "sistic_api",          # sistic (SG)
+        "et4_search",          # visitessen
+        "toubiz_api",          # visitduesseldorf
+        "algolia_calendar",
+    }
     prio: dict[str, int] = {}
     for v in venues:
         vid = v.get("id")
-        if vid:
-            prio[vid] = int(v.get("source_priority", 0))
+        if not vid:
+            continue
+        if "source_priority" in v:
+            prio[vid] = int(v["source_priority"])
+        elif (v.get("city") or "").strip() == "__aggregator__" or v.get("kind") in AGGREGATOR_KINDS:
+            prio[vid] = AGGREGATOR_PENALTY
+        else:
+            prio[vid] = 0
 
     def _ev_get(e, k, default=""):
         return (e.get(k, default) if isinstance(e, dict) else getattr(e, k, default)) or default
@@ -191,57 +211,61 @@ def _dedup_cross_source(events: list, venues: list) -> list:
 
     drop: set[int] = set()
     before = len(events)
+
+    def _src_prio(i: int) -> int:
+        src = _ev_get(events[i], "source", "")
+        vid = _ev_get(events[i], "venue_id", "")
+        return prio.get(src, prio.get(vid, 0))
+
+    def _is_direct(i: int) -> int:
+        # 0 = source==venue_id (true venue-direct), 1 = re-attributed
+        src = _ev_get(events[i], "source", "")
+        vid = _ev_get(events[i], "venue_id", "")
+        return 0 if src and src == vid else 1
+
+    # Pairwise within each (normalized_title, city) bucket: an event is
+    # dropped iff there exists ANOTHER event in the same bucket from a
+    # DIFFERENT source whose date is within +/-2 days AND whose
+    # (priority, direct-ness) score is strictly better (lower).
+    #
+    # Pairwise (not chain-cluster) is intentional: multi-night runs of the
+    # same show (Magic Flute on 6/14, 6/20, 6/21 at la-opera) used to chain
+    # into one cluster via an aggregator's intermediate date, leading to
+    # spurious drops of legitimate run nights. With pairwise + same-source
+    # exclusion, run nights never compete with each other.
     for (_nt, _nc), idxs in buckets.items():
         if len(idxs) < 2:
             continue
-        # Cluster within +/-2 days
-        idxs_sorted = sorted(idxs, key=lambda i: dates[i])
-        cluster: list[int] = []
-
-        def _flush(cl: list[int]) -> None:
-            if len(cl) < 2:
-                return
-            # Only dedup if cluster contains >=2 distinct sources AND
-            # at least one is aggregator-attributed (source != venue_id)
-            # OR cluster spans multiple sources where the venue_id is shared.
-            sources = {_ev_get(events[i], "source", "") for i in cl}
-            if len(sources) < 2:
-                return
-            vids = {_ev_get(events[i], "venue_id", "") for i in cl}
-            has_aggregator_attr = any(
-                _ev_get(events[i], "source", "") != _ev_get(events[i], "venue_id", "")
-                for i in cl
-            )
-            # If every event has source==venue_id AND venue_ids differ,
-            # these are genuinely different physical venues with the same
-            # show title (LCSD pattern) — don't merge.
-            if not has_aggregator_attr and len(vids) > 1:
-                return
-
-            def _score(i: int) -> tuple:
-                src = _ev_get(events[i], "source", "")
-                vid = _ev_get(events[i], "venue_id", "")
-                # Priority on SOURCE (the emitting venue). Default 0.
-                p = prio.get(src, prio.get(vid, 0))
-                direct = 0 if src and src == vid else 1  # 0 = direct, 1 = attributed
-                start = dates[i] or date.max
-                return (p, direct, start)
-
-            keep = min(cl, key=_score)
-            for i in cl:
-                if i != keep:
-                    drop.add(i)
-
-        for i in idxs_sorted:
-            if not cluster:
-                cluster.append(i)
+        for i in idxs:
+            if i in drop:
                 continue
-            if dates[i] and dates[cluster[-1]] and (dates[i] - dates[cluster[-1]]).days <= 2:
-                cluster.append(i)
-            else:
-                _flush(cluster)
-                cluster = [i]
-        _flush(cluster)
+            di = dates[i]
+            si = _ev_get(events[i], "source", "")
+            vi = _ev_get(events[i], "venue_id", "")
+            pi = _src_prio(i)
+            direct_i = _is_direct(i)
+            for j in idxs:
+                if j == i or j in drop:
+                    continue
+                sj = _ev_get(events[j], "source", "")
+                if sj == si:
+                    continue  # same source → multi-night run, not duplicate
+                dj = dates[j]
+                if di is None or dj is None or abs((di - dj).days) > 2:
+                    continue
+                pj = _src_prio(j)
+                direct_j = _is_direct(j)
+                vj = _ev_get(events[j], "venue_id", "")
+                # Guard: if venue_ids differ AND neither side is a known
+                # aggregator AND both are direct (source==venue_id), these
+                # are genuinely different physical venues with the same
+                # title (HK LCSD pattern). Don't merge.
+                if (vi != vj and direct_i == 0 and direct_j == 0
+                        and pi < AGGREGATOR_PENALTY and pj < AGGREGATOR_PENALTY):
+                    continue
+                if (pj, direct_j) < (pi, direct_i):
+                    drop.add(i)
+                    break
 
     if drop:
         kept = [e for i, e in enumerate(events) if i not in drop]
