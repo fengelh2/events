@@ -94,3 +94,29 @@ Output from 4 parallel audit agents (cross-city consistency, scraper code qualit
 **Larger projects**:
 - #4 (link audit trust hardening — needs design pass)
 - #11 (canonical category vocabulary across cities)
+
+---
+
+## Round-9 HK Kids filter audit (2026-05-28)
+
+Ran kids filter against `cities/hk/data/events_cache.json` (921 raw → 371 admitted before, 357 after). Admission split: ~67% venue-whitelist, ~27% keyword, ~3% audience tag.
+
+**Rough rates** (over keyword-admitted subset of ~111):
+- **False-positive rate ~12%** (13 clear FPs: see fixes below)
+- **False-negative rate <2%** in mixed-venue dropped sample (60+ inspected; almost all correctly dropped — Mahler/Bruckner/Lee Bul/Anne Imhof/Oldies Concert are all adult)
+
+**Fixes applied (high-confidence)**:
+- Dropped bare `workshop` keyword — admitted "Body in Time" elderly dance (7×), "Standup Comedy Workshop", "Farm-to-Table Basil Pesto Workshop", HKBU ecology talk, generic "Music Workshop in Hong Kong" (2×). Kept narrower variants (`art workshop`, `craft workshop`, `science workshop`, `kids workshop`).
+- Dropped bare `tutti programme` — admitted Dudamel Masters Series adult concerts (Beethoven 9, Romeo & Juliet, Fidelio). Replaced with `tutti programme interactive` + `tutti programme event week` (true outreach).
+- Dropped `summer term short` — admitted "HK Arts Centre Summer Term Short Courses 2026" (adult diploma catalog).
+- Added `ancient egyptian`, `pyramid workshop`, `paper making workshop` to preserve Palace Museum Egypt-exhibit kid programs after the bare `workshop` removal.
+- Mirrored `pyramid workshop`, `paper making workshop`, `tutti programme interactive`, `tutti programme event week` into `cities/hk/site.yaml` `kids_only_keywords` (drop from adult HK).
+
+**Uncertain / left as-is**:
+- Round-8 keywords `variety show` / `annual performance` / `cantonese opera(tic)` / `choral concert` / `funky dance` admit LCSD community shows that *could* be adult-oriented; user explicitly designed these as cultural-exposure family programming. **No change.**
+- `young friends` admits "Young Friends Special: Jazz Music Theatre" at HK Arts Festival — actually IS a youth program (TP).
+- 1-hit borderline FPs not worth a dedicated rule: "BaseHall Evening Entertainment (comedy, DJ, storytelling)" via `storytelling`, "Snuggle and Stitch: Childhood Textiles" (the-mills) via `child`, "Family Nest (Hungarian arthouse)" via `family`, "Hong Kong Wedding Fair" via `wedding fair`, "Music Workshop in Hong Kong" (hk-fringe-workshops) — would need venue-blacklist mechanism to fix cleanly.
+- `comix pulse` admits an adult "Call for Entry [PHASE 2]" submission notice (1 hit). Marginal; keyword still legit for screening events.
+
+**Known harmless bug** (boundary-value, flagged per CLAUDE.md safety protocol):
+- `cities/hk/site.yaml` `kids_only_keywords` has `"ages 0"`, `"ages 1"`, `"ages 2"` which substring-match `ages 10`, `ages 12`, etc. Currently 5 such titles exist in cache, all from kids-only venues (esf-explore-camps, kids-gallery, hk-ballet-academy) which are already venue-dropped from adult HK — so the substring bug is currently silent. If a mixed venue ever lists "Ages 12-14", it would be wrongly dropped from adult HK. Recommend changing to `"ages 0-"`/`"ages 1-"`/`"ages 2-"`/`"ages 1 "`/`"ages 2 "` with trailing separator (similar to existing `"ages 3-"`..`"ages 10-"` pattern). Deferred — fix should be checked against any future venue add.

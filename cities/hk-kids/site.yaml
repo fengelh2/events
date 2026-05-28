@@ -170,7 +170,10 @@ kids_keywords:
   # programs from venues NOT in always_include (M+, Palace Museum, Tai Kwun,
   # HK Museum of Art, HKU Museum, Asia Society, HK Arts Centre, etc.)
   # Anything with these in the title is broadly under-10 appropriate.
-  - workshop                # most kid-targeted museum programs
+  # Round-9 (2026-05-28): bare `workshop` removed — over-admitted elderly-dance
+  # ("Body in Time"), standup-comedy, adult-cooking ("Farm-to-Table Basil
+  # Pesto"), academic-ecology talks. Specific `art workshop`/`craft workshop`/
+  # `science workshop`/`kids workshop` below still catch legit cases.
   - hands-on
   - hands on
   - drop-in
@@ -225,7 +228,11 @@ kids_keywords:
   - swire community concert
   - swire music for everyone
   - swire symphony under
-  - tutti programme        # HK Phil Jockey Club outreach
+  # Round-9 (2026-05-28): bare `tutti programme` over-admitted Dudamel Masters
+  # Series adult concerts (sponsored by the outreach umbrella but full-price
+  # adult performances). Use specific outreach event types instead.
+  - tutti programme interactive   # outreach workshops
+  - tutti programme event week    # outreach week
   - hisaishi               # Joe Hisaishi = Studio Ghibli music
   - nutcracker
   - sleeping beauty
@@ -255,6 +262,11 @@ kids_keywords:
   - heavenly horses        # animals are kid-engaging
   - adventure night
   - mobile museum
+  # Round-9 (2026-05-28): Palace Museum Egypt exhibit kid workshops
+  # (preserves these as TPs after dropping bare `workshop` keyword)
+  - ancient egyptian
+  - pyramid workshop
+  - paper making workshop
   - art journey            # kids art outreach
   - meet mona lisa
   - tai kwun movie steps   # outdoor family cinema
@@ -284,7 +296,8 @@ kids_keywords:
   - sunset concert         # community outdoor
 
   # HK Arts Centre / Para Site / comics
-  - summer term short
+  # Round-9 (2026-05-28): `summer term short` removed — admits HK Arts Centre
+  # adult diploma/course catalogs ("Summer Term Short Courses 2026" = adult).
   - comix pulse
   - filmic detours         # screening program (kid-OK)
 

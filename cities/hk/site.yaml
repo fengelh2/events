@@ -101,3 +101,9 @@ kids_only_keywords:
   - "youth rugby"
   - "school holiday camp"
   - "summer camp"
+  # Round-9 (2026-05-28): mirror of new kids-side Egypt-workshop + TUTTI-outreach
+  # additions. These are unambiguously kid-only.
+  - "pyramid workshop"
+  - "paper making workshop"
+  - "tutti programme interactive"
+  - "tutti programme event week"
