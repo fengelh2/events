@@ -1153,11 +1153,11 @@
     - title: "Free Admission on Environment Day (Wetland Park)"
       start: 2026-06-05
       end:   2026-06-05
-      detail_url: "https://www.facebook.com/HongKongWetlandPark/whatsnew/1873"
+      detail_url: "https://www.wetlandpark.gov.hk/en/whatsnew"
     - title: "Hong Kong Wetland Park — open daily, mangrove + reedbed + birding"
       start: 2026-05-24
       end:   2027-05-24
-      detail_url: "https://www.facebook.com/HongKongWetlandPark/"
+      detail_url: "https://www.wetlandpark.gov.hk/en/"
   notes: |
     Verified 2026-05-24: site lives but the events feed is sparse
     (1 news post for Env Day + closure notice). Static seed for the

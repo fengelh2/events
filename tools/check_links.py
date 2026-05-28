@@ -48,10 +48,30 @@ HEADERS = {
 # we follow them, and 401/405 (page exists but blocked HEAD).
 OK_CODES = {200, 401, 405}
 # Hosts we know bot-wall HEAD requests — treat any 403 as OK for these.
+# Verified 2026-05-28: each of these returns 200 (or 401) to a real browser
+# UA but 403 to our HEAD checker. Without this allow-list the audit reports
+# hundreds of false-positives (SISTIC alone = 205 SG events, Ticketmaster
+# = 66 LA events) and the investigator wastes API calls trying to "fix"
+# perfectly working links.
 BOT_WALL_HOSTS = {
     "asiasociety.org", "www.westk.hk",
     "www.timeout.com", "www.honeycombers.com",
+    # SG: SISTIC ticketing CMS — entire singa calendar funnels through this
+    "www.sistic.com.sg",
+    # LA: Ticketmaster — every LA Phil / Hollywood Bowl / venue chain link
+    "www.ticketmaster.com",
+    # HK: Klook + KKday DataDome wall, Sassy + Tatler Cloudflare, etc.
+    "www.klook.com", "www.kkday.com",
+    "www.sassyhongkong.com", "www.tatlerasia.com",
+    # SG: Singapore Repertory Theatre — flaky 502 to HEAD, 200 to GET
+    "www.srt.com.sg",
+    # HK: HEAD returns 404 for valid paths; GET works
+    "www.wetlandpark.gov.hk",
+    "www.newtownplaza.com.hk",
 }
+# Hosts where 401 / 403 / 404 from HEAD is unreliable; downgrade by re-trying
+# as a real GET with a browser UA before failing. Adds latency, but only fires
+# on the failure path so total audit time is bounded.
 
 
 def extract_links(html: str) -> set[str]:
@@ -104,6 +124,32 @@ def probe(url: str) -> tuple[str, int, str]:
         return url, code, "ok"
     if code == 403 and host in BOT_WALL_HOSTS:
         return url, code, "ok-botwall"
+    # Bot-walled hosts that lie on HEAD (return 404/4xx for valid paths) —
+    # retry once with a browser UA + GET to settle the question for real.
+    # Cost: only fires on the failure path AND only for hosts we whitelisted,
+    # so it's bounded.
+    if host in BOT_WALL_HOSTS and code not in (404,):
+        # Skip 404 retries because 404 is sometimes truthful even for bot-
+        # walled hosts (genuinely removed event pages). Leave that decision
+        # to the investigator.
+        pass
+    if host in BOT_WALL_HOSTS:
+        browser_headers = {
+            **HEADERS,
+            "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                           "Chrome/120.0.0.0 Safari/537.36"),
+        }
+        try:
+            r2 = requests.get(url, headers=browser_headers, timeout=TIMEOUT,
+                              allow_redirects=True, stream=True)
+            real_code = r2.status_code
+            r2.close()
+            if real_code in OK_CODES:
+                return url, real_code, "ok-botwall-get"
+            return url, real_code, "fail"
+        except requests.RequestException:
+            pass
     return url, code, "fail"
 
 

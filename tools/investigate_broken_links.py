@@ -183,8 +183,14 @@ def investigate(broken_url: str, ctx: dict | None) -> dict:
     #     reference page (Facebook, Instagram, Wikipedia of the venue).
     #     Random fan blogs that happen to contain the venue name are
     #     explicitly rejected.
-    TRUSTED_OFF_HOSTS = ("facebook.com", "instagram.com", "twitter.com",
-                          "x.com", "wikipedia.org", "youtube.com",
+    # Facebook + Instagram removed 2026-05-28: a previous run "patched"
+    # wetlandpark.gov.hk/en/whatsnew/1873 → facebook.com/HongKongWetlandPark/whatsnew/1873
+    # by blindly appending the dead path to the FB profile URL (the topical-
+    # match gate triggered on the shared "whatsnew" token even though FB has
+    # no /whatsnew/ paths). Both produced 4xx after the patch. Off-host
+    # replacement is too dangerous without per-host URL-shape validation —
+    # keep only wiki / official-org redirects.
+    TRUSTED_OFF_HOSTS = ("wikipedia.org", "youtube.com",
                           "eventbrite.com", "eventbrite.hk")
     same_host = host_of(broken_url)
     scored = []
@@ -242,6 +248,13 @@ def main():
 
     patches = []
     removals = []
+    # AUTO-PATCH GAP: any broken URL that came from a live scrape (SISTIC
+    # per-event slugs, Ticketmaster events, visitessen detail pages, etc.)
+    # is NOT in venues.yaml and can never be patched here. We log them as
+    # "unpatchable_dynamic" so an operator can decide whether to add the host
+    # to BOT_WALL_HOSTS in check_links.py (if it's a false positive) or
+    # disable/swap the parser kind for that venue (if events truly 404).
+    unpatchable = []
     for city_code, rep in audit.get("cities", {}).items():
         samples = (rep.get("samples") or [])[: args.max_per_city]
         if not samples: continue
@@ -253,7 +266,9 @@ def main():
             if ctx:
                 print(f"    venue: {ctx.get('venue_id')} ({ctx.get('name','?')[:50]})  field={ctx.get('field')}")
             else:
-                print("    (URL not directly in YAML — came from a live scrape; transient or upstream churn)")
+                print("    (URL not in venues.yaml — dynamic scrape; unpatchable here)")
+                unpatchable.append({"city": city_code, "url": url, "status": s.get("status")})
+                continue  # don't even waste DDG calls on URLs we cannot patch
             res = investigate(url, ctx)
             if res["verdict"] == "replace_with_best" and res["best"]:
                 print(f"    ✓ best alternative: {res['best']}")
@@ -273,9 +288,11 @@ def main():
                     })
 
     PATCH.parent.mkdir(parents=True, exist_ok=True)
-    PATCH.write_text(json.dumps({"patches": patches, "removals": removals},
+    PATCH.write_text(json.dumps({"patches": patches, "removals": removals,
+                                 "unpatchable_dynamic": unpatchable},
                                 indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"\n→ Patch suggestions: {len(patches)} replacements, {len(removals)} proposed removals")
+    print(f"\n→ Patch suggestions: {len(patches)} replacements, {len(removals)} proposed removals, "
+          f"{len(unpatchable)} unpatchable dynamic URLs (see patch.json)")
     print(f"  Saved: {PATCH}")
     print("\nReview the patch file, then apply via tools/apply_link_patch.py")
     return 0
