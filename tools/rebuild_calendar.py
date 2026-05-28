@@ -40,52 +40,119 @@ SEEN_FRESH_DAYS = 14
 SEEN_BOOTSTRAP_OFFSET_DAYS = 30
 
 
-def _config_hash(venues_path: str, site: dict) -> str:
-    """Hash that changes when scrape output should change: venues.yaml content,
-    site locale config (audience filter is excluded since it runs post-scrape),
-    AND the actual content of the scraper code (NOT mtime — mtime resets on
-    every git checkout, which would invalidate every CI cache).
+# ─── Per-venue cache (schema 2) ──────────────────────────────────────────
+# DIAGNOSIS: prior whole-file cache invalidated all ~100 venues when ANY
+# venue's config or ANY line of tools/scrape_venue_events.py changed. CI
+# rebuilds took 30-60 min even for one-venue edits.
+#
+# FIX: per-venue cache key = hash(this venue's config + site locale + parser
+# code). Editing one venue invalidates only that venue. Parser-code edits
+# still invalidate every venue (a parser change can silently alter ANY
+# venue's output) — that's deliberate. Per-venue `cache_ttl_hours: N` keeps
+# stable venues warm even when their config hash changes cosmetically.
+#
+# Correctness: events are grouped by source venue_id on save, so each venue's
+# block is EITHER all fresh-scraped OR all cached — never mixed.
 
-    Cache built under one hash is reusable when the hash matches.
-    """
+_SCRAPER_CODE_HASH: str | None = None
+
+
+def _scraper_code_hash() -> str:
+    """SHA256 of parser code files. Content-based (not mtime) so stable across
+    CI checkouts. Computed once per process and cached."""
+    global _SCRAPER_CODE_HASH
+    if _SCRAPER_CODE_HASH is not None:
+        return _SCRAPER_CODE_HASH
     import hashlib
     h = hashlib.sha256()
-    h.update(Path(venues_path).read_bytes())
-    # Only the scrape-affecting site fields — locale changes the parser output;
-    # audience_filter / kids_keywords run post-scrape so don't invalidate cache.
-    scrape_relevant = {k: v for k, v in (site or {}).items()
-                       if k in ("date_order", "timezone", "lang", "horizon_days")}
-    h.update(str(sorted(scrape_relevant.items())).encode("utf-8"))
-    # Parser code CONTENT (not mtime). Stable across CI runs.
     for sib in ("scrape_venue_events.py", "parse_ical.py"):
         p = Path(__file__).parent / sib
         if p.exists():
             h.update(p.read_bytes())
+    _SCRAPER_CODE_HASH = h.hexdigest()
+    return _SCRAPER_CODE_HASH
+
+
+def _site_scrape_hash(site: dict) -> str:
+    """Hash of site fields that affect scrape OUTPUT (locale/tz/lang).
+    audience_filter/kids_keywords/horizon_days are post-scrape filters so are
+    deliberately excluded — they don't invalidate cached venue events."""
+    import hashlib, json as _json
+    scrape_relevant = {k: v for k, v in (site or {}).items()
+                       if k in ("date_order", "timezone", "lang")}
+    return hashlib.sha256(
+        _json.dumps(scrape_relevant, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+
+
+def _venue_hash(venue: dict, site_hash: str, code_hash: str) -> str:
+    """Per-venue cache key. Other venues' configs are NOT in the key, so
+    editing one venue does NOT invalidate the other ~100."""
+    import hashlib, json as _json
+    # cache_ttl_hours is cache-layer metadata, not a scrape input.
+    venue_for_hash = {k: v for k, v in (venue or {}).items() if k != "cache_ttl_hours"}
+    h = hashlib.sha256()
+    h.update(_json.dumps(venue_for_hash, sort_keys=True, default=str).encode("utf-8"))
+    h.update(site_hash.encode("ascii"))
+    h.update(code_hash.encode("ascii"))
     return h.hexdigest()
 
 
-def _scraper_newer_than_cache(cache_path: Path) -> bool:
-    """Deprecated since cache hash now embeds scraper content."""
-    return False
-
-
-def _save_cache(cache_path: Path, events: list, config_hash: str) -> None:
+def _save_cache(cache_path: Path, events: list, site_hash: str, code_hash: str,
+                venues: list[dict]) -> None:
+    """Per-venue cache file (schema 2). Events grouped by source venue_id so a
+    per-venue refresh replaces only that venue's events — never a mix of stale
+    + fresh for the same venue. Events without a `source` aren't cached."""
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     import json
     from dataclasses import asdict, is_dataclass
+
+    def _serialise(e):
+        if is_dataclass(e):
+            return {**asdict(e), "start": _iso(e.start), "end": _iso(getattr(e, "end", None))}
+        return {**e, "start": _iso(e["start"]), "end": _iso(e.get("end"))}
+
+    by_source: dict[str, list] = {}
+    for e in events:
+        src = (e.get("source") if isinstance(e, dict) else getattr(e, "source", None)) or ""
+        if not src:
+            continue
+        by_source.setdefault(src, []).append(_serialise(e))
+
+    now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    venues_block: dict[str, dict] = {}
+    for v in venues or []:
+        vid = v.get("id")
+        if not vid:
+            continue
+        ttl_h = v.get("cache_ttl_hours")
+        cache_until = None
+        if isinstance(ttl_h, (int, float)) and ttl_h > 0:
+            cache_until = (datetime.now(timezone.utc)
+                           + timedelta(hours=float(ttl_h))).isoformat(timespec="seconds")
+        venues_block[vid] = {
+            "venue_hash": _venue_hash(v, site_hash, code_hash),
+            "saved_at": now_iso,
+            "cache_until": cache_until,
+            "events": by_source.get(vid, []),
+        }
+
     payload = {
-        "config_hash": config_hash,
-        "saved_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "events": [
-            {**asdict(e), "start": _iso(e.start), "end": _iso(getattr(e, "end", None))}
-            if is_dataclass(e) else {**e, "start": _iso(e["start"]), "end": _iso(e.get("end"))}
-            for e in events
-        ],
+        "schema": 2,
+        "saved_at": now_iso,
+        "site_hash": site_hash,
+        "code_hash": code_hash,
+        "venues": venues_block,
     }
-    cache_path.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    cache_path.write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
 
 
-def _load_cache(cache_path: Path, config_hash: str) -> list | None:
+def _load_cache_index(cache_path: Path) -> dict | None:
+    """Load per-venue cache file. Legacy (schema 1, whole-file) returns None
+    so the next save migrates to schema 2 with no partial-mix risk."""
     if not cache_path.exists():
         return None
     import json
@@ -93,22 +160,88 @@ def _load_cache(cache_path: Path, config_hash: str) -> list | None:
         data = json.loads(cache_path.read_text(encoding="utf-8"))
     except Exception:
         return None
-    if data.get("config_hash") != config_hash:
-        log.info("cache config hash mismatch — will re-scrape")
+    if data.get("schema") != 2:
+        log.info("cache schema is legacy (whole-file) — will re-scrape and migrate to per-venue")
         return None
+    return data
+
+
+def _events_from_cache_block(block: dict) -> list | None:
+    """Rehydrate Event dataclasses from one venue's cache block. Returns None
+    on schema drift so caller treats as a miss for that venue."""
     from datetime import datetime as _dt
     Event = scrape_venue_events.Event
     out = []
-    for d in data.get("events", []):
+    for d in block.get("events", []):
         d = dict(d)
         d["start"] = _dt.fromisoformat(d["start"]) if d.get("start") else None
         d["end"]   = _dt.fromisoformat(d["end"])   if d.get("end") else None
         try:
             out.append(Event(**d))
         except TypeError:
-            # Schema drift between cache and current Event dataclass — bail
             return None
     return out
+
+
+def _venue_cache_hit(block: dict | None, expected_venue_hash: str) -> tuple[bool, str]:
+    """Return (hit, reason). Hit when venue_hash matches OR cache_until > now
+    (per-venue TTL keeps stable venues warm across unrelated config touches)."""
+    if not block:
+        return False, "missing"
+    if block.get("venue_hash") == expected_venue_hash:
+        return True, "hash_match"
+    cu = block.get("cache_until")
+    if cu:
+        try:
+            until = datetime.fromisoformat(cu)
+            if until > datetime.now(timezone.utc):
+                return True, "ttl_active"
+        except ValueError:
+            pass
+    return False, "hash_mismatch"
+
+
+def _emit_cache_stats(cache_index: dict | None, venues: list,
+                      site_hash: str, code_hash: str) -> None:
+    """Print per-venue cache hit/miss/age report. Pure dry-run — no I/O."""
+    if not cache_index:
+        print("No cache file (or legacy schema). All venues will re-scrape on next run.")
+        return
+    cached = (cache_index.get("venues") or {})
+    now = datetime.now(timezone.utc)
+    hits = misses = 0
+    rows: list[tuple[str, str, str, str, int]] = []
+    for v in venues:
+        if v.get("kind") == "unknown":
+            continue
+        vid = v.get("id") or ""
+        block = cached.get(vid)
+        hit, reason = _venue_cache_hit(block, _venue_hash(v, site_hash, code_hash))
+        age = "—"
+        n_events = 0
+        if block:
+            n_events = len(block.get("events") or [])
+            sa = block.get("saved_at")
+            if sa:
+                try:
+                    age_s = (now - datetime.fromisoformat(sa)).total_seconds()
+                    age = f"{age_s/3600:.1f}h" if age_s >= 3600 else f"{age_s/60:.0f}m"
+                except ValueError:
+                    pass
+        if hit:
+            hits += 1
+        else:
+            misses += 1
+        rows.append((vid, "HIT" if hit else "MISS", reason, age, n_events))
+
+    print(f"\nPer-venue cache: {hits} HIT  /  {misses} MISS  ({len(rows)} total)")
+    print(f"saved_at (file): {cache_index.get('saved_at', '?')}")
+    print("-" * 76)
+    print(f"{'venue_id':40} {'state':5} {'reason':14} {'age':>6} {'events':>6}")
+    print("-" * 76)
+    # MISS first so they're easy to spot
+    for vid, state, reason, age, n in sorted(rows, key=lambda r: (r[1] == "HIT", r[0])):
+        print(f"{vid:40} {state:5} {reason:14} {age:>6} {n:>6}")
 
 
 def _iso(v):
@@ -345,6 +478,8 @@ def main() -> int:
                    help="Skip scrape: load events from cities/<code>/.cache/events.json")
     p.add_argument("--no-cache", action="store_true",
                    help="Force re-scrape even if cache is fresh")
+    p.add_argument("--cache-stats", action="store_true",
+                   help="Print per-venue cache hit/miss/age report and exit")
     p.add_argument("--verbose", "-v", action="store_true")
     args = p.parse_args()
 
@@ -391,51 +526,98 @@ def main() -> int:
     if args.only_city:
         venues = [v for v in venues if v.get("city") == args.only_city]
 
-    # ─── Cache decision ──────────────────────────────────────────────────
-    # Cache file lives next to data/seen_events.json. Cache is valid when
-    # its config-hash matches the current scraper + venues + city tz/lang.
-    # On a render-only push (tools/render_events_html.py changed but venues
-    # didn't), the cache hash matches → skip scrape (saves ~20 min).
+    # ─── Cache decision (per-venue, schema 2) ────────────────────────────
+    # Each venue has its own hash. Editing one venue invalidates ONLY that
+    # venue's cache, not the other ~100. Editing tools/scrape_venue_events.py
+    # invalidates every venue (parser-code hash is mixed in). Per-venue
+    # `cache_ttl_hours: N` keeps a venue warm across cosmetic config touches.
     cache_path = Path(args.seen).parent / "events_cache.json"
-    config_hash = _config_hash(args.venues, site)
-    cached_events = _load_cache(cache_path, config_hash) if not args.no_cache else None
-    use_cache = cached_events is not None and (args.from_cache or args.no_cache is False and not _scraper_newer_than_cache(cache_path))
+    code_hash = _scraper_code_hash()
+    site_hash = _site_scrape_hash(site)
+    cache_index = None if args.no_cache else _load_cache_index(cache_path)
+
+    # --cache-stats: dry-run report, exit before scraping.
+    if args.cache_stats:
+        _emit_cache_stats(cache_index, venues, site_hash, code_hash)
+        return 0
 
     failed: list[tuple[str, str]] = []
     ok = 0
     skipped = 0
-    if use_cache:
-        all_events = cached_events
-        log.info("LOADED %d events from cache (config hash matched)", len(all_events))
+    cache_hits = 0
+    cache_misses = 0
+    cache_hit_reasons: dict[str, int] = {}
+    all_events: list = []
+
+    # --from-cache: skip scrape ENTIRELY and return whatever the cache holds
+    # (possibly stale, possibly partial). Useful for render-only debugging.
+    if args.from_cache and cache_index is not None:
+        for vblock in (cache_index.get("venues") or {}).values():
+            evs = _events_from_cache_block(vblock)
+            if evs:
+                all_events.extend(evs)
+        log.info("--from-cache: LOADED %d events from cache (skipped scrape entirely)",
+                 len(all_events))
     else:
-        # Reuse one HTTP session across all venues for connection pooling
+        # Reuse one HTTP session across all venues for connection pooling.
         session = requests.Session()
         session.headers.update(scrape_venue_events.DEFAULT_HEADERS)
-        all_events = []
+        cached_venues: dict[str, dict] = (cache_index or {}).get("venues") or {}
         for v in venues:
             if v.get("kind") == "unknown":
                 skipped += 1
                 continue
+            vid = v.get("id")
+            expected_hash = _venue_hash(v, site_hash, code_hash)
+            block = cached_venues.get(vid) if vid else None
+            hit, reason = _venue_cache_hit(block, expected_hash)
+            if hit:
+                evs = _events_from_cache_block(block)
+                if evs is not None:
+                    all_events.extend(evs)
+                    cache_hits += 1
+                    cache_hit_reasons[reason] = cache_hit_reasons.get(reason, 0) + 1
+                    ok += 1
+                    continue
+                # Schema drift on this venue's block — fall through to re-scrape.
+                log.info("cache schema drift for %s — re-scraping", vid)
+            cache_misses += 1
             try:
                 evs = scrape_venue_events.scrape(v, session=session)
             except Exception as exc:
-                log.error("scrape() raised for %s: %s", v["id"], exc)
-                failed.append((v["id"], str(exc)))
+                log.error("scrape() raised for %s: %s", vid, exc)
+                failed.append((vid, str(exc)))
+                # On scrape failure, fall back to cached events for this
+                # venue if any exist (better stale than empty). Hash mismatch
+                # is acceptable here — alternative is dropping the venue.
+                if block is not None:
+                    stale = _events_from_cache_block(block) or []
+                    if stale:
+                        log.warning("scrape failed for %s — serving %d stale cached events",
+                                    vid, len(stale))
+                        all_events.extend(stale)
                 continue
             if not evs:
-                failed.append((v["id"], "no events returned"))
+                failed.append((vid, "no events returned"))
             else:
                 all_events.extend(evs)
                 ok += 1
 
-        log.info("scraped %d venues OK, %d failed, %d skipped (kind=unknown)", ok, len(failed), skipped)
+        log.info("scraped %d venues OK, %d failed, %d skipped (kind=unknown); "
+                 "cache hits=%d misses=%d",
+                 ok, len(failed), skipped, cache_hits, cache_misses)
+        if cache_hit_reasons:
+            log.info("cache hit reasons: %s",
+                     ", ".join(f"{k}={v}" for k, v in sorted(cache_hit_reasons.items())))
         log.info("raw events: %d", len(all_events))
-        # Persist scrape to cache for the next render-only build.
-        # NOTE: cache is saved BEFORE cross-source dedup so the cache hash logic
-        # stays purely a function of scraped output. Dedup is a render-time
-        # post-process — its decisions are cheap to recompute and depend on
-        # venues.yaml priorities (already part of config_hash).
-        _save_cache(cache_path, all_events, config_hash)
+        # Persist per-venue cache. Saved BEFORE cross-source dedup so the
+        # cache stays a pure function of scraped output. Dedup is a
+        # render-time post-process — cheap to recompute, depends on
+        # venues.yaml priorities (already in each venue's hash).
+        # _save_cache groups events by `source` (venue_id), so each venue's
+        # block in the new file contains EITHER its fresh-scraped events OR
+        # the cached events we served — never a mix.
+        _save_cache(cache_path, all_events, site_hash, code_hash, venues)
 
     # ─── Cross-source deduplication ──────────────────────────────────────
     # Aggregator sources (visitessen, sistic, discover-los-angeles,
