@@ -26,6 +26,30 @@ from typing import Optional
 NEW_FRESH_DAYS = 14
 NEW_STRIP_CAP = 8
 
+# An "umbrella" event is a long-running static placeholder for a venue without
+# per-program schedules (e.g. "Disneyland — daily parades, 2026-05-21..2027-05-21",
+# "YMCA Kids Table Tennis Classes thru Dec 31"). They're intentionally in the
+# data so the venue is discoverable, but they swamp "Now Showing" if treated
+# as peer to short-run exhibitions. UMBRELLA_DAYS = span at which an ongoing
+# event is reclassified as an umbrella: rendered in a separate, visually
+# subordinate "Ongoing this season" block and excluded from the featured carousel.
+UMBRELLA_DAYS = 180
+
+
+def _is_umbrella(e, now) -> bool:
+    """True for ongoing events whose remaining run AND full span both exceed
+    UMBRELLA_DAYS. Both legs matter: a 2-year exhibit that closes in 20 days
+    should NOT be demoted; a freshly-added 365-day venue placeholder should."""
+    s = _start(e)
+    en = _end(e)
+    if s is None or en is None:
+        return False
+    if not (en > now and s <= now):
+        return False  # not currently ongoing — handled by normal week bucketing
+    days_left = (en.date() - now.date()).days
+    span = (en.date() - s.date()).days
+    return span > UMBRELLA_DAYS and days_left > UMBRELLA_DAYS
+
 
 def _event_identity(e) -> tuple[str, str, str]:
     """Identity tuple used to dedupe events across strips. Mirrors
@@ -920,12 +944,16 @@ def _render_html(
         parts.append('    <div class="week">')
         parts.append(f'      <h2 class="week-heading">{html.escape(week_label)}</h2>')
         ongoing: list = []
+        umbrellas: list = []
         by_day: dict[date, list] = {}
         for e in evs:
             s = _start(e)
             en = _end(e)
             if en is not None and en > now and s <= now:
-                ongoing.append(e)
+                if _is_umbrella(e, now):
+                    umbrellas.append(e)
+                else:
+                    ongoing.append(e)
             else:
                 by_day.setdefault(s.date(), []).append(e)
         if ongoing:
@@ -933,6 +961,15 @@ def _render_html(
             parts.append(_render_ongoing_block(ongoing, now, featured, fresh_keys=fresh_keys))
         for d in sorted(by_day):
             parts.append(_render_day_block(d, by_day[d], now, featured, fresh_keys=fresh_keys))
+        if umbrellas:
+            # Long-running umbrella entries (venue placeholders, year-round
+            # classes) render in a separate, visually subordinate block at the
+            # end of the week so they don't crowd out date-specific events.
+            umbrellas.sort(key=lambda x: (
+                (_attr(x, "venue_name") or "").lower(),
+                (_attr(x, "title") or "").lower(),
+            ))
+            parts.append(_render_umbrella_block(umbrellas, now, featured, fresh_keys=fresh_keys))
         parts.append('    </div>')
     parts.append('    <p class="filter-empty">No events in this category.</p>')
     parts.append('  </section>')
@@ -1200,6 +1237,20 @@ def _render_ongoing_block(evs: list, now: datetime, featured: set,
     rows = "\n".join(_render_row(e, now, featured, fresh_keys=fresh_keys) for e in evs)
     return f"""    <div class="day day-ongoing">
       <h3 class="day-heading">Now Showing</h3>
+      <div class="rows">
+{rows}
+      </div>
+    </div>"""
+
+
+def _render_umbrella_block(evs: list, now: datetime, featured: set,
+                            fresh_keys: Optional[set] = None) -> str:
+    """Render long-running umbrella entries (year-round venue placeholders +
+    multi-month classes) under a dimmed 'Ongoing this season' heading at the
+    end of their week bucket. Visually subordinate to date-specific events."""
+    rows = "\n".join(_render_row(e, now, featured, fresh_keys=fresh_keys) for e in evs)
+    return f"""    <div class="day day-ongoing day-umbrella">
+      <h3 class="day-heading day-heading-umbrella">Ongoing this season <span class="umbrella-hint">venue placeholders &amp; year-round programmes</span></h3>
       <div class="rows">
 {rows}
       </div>
@@ -1912,6 +1963,40 @@ _PAGE_HEAD = """<!DOCTYPE html>
     .row.de-emphasized .row-title {{ font-size: 15px; font-weight: 400; }}
     .row.de-emphasized .row-time {{ font-weight: 400; }}
     .row.de-emphasized:hover {{ opacity: 0.85; }}
+    /* Umbrella block: long-running venue placeholders + year-round programmes.
+       Rendered subordinately at the end of each week — collapsed by default,
+       expanded via <details>-style toggle (pure-CSS checkbox).
+       Visually quieter than .day-ongoing: smaller heading, dimmed rows. */
+    .day-umbrella {{
+      margin-top: 18px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--rule);
+    }}
+    .day-heading-umbrella {{
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted) !important;
+      opacity: 0.85;
+    }}
+    .umbrella-hint {{
+      font-size: 11px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--muted);
+      margin-left: 8px;
+      opacity: 0.7;
+    }}
+    .day-umbrella .row {{
+      opacity: 0.62;
+    }}
+    .day-umbrella .row:hover {{ opacity: 0.92; }}
+    .day-umbrella .row .row-title {{
+      font-size: 15px;
+      font-weight: 400;
+    }}
     /* Kids + active (workshops, classes, family programme) — hidden by default;
        toggled visible by the "Auch Kurse..." checkbox. When visible, they're dimmed. */
     .row.audience-kids,
