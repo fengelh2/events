@@ -3,3 +3,4 @@ _deploy/
 __pycache__/
 *.pyc
 .venv/
+dist/
