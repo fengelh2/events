@@ -9,3 +9,13 @@ date_order: DMY
 timezone: Europe/Berlin
 horizon_days: 270
 goatcounter_code: fengelh
+
+# Drop events whose `city` field matches any of these (substring, case-insensitive).
+# Used to hide whole municipalities from the NRW calendar.
+hidden_cities:
+  - Oberhausen
+  - Wuppertal
+  - Krefeld
+  - Bochum
+  - Duisburg
+  - Dortmund

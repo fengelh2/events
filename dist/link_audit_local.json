@@ -1,0 +1,92 @@
+{
+  "audited_at": "2026-05-28T07:38:07Z",
+  "cities": {
+    "hk": {
+      "city": "hk",
+      "total": 175,
+      "broken": 0,
+      "broken_pct": 0.0,
+      "broken_by_host": {},
+      "samples": []
+    },
+    "hk-kids": {
+      "city": "hk-kids",
+      "total": 79,
+      "broken": 3,
+      "broken_pct": 3.8,
+      "broken_by_host": {
+        "www.hongkongdisneyland.com": 2,
+        "www.round1usa.com": 1
+      },
+      "samples": [
+        {
+          "url": "https://www.hongkongdisneyland.com/christmas/",
+          "status": 404
+        },
+        {
+          "url": "https://www.hongkongdisneyland.com/halloween/",
+          "status": 404
+        },
+        {
+          "url": "https://www.round1usa.com/store-locator",
+          "status": 404
+        }
+      ]
+    },
+    "nrw": {
+      "city": "nrw",
+      "total": 862,
+      "broken": 50,
+      "broken_pct": 5.8,
+      "broken_by_host": {
+        "pages.visitessen.de": 49,
+        "theatercourage.de": 1
+      },
+      "samples": [
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101253555/gaston-stabiszewski/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101217350/the-magic-mumble-jumble/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101251235/auf-suess/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101135534/abdel-boudii/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101247266/senta/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101221367/ruhrpott-revue/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101218569/erobique/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101167149/future-palace/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101265331/bad-nerves/",
+          "status": 404
+        },
+        {
+          "url": "https://pages.visitessen.de/de/visitessen/streaming/detail/Event/101232632/sarah-hakenberg/",
+          "status": 404
+        }
+      ]
+    }
+  },
+  "grand_total": 1116,
+  "grand_broken": 53,
+  "grand_pct": 4.7
+}

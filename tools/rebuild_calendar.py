@@ -666,6 +666,19 @@ def main() -> int:
         log.warning("dropped %d events with start before %s (likely year-inference errors)",
                     _dropped, _cutoff.isoformat())
 
+    # Hidden cities — drop events whose `city` field matches any entry in
+    # `hidden_cities` (case-insensitive substring). Used by NRW to hide
+    # whole municipalities (Wuppertal, Bochum, …) from the calendar.
+    hidden = [c.lower() for c in (site.get("hidden_cities") or [])]
+    if hidden:
+        before_h = len(all_events)
+        def _is_hidden(e):
+            c = (getattr(e, "city", "") or "").lower()
+            return any(h in c for h in hidden)
+        all_events = [e for e in all_events if not _is_hidden(e)]
+        if before_h != len(all_events):
+            log.info("hidden_cities: dropped %d / %d events", before_h - len(all_events), before_h)
+
     # Audience filter:
     #   audience_filter: kids   → keep events that are kid-relevant.
     #   audience_filter: adults → drop events that are explicitly kids-targeted

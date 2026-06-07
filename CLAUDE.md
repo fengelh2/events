@@ -1,5 +1,7 @@
 # Project: events
 
+> **Global behavioral rules apply here** (full text in `~/.claude/CLAUDE.md`): (1) **Be brief** — lead with the answer, no preamble or recap. (2) **Verify before you assert** — check facts with a tool this turn instead of guessing, so you rarely need to self-correct; honest corrections stay welcome. (3) **Never mislead, even with true statements** — replace vague reassurance ("fundamentally sound") with specifics, lead with the bad parts, and own any misread your wording caused.
+
 A unified cultural-events calendar covering five real cities (Hong Kong, Hong Kong Kids, Los Angeles, NRW, Singapore, Fukuoka) plus a kids-view sub-calendar over HK. One repo, one deployment, six sub-pages — each rebuilt nightly from its own venue list.
 
 **Live:** https://fengelh2.github.io/events/
