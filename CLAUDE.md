@@ -165,7 +165,7 @@ Each city is a fresh Python subprocess so locale globals stay isolated.
 | `ical` | `.ics` exports (HK Chinese Orchestra, The Wanch was) |
 | `json_ld_aggregator` | Pages with `<script type="application/ld+json">` Event arrays. Supports `use_playwright: true` + `browser_headers: true` for anti-bot sites (Eventbrite). |
 | `tribe_rest` | WordPress + The Events Calendar plugin |
-| `flat_json_feed` | Tessitura, LA Phil, Hollywood Bowl |
+| `flat_json_feed` | Tessitura, LA Phil, Hollywood Bowl. Also reads a calendar rendered into an inline JS variable via `inline_json_var:` (HK Science Museum) — no Playwright needed. `time_path:` merges a separate "HH:MM" field onto a midnight date; `dedup_key: url_start` keeps recurring sessions that share one detail URL (the default `url` collapses them to a single row). |
 | `algolia_calendar` | Algolia-backed search (LA Opera) |
 | `nextjs_contentful` | Contentful API behind Next.js (Academy Museum) |
 | `sistic_api` | SISTIC ticketing CMS — SG ~355 events from one endpoint |
@@ -236,6 +236,8 @@ Each city page includes a GoatCounter `<script>`. Unified dashboard: https://fen
 - **Playwright on Windows** is flaky locally (random EPIPE crashes). Linux CI runner is reliable.
 - **SISTIC chip explosion**: the SG SISTIC parser slugifies `venue_name` into sub-venue chips so the renderer shows real venues.
 - **`unknown` kind venues** — currently 16 in LA, 22 in NRW. Skipped silently. Track via grep.
+- **The scrape cache never expires.** `_venue_cache_hit` returns a hit whenever `venue_hash` matches, with **no max age**, and CI never passes `--no-cache`. So a venue is re-scraped only when its config or `scrape_venue_events.py`/`parse_ical.py` changes. Between `8ef2c97` and `16aedf6` — 93 nightly runs — **all 117 HK venues had byte-identical event arrays** and 86% of cached events were already in the past. Worse, `_save_cache` re-stamps `saved_at` on **every** venue each run including cache hits, so the file looks freshly scraped and `saved_at` cannot be used to detect the staleness. A real fix needs a separate `scraped_at` set only on an actual scrape, plus a max-age check. **Open.**
+- **Kid-venue coverage is thin by construction.** 25 of the 30 venues whitelisted into hk-kids are `kind: static` — hand-typed umbrella rows ("APSS — Kids Football Classes") that yield 1-6 fixed rows and never change. That, not the filter, is why the 0-5 calendar looked like a list of sports providers. Real scraped kid sources are the gap to close.
 
 ## Sister project
 

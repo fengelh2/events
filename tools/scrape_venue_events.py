@@ -1493,15 +1493,69 @@ def _scrape_nextjs_contentful(venue_row: dict, session=None) -> list[Event]:
     return out
 
 
+def _merge_clock_time(start: datetime, clock) -> datetime:
+    """Overlay an "HH:MM" (or "2:30pm") clock time onto `start`'s date.
+
+    For feeds whose date field is always midnight and whose time lives in a
+    separate field. Returns `start` unchanged when `clock` is missing or
+    unparseable — a wrong time is worse than a midnight default.
+    """
+    if not clock or not isinstance(clock, str):
+        return start
+    m = re.match(r"\s*(\d{1,2})[:.](\d{2})\s*([ap]\.?m\.?)?", clock.strip(), re.IGNORECASE)
+    if not m:
+        return start
+    hour, minute = int(m.group(1)), int(m.group(2))
+    suffix = (m.group(3) or "").lower().replace(".", "")
+    if suffix == "pm" and hour < 12:
+        hour += 12
+    elif suffix == "am" and hour == 12:
+        hour = 0
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return start
+    return start.replace(hour=hour, minute=minute)
+
+
+def _decode_inline_json_var(html_text: str, var_name: str):
+    """Extract the JSON value assigned to a JS variable inside an HTML page.
+
+    Some CMSes render the whole event calendar into an inline
+    `var <name> = [ ... ];` block and expose no JSON endpoint (HK Science
+    Museum's event-calendar.html is the canonical case — its
+    `event-calendar-data-json.html` URL serves the same HTML, not JSON).
+
+    Uses raw_decode so trailing script code after the literal is ignored; a
+    plain regex to the last bracket swallows the rest of the file.
+    Returns the decoded list/dict, or None when absent or unparseable.
+    """
+    m = re.search(r"var\s+" + re.escape(var_name) + r"\s*=\s*(?=[\[{])", html_text)
+    if not m:
+        return None
+    try:
+        value, _ = _json.JSONDecoder().raw_decode(html_text[m.end():])
+    except ValueError:
+        return None
+    return value
+
+
 def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
     """Fetch + parse a flat JSON-array event feed.
 
     Config:
       calendar_url: URL returning a JSON array of event records
+      inline_json_var: name of a JS variable holding the array when the URL
+                       serves HTML instead of JSON (e.g. HK Science Museum's
+                       `var eventDetailListCalendarJson = [...]`). The page is
+                       fetched as HTML and the array is decoded from the
+                       assignment. Omit for a normal JSON endpoint.
       title_path: dot-path to title (default 'title')
       start_path: dot-path to start time (ISO 8601 string; default 'start_time')
+      time_path: dot-path to a separate "HH:MM" clock time merged onto the
+                 start date, for feeds whose date field is always midnight
+                 (optional)
       end_path: dot-path to end time (optional)
-      url_path: dot-path to detail URL (optional)
+      url_path: dot-path to detail URL (optional; relative URLs are resolved
+                against calendar_url)
       venue_path: dot-path to venue name (optional)
       filter_field: dot-path to filter on (e.g. 'venue.name')
       filter_value: substring match against filter_field (case-insensitive)
@@ -1510,10 +1564,18 @@ def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
     """
     sess = session or requests
     url = venue_row["calendar_url"]
+    inline_var = venue_row.get("inline_json_var")
     try:
         r = sess.get(url, headers=DEFAULT_HEADERS, timeout=DEFAULT_TIMEOUT)
         r.raise_for_status()
-        data = r.json()
+        if inline_var:
+            data = _decode_inline_json_var(r.text, inline_var)
+            if data is None:
+                log.warning("%s: inline var %r not found or unparseable",
+                            venue_row["id"], inline_var)
+                return []
+        else:
+            data = r.json()
     except (requests.RequestException, ValueError) as exc:
         log.warning("%s: feed fetch failed: %s", venue_row["id"], exc)
         return []
@@ -1529,15 +1591,23 @@ def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
 
     title_path = venue_row.get("title_path", "title")
     start_path = venue_row.get("start_path", "start_time")
+    time_path = venue_row.get("time_path")
     end_path = venue_row.get("end_path")
     url_path = venue_row.get("url_path")
     venue_path = venue_row.get("venue_path")
     cats_path = venue_row.get("categories_path")
     filter_field = venue_row.get("filter_field")
     filter_value = (venue_row.get("filter_value") or "").lower()
+    # Dedup key. Default "url" is the long-standing behaviour (one row per
+    # detail URL). Feeds that list recurring sessions repeat the same URL on
+    # many dates — HK Science Museum runs "Multiple Perspectives on Disaster
+    # Preparedness" 7 times — and dedup-by-url collapses them to one. Those
+    # venues set dedup_key: url_start. Left opt-in so existing feeds keep
+    # their exact current output.
+    dedup_key = (venue_row.get("dedup_key") or "url").lower()
 
     out: list[Event] = []
-    seen_urls: set[str] = set()
+    seen_urls: set = set()
     for raw in data:
         if not isinstance(raw, dict):
             continue
@@ -1551,12 +1621,17 @@ def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
         start = _parse_jsonld_dt(_dig(raw, start_path))
         if start is None:
             continue
+        if time_path:
+            start = _merge_clock_time(start, _dig(raw, time_path))
         end = _parse_jsonld_dt(_dig(raw, end_path)) if end_path else None
         url_val = _dig(raw, url_path) if url_path else None
         url_str = url_val if isinstance(url_val, str) else venue_row.get("homepage", "#")
-        if url_str in seen_urls:
+        if url_str.startswith("/"):
+            url_str = urljoin(url, url_str)
+        key = (url_str, start) if dedup_key == "url_start" else url_str
+        if key in seen_urls:
             continue
-        seen_urls.add(url_str)
+        seen_urls.add(key)
 
         venue_name = _clean_title(_html_decode(_dig(raw, venue_path) or "")) if venue_path else ""
         venue_name = venue_name or _display(venue_row)

@@ -22,7 +22,9 @@ kids_only_venues:
   - noahs-ark-hk
   - hk-arcades-kid-friendly
   - hk-science-museum-kids
-  - hk-public-libraries-kids
+  # hk-public-libraries-kids removed 2026-09-08: it now scrapes ALL library
+  # programmes, so its adult talks belong on this calendar. Its kid rows are
+  # dropped by kids_only_keywords below.
   - esf-explore-camps
   - activekids-hk
   - hkfc-youth-10s

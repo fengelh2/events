@@ -180,8 +180,10 @@ always_include_venues:
   - noahs-ark-hk
   - hk-arcades-kid-friendly     # indoor playgrounds, Snoopy World
   # Dedicated young-child programmes
-  - hk-science-museum-kids
-  - hk-public-libraries-kids
+  - hk-science-museum-kids       # ALL its rows are kid workshops - safe to whitelist
+  # NOT hk-public-libraries-kids: its feed is ALL library programmes (adult
+  # calligraphy, writing courses, Cantonese opera talks). Keywords admit the
+  # 0-5 rows ("Storytelling for Children", "Parent-child Workshop") instead.
   - kids-gallery                # kid arts studio, open play from toddler age
   # Sport / movement providers that run genuine toddler & preschool classes
   - hkfa-grassroots             # grassroots football from age 4
