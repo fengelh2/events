@@ -2,7 +2,7 @@ code: hk-kids
 name: HK Kids
 flag: "👶"
 title: "What's happening in Theo's World"
-header_eyebrow: "Kids in Honkers"
+header_eyebrow: "Little Ones in Honkers"
 city_identity_word: "Honkers"
 lang: en
 date_order: DMY
@@ -12,168 +12,309 @@ goatcounter_code: fengelh
 # Same venue database as adult HK — different VIEW (filter + branding).
 # Single source of truth: cities/hk/config/venues.yaml. Scraped once, filtered per-city.
 venues_from: hk
-# Audience filter logic (in rebuild_calendar.py):
-#   1. event.audience == "adults"   → HARD VETO (drops it regardless)
-#   2. venue in always_include_venues → admit (venue vouches for all its events)
-#   3. event.audience == "kids"     → admit
-#   4. title matches kids_keywords  → admit
+#
+# ── TARGET AGE: 0-5 (retargeted 2026-09-08) ──────────────────────────────────
+# This calendar is for a toddler/preschooler, NOT for school-age kids. Before
+# 2026-09-08 it was a broad 0-12 view and was dominated by older-kid content:
+# 85 U11-U18 ice-hockey fixtures, U10-U14 baseball tournaments, judo
+# championships, "ages 13+" ballet masterclasses, HK Phil main-series concerts
+# (Beethoven 5, Doctor Atomic, Zarathustra), 10x LCSD "Cantonese Operatic Songs
+# Concert", plus outright adult leaks ("improvised puppet show for adults",
+# "LEGO SERIOUS PLAY for Teams", a bar called Terrible Baby).
+#
+# Calibration is LENIENT: drop clear misfits only. Anything plausibly fine with
+# a 3-year-old stays (Peppa Pig, Frozen Live in Concert, Disney, malls, soft
+# play, Ocean Park, nature parks). Only stated-6+/teen/adult content is cut.
+#
+# Filter order (rebuild_calendar.py `audience_filter: kids`):
+#   1. event.audience == "adults"      → HARD VETO
+#   2. title matches veto_keywords     → HARD VETO (beats always_include)
+#   3. venue in exclude_venues         → HARD VETO (beats always_include)
+#   4. title STATES a min age > 5      → HARD VETO (beats always_include)
+#   5. venue in always_include_venues  → admit
+#   6. event.audience == "kids"        → admit
+#   7. title matches kids_keywords     → admit
 #   else: drop
 audience_filter: kids
-# WHITELIST ONLY 100%-kid-focused venues. If a venue has ANY meaningful adult
-# programming (Harbour City car shows, HK Sevens party, HKCEC trade fairs,
-# HK Park Tai Chi), DO NOT put it here — let the keyword filter decide
-# per-event. Venues in this list bypass ALL kid-keyword checks.
+# Age ceiling for the stated-age veto. A title that states no age is never
+# touched by this rule — it only acts on explicit evidence ("ages 6+", "U14",
+# "12-14"). "Ages 5-14" survives (a 5-year-old qualifies); "Ages 12-14" doesn't.
+max_start_age: 5
+
+# ── HARD VETOES ──────────────────────────────────────────────────────────────
+# Venues whose programming is structurally school-age-or-older. These beat the
+# whitelist, so a venue must NOT appear in both lists.
+exclude_venues:
+  # Competitive youth leagues — fixtures, tournaments, medal games. Nothing a
+  # 0-5 can join, and they flooded the calendar (85 + 10 + 6 events).
+  - hkihl-ice-hockey        # U11-U18 league fixtures
+  - hk-baseball-youth       # U10-U14 tournaments + coach seminars
+  - hk-judo                 # championships / kyu-grade tournaments
+  - hktkda-taekwondo        # championships
+  - hockey-hk-fixtures      # league fixtures
+  - cricket-hk-junior       # junior league
+  - hkaaa-athletics         # athletics championships
+  - hkfc-youth-10s          # name says it: 10-year-olds
+  - hk-marathon-youth-run   # min entry age well above 5
+  - hkba-badminton-courses  # HKBA intake starts age 6
+  # Mixed-programming venues that were whitelisted and leaked adult content.
+  # Removed from always_include rather than excluded outright would still leak
+  # via keywords, so veto them and let genuinely-kid titles back in by keyword.
+  - mplus-cinema            # art-house film festival, not family cinema
+  - hkiff-cine-fan          # arthouse retrospectives (admitted "Family Nest", a 1977 Hungarian drama)
+  # Trade-only fair (not open to the public)
+  - hktdc-toy-fair-2027
+
+# Title substrings that drop an event outright, even from a whitelisted venue.
+# These are the patterns that made the old calendar unusable for a 3-year-old.
+veto_keywords:
+  # Explicitly not for young children
+  - for adults
+  - adults only
+  - adults-only
+  - "18+"
+  - "21+"
+  - over 18
+  # NOT bare "teen" — it vetoed "Just Climb — Teen/Kid Climb", a listing
+  # that offers a kid band too. Same lesson as U6-U18 in _stated_min_age.
+  - teen only
+  - teens only
+  - for teens
+  - teens
+  - teenage
+  - teenager
+  - adolescent
+  - secondary school
+  - university
+  - universities
+  - undergraduate
+  - masterclass
+  - master class
+  - advanced
+  # Competitive / performance-pathway sport — spectator or 6+ participation
+  - championship
+  - championships
+  - tournament
+  - league
+  - invitational
+  - medal game
+  - fixtures
+  - grand prix
+  - trials
+  - recruitment
+  - coach programme
+  - coaching
+  - officials seminar
+  - referee
+  - kyu grade
+  # Professional / trade / adult-education programming
+  - call for entry
+  - open call
+  - open calls
+  - artist-in-residence
+  - artist in residence
+  - residency
+  - conference
+  - symposium
+  - seminar
+  - public lecture
+  - short courses
+  - diploma
+  - certificate programme
+  - networking
+  - job fair
+  - career
+  - admissions
+  - serious play          # "LEGO SERIOUS PLAY for Teams" is corporate training
+  - docents               # junior-docent programmes are secondary-school age
+  # Nightlife / bars / adult entertainment that slipped through on kid words
+  - terrible baby         # a bar in Eaton HK, not a baby event
+  - comedy
+  - stand-up
+  - standup
+  - burlesque
+  - drag show
+  - nightlife
+  - cocktail
+  - wine tasting
+  - whisky
+  - brewery
+  - happy hour
+  - after party
+  - dj set
+  - live music night
+  - vinyl
+  # Adult / school-group programming at otherwise-family venues (mostly KFBG,
+  # whose listing is dominated by conservation talks and group bookings).
+  - talk series
+  - talks
+  - online talk
+  - outreach talk
+  - talk on
+  - group application
+  - forest therapy
+  - immersion walk
+  - migrant domestic workers
+  - conservation
+  - habitat restoration
+  - urban habitat
+  - academic year
+  - eco-literate
+  - photography workshop
+  - teacher training      # "100-hours Kids Yoga Teacher Training" is for adults
+  - assessment            # school-admission assessment days
+  - summit
+  - tedx
+  - fur babies            # dog event, not a baby event
+  - brony                 # adult My Little Pony fandom carnival
+  - storytelling evening  # adult storytelling night, not story time
+
+# ── ADMIT: whitelisted venues ────────────────────────────────────────────────
+# ONLY venues whose programming works for an under-5. Venues in this list bypass
+# the keyword admit check but NOT the vetoes above.
 always_include_venues:
-  # Theme parks & dedicated kid attractions
+  # Theme parks & dedicated attractions
   - hk-disneyland-events
   - ocean-park-events
   - ocean-park-whatson
   - noahs-ark-hk
-  - hk-arcades-kid-friendly
-  # Dedicated kids programs (venue's name explicitly contains "kids" or similar)
+  - hk-arcades-kid-friendly     # indoor playgrounds, Snoopy World
+  # Dedicated young-child programmes
   - hk-science-museum-kids
   - hk-public-libraries-kids
-  - esf-explore-camps
-  - activekids-hk
-  - hkfc-youth-10s
-  - hk-marathon-youth-run
-  - hktdc-toy-fair-2027
-  # Round-4 kid-only venues (2026-05-25)
-  - kids-gallery                # 100% kid arts studio
-  - hkru-summer-of-rugby-2026   # static — youth + mini rugby festivals
-  # Round-5 kids-sport class providers (2026-05-25)
-  - hkfa-grassroots
+  - kids-gallery                # kid arts studio, open play from toddler age
+  # Sport / movement providers that run genuine toddler & preschool classes
+  - hkfa-grassroots             # grassroots football from age 4
   - esf-sports-classes
   - apss-soccer-school
-  - hkjc-public-riding
-  - harry-wright-swim
-  - hkba-badminton-courses
+  - harry-wright-swim           # baby & parent-and-child swimming
   - ymca-multisport
   - trybe-gym-ninja
-  - tennis-hk-junior
-  - try-hk-rugby
-  # Round-6 kids-sport (2026-05-26)
+  - hkjc-public-riding          # pony rides
   - lcsd-comm-rec-sports
-  - ryze-hk
-  - bounce-hk
+  - ryze-hk                     # trampoline park — toddler sessions
+  - bounce-hk                   # trampoline park — mini-bouncer sessions
   - cityplaza-ice-palace
+  - megaice-skating
   - vermcity-climbing
   - just-climb
   - attic-v-climbing
-  - hktkda-taekwondo
-  - hk-judo
-  - hockey-hk-fixtures
-  - cricket-hk-junior
-  - hk-baseball-youth
-  - hkihl-ice-hockey
-  - hkaaa-athletics
   - surf-hk-kids
-  - hk-ballet-academy
-  - hkyba-ballet
-  - megaice-skating
-  # Family nature venues (programming is family-default, no adult-only sessions)
+  - hk-ballet-academy           # keeps Pre-Ballet (ages 4-5); the "ages 13+"
+  - hkyba-ballet                #   masterclasses are cut by max_start_age
+  # Nature & family venues (programming is family-default)
   - kfbg
   - wetland-park
-  # Round-7 family-friendly venues (2026-05-26, refined 2026-05-26 round-2)
-  # Only venues whose programming is OVERWHELMINGLY kid/family by default.
-  # Mixed museums (M+, HK Museum of Art, Palace Museum, Tai Kwun, HKU Museum)
-  # had too many adult shows leaking in ("When Art Meets Horse Racing",
-  # "Heavenly Horses Masterpieces") — REMOVED, rely on kids_keywords instead.
-  - mplus-cinema                # cinema — most films family-suitable
-  - hk-science-museum-kids      # interactive — kid-friendly default (real venue id)
-  - hk-space-museum             # planetarium — kid-friendly default
-  - hkpl-events                 # public library — story time + workshops
-  - new-town-plaza              # mall — carnival/family default
-  - harbour-city                # mall — family default (car shows, mascots)
-  - hk-park-events              # HK Park (aviary, sport courts)
-# Title keywords that promote an event into the kids calendar.
-# DELIBERATELY narrow — don't use broad sport terms (rugby/football/marathon)
-# because they match Men's Pro Championship titles. Use child-specific
-# qualifiers ("kids rugby", "mini rugby", "youth football") instead.
+  - hk-space-museum             # planetarium
+  - hk-park-events              # HK Park (aviary, playgrounds)
+  # NOT whitelisted (deliberate): hkpl-events, new-town-plaza, harbour-city.
+  # Whitelisting them admitted adult library book displays ("Sci-fi May",
+  # "Home Design") and mall marketing rows ("Spend and earn HK$6,140
+  # rebate"). Their real kid programming still arrives via kids_keywords
+  # ("Children's Book Display", "family", "carnival").
+
+# ── ADMIT: title keywords ────────────────────────────────────────────────────
+# Promotes an event from a NON-whitelisted venue into the calendar.
+# Retuned 2026-09-08 for 0-5. Removed: junior / youth / schools / primary
+# school / age group / feeder scheme / optimist / 29er / mini rugby / junior
+# tennis / youth football / youth run / ages 6-10 — all school-age-or-older.
+# Removed the HK Phil & LCSD adult-programme keywords (swire music for
+# everyone, swire symphony under, john williams, hisaishi, nutcracker,
+# planet earth, video game symphony, movie music, community concert,
+# side-by-side, cello/voice festival, cantonese opera, variety show, annual
+# performance, choral concert, bel canto) — those are 2-hour seated concerts.
 kids_keywords:
-  # Direct kid signals
+  # Direct 0-5 signals
+  - baby
+  - babies
+  - infant
+  - newborn
+  - toddler
+  - toddlers
+  - playgroup
+  - play group
+  - playdate
+  - tummy time
+  - nursery
+  - preschool
+  - pre-school
+  - kindergarten
+  - montessori
+  - parent and child
+  - parent & child
+  - parent-and-child
+  - mummy and me
+  - mommy and me
+  - mom and me
+  - dad and me
+  - pram
+  - stroller
+  - buggy
+  # Broad kid/family signals
   - kid
   - kids
   - child
   - children
   - family
   - families
-  # Kid-specific activities
+  - all ages
+  - all-ages
+  - for all ages
+  - little ones
+  - under 3
+  - under 5
+  - under 6
+  # Explicit young-age brackets (0-5 only; 6+ deliberately absent)
+  - "ages 0"
+  - "ages 1"
+  - "ages 2"
+  - "ages 3"
+  - "ages 4"
+  - "ages 5"
+  - "age 2"
+  - "age 3"
+  - "age 4"
+  - "age 5"
+  - "0-3"
+  - "0-5"
+  - "1-3"
+  - "2-4"
+  - "3-5"
+  - "2-5"
+  # Toddler-appropriate activity formats
+  - story time
+  - storytime
+  - rhyme time
+  - sing along
+  - sing-along
+  - singalong
   - puppet
   - storytelling
-  - story time
   - fairy
   - lego
-  - LEGO
+  - duplo
   - magic show
-  - parent and child
-  - parent & child
-  - parent-and-child
-  - mom and me
-  - dad and me
-  - school holiday
-  - holiday camp
-  - summer camp
-  - winter camp
-  - spring camp
-  - autumn camp
-  - junior
-  - youth
-  - young friends
-  - playground
-  - kindergarten
-  - preschool
-  - toddler
-  - baby
-  - babies
-  - infant
-  # Kid-specific sport phrasings ONLY (not generic "rugby"/"sport"/"marathon")
-  - mini rugby
-  - kids rugby
-  - youth rugby
-  - junior rugby
-  - football camp
-  - junior tennis
-  - mini football
-  - youth football
-  - youth run
-  - kids workshop
-  # Round-4 youth-sport jargon (2026-05-25)
-  - optimist            # Optimist dinghy class is U15 sailing
-  - age group           # "Asian Age Group Championships" = junior swimming
-  - feeder scheme       # HKSF Feeder Scheme = junior dinghy
-  - 29er                # 29er sailing dinghy = teen class
-  - mini sail
-  - junior sail
-  - youth swimming
-  - youth championship
-  - schools             # school sport competitions
-  # Kid-friendly cultural events
+  - sensory
+  - messy play
+  - soft play
+  - open play
+  - petting zoo
+  - animal encounter
+  - animal encounters
+  - farm visit
   - balloon
   - mascot
   - carnival
   - parade
   - circus
-  # "musical" alone matches too much (Musical Moments, Magic of the Organ).
-  # Use specific patterns instead — kid musicals have one of these in the title.
-  - the musical          # "Operation Oops! - the Musical" / "Cats the Musical"
-  - broadway musical
-  - kids musical
-  - family musical
-  - junior musical
-  # Lantern Carnival, family festival patterns
-  - lantern carnival
-  - family festival
-  - kids festival
-  - children's festival
-  # Round-7 museum/workshop signals (2026-05-26) — admit kid-friendly
-  # programs from venues NOT in always_include (M+, Palace Museum, Tai Kwun,
-  # HK Museum of Art, HKU Museum, Asia Society, HK Arts Centre, etc.)
-  # Anything with these in the title is broadly under-10 appropriate.
-  # Round-9 (2026-05-28): bare `workshop` removed — over-admitted elderly-dance
-  # ("Body in Time"), standup-comedy, adult-cooking ("Farm-to-Table Basil
-  # Pesto"), academic-ecology talks. Specific `art workshop`/`craft workshop`/
-  # `science workshop`/`kids workshop` below still catch legit cases.
+  - playground
+  - playscape
+  - playpark
+  - play park
+  - playtime
+  - playroom
+  - bouncy
+  - face painting
   - hands-on
   - hands on
   - drop-in
@@ -181,150 +322,29 @@ kids_keywords:
   - make and take
   - make-and-take
   - interactive
-  - guided tour
-  - guided visit
   - art class
   - art workshop
   - craft workshop
-  - science workshop
-  - all ages
-  - all-ages
-  - for all ages
-  - ages 3
-  - ages 4
-  - ages 5
-  - ages 6
-  - ages 7
-  - ages 8
-  - ages 9
-  - ages 10
-  - "age 3"
-  - "age 4"
-  - "age 5"
-  - "age 6"
-  - "age 7"
-  - "age 8"
-  - "age 9"
-  - "age 10"
-  - "ages 3-"
-  - "ages 4-"
-  - "ages 5-"
-  - "ages 6-"
-  - "ages 7-"
-  - "ages 8-"
-  - "ages 9-"
-  - "ages 10-"
-  - primary school
-  - sunday family
-  - saturday family
+  - kids workshop
   - family day
   - family weekend
-  - educational
-  # Round-8 manual classification keywords (2026-05-26)
-  # Hand-picked from 473 mixed-venue dropped events: titles/programs that ARE
-  # kid-appropriate but weren't matching any prior keyword.
-
-  # HK Phil / Sinfonietta — outreach + family + film-music programs
-  - swire community concert
-  - swire music for everyone
-  - swire symphony under
-  # Round-9 (2026-05-28): bare `tutti programme` over-admitted Dudamel Masters
-  # Series adult concerts (sponsored by the outreach umbrella but full-price
-  # adult performances). Use specific outreach event types instead.
-  - tutti programme interactive   # outreach workshops
-  - tutti programme event week    # outreach week
-  - hisaishi               # Joe Hisaishi = Studio Ghibli music
-  - nutcracker
-  - sleeping beauty
-  - planet earth
-  - movie music
-  - video game symphony
-  - the magic of musicals
-  - cinematic adventures
-  - wind ensemble community
-  - community concert
-  - animation stories
-  - mcdull                 # HK kid character
-  - know your piano
-  - music for ballet
-  - moonchild
-  - school of dance
-  - john williams          # Star Wars/Harry Potter scores
-  - school of music
-  - side-by-side concert
-  - magic of movie
-
-  # Museums — kid-targeted programs
-  - playscape
-  - design ah              # NHK kids show exhibit
-  - myths and monsters
-  - mini-figures
-  - heavenly horses        # animals are kid-engaging
-  - adventure night
-  - mobile museum
-  # Round-9 (2026-05-28): Palace Museum Egypt exhibit kid workshops
-  # (preserves these as TPs after dropping bare `workshop` keyword)
-  - ancient egyptian
-  - pyramid workshop
-  - paper making workshop
-  - art journey            # kids art outreach
-  - meet mona lisa
-  - tai kwun movie steps   # outdoor family cinema
-  - tai kwun neon          # visual / interactive
-  - pop unboxed
-  - pop culture festival
-  - fifa museum
-  - bruce lee              # iconic, kid-suitable
-
-  # LCSD community programs (variety, choral, annual perf — family-default)
-  - variety show
-  - annual performance
-  - choral concert
-  - funky dance
-  - cantonese operatic
-  - cantonese opera        # cultural exposure
-  - bel canto
-
-  # West Kowloon + HKAPA student/youth showcases
-  - westk funfest
-  - westk cabaret          # cabaret festival open program
-  - hkyaf                  # HK Youth Arts Foundation
-  - journey to the west
-  - three musketeers
-  - voice festival
-  - cello festival
-  - sunset concert         # community outdoor
-
-  # HK Arts Centre / Para Site / comics
-  # Round-9 (2026-05-28): `summer term short` removed — admits HK Arts Centre
-  # adult diploma/course catalogs ("Summer Term Short Courses 2026" = adult).
-  - comix pulse
-  - filmic detours         # screening program (kid-OK)
-
-  # HKCEC family fairs (Pet/Toy etc.)
-  - pet supplies expo
-  - pet expo
-  - 寵物用品展             # pet supplies (zh)
-  - wedding fair          # families often attend
-  - 香港潮州節             # cultural festival
-
-  # Eaton / mixed venue family concerts
-  - velvet express        # specific family band
-
-  # Pop culture / fandom (typically family-suitable)
-  - comic con
-  - comicon
-  - comic-con
-  - cosplay
-  - anime
-  - manga
-  - pokemon
-  - pokémon
-  - toy fair
-  - toy expo
-  - game fair
-  - book fair
-  # Kid characters / brands
+  - sunday family
+  - saturday family
+  - family festival
+  - family fun
+  - kids festival
+  - children's festival
+  - lantern carnival
+  - school holiday
+  - holiday camp
+  # Family concerts/shows that ARE pitched at the very young
+  - swire family series      # HK Phil's actual family strand
+  - animation stories        # Sinfonietta live-animation concerts
+  - mcdull                   # HK picture-book character, aimed young
+  - the musical              # "Operation Oops! - the Musical"
+  - kids musical
+  - family musical
+  # Kid characters / brands — reliably under-5 friendly
   - disney
   - pixar
   - peppa
@@ -337,4 +357,27 @@ kids_keywords:
   - mickey
   - elsa
   - frozen
-  - star wars
+  - pokemon
+  - pokémon
+  - thomas the tank
+  - gruffalo
+  - teletubbies
+  - cocomelon
+  - toy fair
+  - toy expo
+  - book fair
+  # Chinese title signals. Many HK listings are bilingual and some are
+  # Chinese-only — "Victoria Playpark - Playtime 假日親子活動" was dropped
+  # before these were added. _keyword_pattern deliberately does NOT word-
+  # boundary-anchor CJK keywords (Python treats CJK as word characters, so an
+  # anchor would demand a boundary that never occurs inside Chinese text).
+  - 親子              # parent-and-child
+  - 兒童              # children
+  - 幼兒              # toddler / infant
+  - 嬰兒              # baby
+  - 小朋友            # kids
+  - 幼稚園            # kindergarten
+  - 遊樂場            # playground
+  - 故事時間          # story time
+  - 繪本              # picture book
+  - 家庭日            # family day

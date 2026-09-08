@@ -11,7 +11,7 @@ A unified cultural-events calendar covering five real cities (Hong Kong, Hong Ko
 | Code | URL | Audience | Venues |
 |---|---|---|---|
 | `hk` | https://fengelh2.github.io/events/hk/ | Sihan | ~120 |
-| `hk-kids` | https://fengelh2.github.io/events/hk-kids/ | Theo (kids view over HK) | (shares HK) |
+| `hk-kids` | https://fengelh2.github.io/events/hk-kids/ | Theo — **ages 0-5** (kids view over HK) | (shares HK) |
 | `la` | https://fengelh2.github.io/events/la/ | Vicki | ~32 |
 | `nrw` | https://fengelh2.github.io/events/nrw/ | Gabi | ~67 |
 | `singa` | https://fengelh2.github.io/events/singa/ | Carla | ~58 |
@@ -51,6 +51,34 @@ The filter logic (`rebuild_calendar.py` audience filter):
 - `audience_filter: kids` → DROP unless the event is kid-relevant
 - `audience_filter: adults` → DROP if the event is explicitly kid-only
 
+**hk-kids targets ages 0-5** (retargeted 2026-09-08). It used to be a broad
+0-12 view, which meant 85 U11-U18 ice-hockey fixtures, U10-U14 baseball
+tournaments, "ages 13+" ballet masterclasses and HK Phil main-series concerts
+(Beethoven 5, Doctor Atomic) dominated a toddler's calendar. The kids filter
+therefore runs a **veto layer before every admit rule** — vetoes beat
+`always_include_venues`, which admit-only lists could not express:
+
+| Field | Effect |
+|---|---|
+| `exclude_venues` | venue never admitted, even if whitelisted |
+| `veto_keywords` | title substring drops the event outright |
+| `max_start_age` | drop when the title STATES a minimum age above this |
+
+`max_start_age` acts only on explicit evidence (`ages 6+`, `U14`, `12-14`,
+`8-11yrs`); a title stating no age is untouched, so it never thins the calendar
+on a guess. Two asymmetries in `_stated_min_age` are deliberate and were both
+found by testing the reject direction:
+- Several **explicit** age phrases are constraints on one event → most
+  restrictive wins ("ages 13+, 7+ yrs training" → 13).
+- Several **U-labels** are the bands on offer → youngest wins ("U6-U18" → 5,
+  because a U6 squad does take five-year-olds). Taking the max rejected it.
+
+Keyword matching is word-boundary aware (`_keyword_pattern`), so `child` no
+longer matches "Moon*child*'s Dream". Base and plural forms must therefore both
+be listed. CJK keywords are deliberately **not** anchored — Python's `\w`
+covers CJK, so an anchor would demand a boundary that never occurs inside
+Chinese text.
+
 The two sites configure mirror lists:
 
 | `hk-kids/site.yaml` (admit list) | `hk/site.yaml` (deny list) |
@@ -59,6 +87,14 @@ The two sites configure mirror lists:
 | `kids_keywords` — title substrings that admit kid programs from mixed venues | `kids_only_keywords` — title substrings that drop kid programs from adult HK |
 
 When adding a new clearly-kid venue, add it to BOTH lists; when adding a new kid keyword pattern, mirror it. Both files have comments showing the pattern.
+
+**Orphaned events (open, 2026-09-08).** The 0-5 retarget added 11 youth-sport
+venues to hk-kids' `exclude_venues` while they remain in hk's
+`kids_only_venues`, so ~130 events (85 `hkihl-ice-hockey` fixtures, 10
+`hk-baseball-youth`, 6 `hk-judo`, …) now render on neither site. Left that way
+deliberately: they are U11-U18 league fixtures that suit neither a toddler
+calendar nor Sihan's culture calendar. To surface them on adult HK instead,
+delete those ids from `hk/site.yaml`'s `kids_only_venues`.
 
 ## Per-city `site.yaml` schema
 
@@ -83,7 +119,17 @@ venues_from:       # base-city code to inherit venues from
 audience_filter:   # "kids" | "adults"
 always_include_venues:  # whitelist (admit any event from these)
 kids_keywords:     # admit-by-title-substring list
+# veto layer — all three run BEFORE the admit rules above
+exclude_venues:    # venue ids never admitted, even if whitelisted
+veto_keywords:     # title substrings that drop the event outright
+max_start_age:     # int; drop when the title STATES a min age above this
 ```
+
+A venue must never appear in both `always_include_venues` and
+`exclude_venues`. Adding a venue to `exclude_venues` while it is still listed
+in `hk/site.yaml`'s `kids_only_venues` **orphans** it — the events land on
+neither calendar. That is currently true of ~130 events, mostly youth-sport
+league fixtures; see the mirror-list note below.
 
 Adult-city-only fields (hk):
 ```yaml

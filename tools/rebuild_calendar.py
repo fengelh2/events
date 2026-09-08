@@ -248,6 +248,79 @@ def _iso(v):
     return v.isoformat() if v else None
 
 
+# Patterns that read a STATED minimum age out of an event title. Used by the
+# kids audience filter's `max_start_age:` veto (see main()). Deliberately
+# evidence-only: a title with no age phrasing returns None and is left alone,
+# so this can never silently thin the calendar on a guess.
+_MIN_AGE_PATTERNS = (
+    # "ages 6+", "age 13 +", "aged 8+"
+    r"\bages?d?\s*(\d{1,2})\s*\+",
+    # "ages 12-14", "ages 5 – 14", "age 6 to 12"  → the range's lower bound
+    r"\bages?d?\s*(\d{1,2})\s*(?:[-–—]|to)\s*\d{1,2}",
+    # "ages 6 and above", "age 8 & up", "aged 10 or older"
+    r"\bages?d?\s*(\d{1,2})\s*(?:and|&|or)\s*(?:above|up|older|over)",
+    # "6+ yrs", "13+ years"
+    r"\b(\d{1,2})\s*\+\s*(?:yrs?|years?)\b",
+    # "8 years and up", "10 yrs or older"
+    r"\b(\d{1,2})\s*(?:yrs?|years?)\s*(?:old\s*)?(?:and|&|or)\s*(?:above|up|older|over)\b",
+    # "(8-11yrs)", "6 - 12 years old" — a bare band with no "ages" prefix
+    r"\b(\d{1,2})\s*[-–—]\s*\d{1,2}\s*(?:yrs?|years?)\b",
+)
+# Under-N squad labels: "U11", "U-14", "(U8". A U-N team's players are N-1 and
+# under, so the youngest realistic participant age is N-1.
+_UNDER_AGE_PATTERN = r"(?<![A-Za-z0-9])[Uu]-?(\d{1,2})(?![0-9])"
+
+
+def _keyword_pattern(words: list[str]):
+    """Compile a title-matching regex from a keyword list, word-boundary aware.
+
+    Plain substring matching produced false positives that were hard to see in
+    a YAML list: "child" matched Moon*child*'s Dream (a Vivaldi recorder
+    recital) and "0-3" would match "1*0-3*5". Anchoring with \\b on whichever
+    end of the keyword is alphanumeric fixes that while leaving keywords like
+    "18+" or "hands-on" intact. Plural/base forms must both be listed — "child"
+    no longer matches "children" — which the lists already do.
+    """
+    parts = []
+    for w in words:
+        w = (w or "").strip()
+        if not w:
+            continue
+        core = re.escape(w)
+        # Anchor only on ASCII word chars. Python's \w covers CJK, so anchoring
+        # a Chinese keyword would demand a boundary that never occurs inside a
+        # CJK run — "親子" would never match "假日親子活動".
+        def _anchor(ch):
+            return r"\b" if ch.isascii() and (ch.isalnum() or ch == "_") else ""
+        parts.append(_anchor(w[0]) + core + _anchor(w[-1]))
+    return re.compile("|".join(parts), re.IGNORECASE) if parts else None
+
+
+def _stated_min_age(title: str) -> int | None:
+    """Minimum participant age STATED in `title`, or None if it states none.
+
+    Explicit age phrases and squad labels combine differently:
+
+    * Several explicit phrases are all CONSTRAINTS on one event, so the most
+      restrictive wins — "Ballet Masterclass (ages 13+, 7+ yrs training)" → 13.
+    * Several U-labels are usually the BANDS ON OFFER, so the youngest wins —
+      "HKFA Youth Football Training (U6-U18)" → 5, because a U6 squad does take
+      five-year-olds. Taking the max here wrongly rejected it.
+
+    An explicit phrase outranks a squad label when a title carries both.
+    """
+    t = title or ""
+    explicit: list[int] = []
+    for pat in _MIN_AGE_PATTERNS:
+        for m in re.finditer(pat, t, flags=re.IGNORECASE):
+            explicit.append(int(m.group(1)))
+    if explicit:
+        return max(explicit)
+    squads = [int(m.group(1)) - 1 for m in re.finditer(_UNDER_AGE_PATTERN, t)
+              if 3 <= int(m.group(1)) <= 21]  # plausible band; ignores "U2", years
+    return min(squads) if squads else None
+
+
 def _normalize_title(t: str) -> str:
     """Lowercase, NFKC, strip punctuation, collapse whitespace.
     Shared by _event_seen_key and cross-source dedup so the two stay consistent.
@@ -689,26 +762,56 @@ def main() -> int:
     #   - title matches a `kids_keywords` regex
     # `audience == "adults"` is a hard veto — overrides every kid-include rule
     # (so "Adults-only Wine Tasting at HK Book Fair" is correctly dropped from kids).
+    #
+    # VETO LAYER (added 2026-09-08 for the 0-5 retarget of hk-kids). Three
+    # optional site.yaml fields run BEFORE every admit rule, so they also
+    # override `always_include_venues`:
+    #   exclude_venues:  venue ids never admitted, even if whitelisted
+    #   veto_keywords:   title substrings that drop the event outright
+    #   max_start_age:   int — drop when the title STATES a minimum age above
+    #                    this (e.g. "ages 13+", "U14"). Titles that state no
+    #                    age are unaffected, so this never silently thins the
+    #                    calendar; it only acts on explicit evidence.
     af = (site.get("audience_filter") or "").lower()
     if af == "kids":
-        import re as _re
-        kw = [k.lower() for k in (site.get("kids_keywords") or [])]
-        pat = _re.compile("|".join(_re.escape(k) for k in kw), _re.IGNORECASE) if kw else None
+        pat = _keyword_pattern([k.lower() for k in (site.get("kids_keywords") or [])])
+        veto_pat = _keyword_pattern([k.lower() for k in (site.get("veto_keywords") or [])])
         always = set(site.get("always_include_venues") or [])
+        excluded = set(site.get("exclude_venues") or [])
+        max_age = site.get("max_start_age")
+        max_age = int(max_age) if max_age is not None else None
         before = len(all_events)
+        _drops = {"veto_kw": 0, "veto_venue": 0, "age": 0}
         def _is_kid_event(e):
             aud = (getattr(e, "audience", "general") or "general").lower()
+            title = getattr(e, "title", "") or ""
             if aud == "adults":
                 return False  # hard veto
+            # --- veto layer: beats always_include_venues ---
+            if veto_pat and veto_pat.search(title):
+                _drops["veto_kw"] += 1
+                return False
+            if getattr(e, "source", "") in excluded or getattr(e, "venue_id", "") in excluded:
+                _drops["veto_venue"] += 1
+                return False
+            if max_age is not None:
+                stated = _stated_min_age(title)
+                if stated is not None and stated > max_age:
+                    _drops["age"] += 1
+                    return False
+            # --- admit layer ---
             if getattr(e, "source", "") in always or getattr(e, "venue_id", "") in always:
                 return True
             if aud == "kids":
                 return True
-            if pat and pat.search(getattr(e, "title", "") or ""):
+            if pat and pat.search(title):
                 return True
             return False
         all_events = [e for e in all_events if _is_kid_event(e)]
-        log.info("audience_filter=kids: kept %d / %d events", len(all_events), before)
+        log.info("audience_filter=kids: kept %d / %d events "
+                 "(vetoed: %d keyword, %d venue, %d stated-age)",
+                 len(all_events), before,
+                 _drops["veto_kw"], _drops["veto_venue"], _drops["age"])
         # On the kids site, every event IS kid-relevant by definition, so the
         # renderer's "hide audience=kids by default" rule (built for adult sites
         # where kids events are an opt-in extra) is wrong here. Promote to
