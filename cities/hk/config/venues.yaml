@@ -1227,6 +1227,12 @@
     title: "h2.content_title"      # h1 is "All Events" page header; h2.content_title is real event title
     date: "td.date_de"             # "2026/5/16 (Saturday) to 2026/5/31 (Sunday)"
   date_extract_regex: '\d{4}/\d{1,2}/\d{1,2}'
+  # HKPL prints a RANGE in 20 of 20 listings — "2026/4/1 (Wednesday) to
+  # 2027/3/31 (Wednesday)". Without date_find_all only the start was kept,
+  # end stayed None, and every multi-month programme vanished from the
+  # calendar the day its start went past: 201 of 617 cached rows had that
+  # exact shape. Largest instance of the truncated-range bug found.
+  date_find_all: true
   date_format: "%Y/%m/%d"
   accept_drop_rate: 0.2
   notes: |
@@ -1710,6 +1716,12 @@
     venue: ".venue_de"
     detail_link: ".event_title a@href"
   date_extract_regex: '\d{4}/\d{1,2}/\d{1,2}'
+  # HKPL prints a RANGE in 20 of 20 listings — "2026/4/1 (Wednesday) to
+  # 2027/3/31 (Wednesday)". Without date_find_all only the start was kept,
+  # end stayed None, and every multi-month programme vanished from the
+  # calendar the day its start went past: 201 of 617 cached rows had that
+  # exact shape. Largest instance of the truncated-range bug found.
+  date_find_all: true
   date_format: "%Y/%m/%d"
   accept_drop_rate: 0.5
   notes: |
