@@ -39,7 +39,16 @@ UMBRELLA_DAYS = 180
 def _is_umbrella(e, now) -> bool:
     """True for ongoing events whose remaining run AND full span both exceed
     UMBRELLA_DAYS. Both legs matter: a 2-year exhibit that closes in 20 days
-    should NOT be demoted; a freshly-added 365-day venue placeholder should."""
+    should NOT be demoted; a freshly-added 365-day venue placeholder should.
+
+    `open_ended` short-circuits both legs. A year-round class provider has no
+    real end date, and inferring one from a placeholder made the demotion
+    time-dependent: the same rows sat at the BOTTOM of the page in May
+    (days_left 220) and jumped to the TOP in September (days_left 113),
+    burying every dated event behind 24 sports-class adverts.
+    """
+    if _attr(e, "open_ended"):
+        return True
     s = _start(e)
     en = _end(e)
     if s is None or en is None:
@@ -448,6 +457,12 @@ def _is_visible(e, now: datetime, horizon: datetime) -> bool:
     en = _end(e)
     if s is None:
         return False
+    # Open-ended entries have no real end date; the stored one is a
+    # placeholder. Without this the 39 static rows carrying `end: 2026-12-31`
+    # would all silently disappear on 2027-01-01, and no freshness check
+    # covers kind: static, so nothing would have warned.
+    if _attr(e, "open_ended"):
+        return s <= horizon + timedelta(days=365)
     # Ongoing exhibitions: end is in the future even if start is in the past.
     # Cap end at horizon+365d so placeholder values like 2099-12-31 don't make
     # an event visible forever — it will age out once start drifts past horizon.
@@ -559,13 +574,17 @@ def _week_label(key: tuple[int, int], this_year: int, this_week: int, first_even
 # ─── relative time helpers ───────────────────────────────────────────────────
 
 
-def _relative_phrase(start: datetime, end: Optional[datetime], now: datetime) -> str:
+def _relative_phrase(start: datetime, end: Optional[datetime], now: datetime,
+                     open_ended: bool = False) -> str:
     """English countdown / duration phrase for the row.
 
     Single-day events:    'today' / 'tomorrow' / 'in 3 days' / 'in 2 weeks'
     Ongoing exhibitions:  'N days left' (closing date is already in the time
                           column, so we don't repeat it).
     """
+    if open_ended:
+        # "113 days left" on a year-round swimming school is simply false.
+        return "ongoing"
     if end is not None and end > now and start <= now:
         days_left = (end.date() - now.date()).days
         return f"{days_left} day{'s' if days_left != 1 else ''} left"
@@ -1277,7 +1296,7 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
     cat_slug = _slug(category_raw)
     icon = _icon(category_raw)
     audience = _attr(ev, "audience") or "general"
-    relative = _relative_phrase(s, e, now)
+    relative = _relative_phrase(s, e, now, open_ended=bool(_attr(ev, "open_ended")))
     is_featured = _featured_key(ev) in featured and audience == "general"
 
     if e is not None and e > now and s <= now:

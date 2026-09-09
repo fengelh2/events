@@ -247,6 +247,15 @@ class Event:
     source: str = ""
     audience: str = "general"   # general | kids | educational  (drives display dimming)
     first_seen: Optional[str] = None   # ISO date this event-key was first observed (orchestrator-stamped)
+    # True for permanently-running entries (year-round class providers, venues
+    # that are simply open daily). There was previously no way to say "no end
+    # date", so these carried a placeholder `end: 2026-12-31`, which made them
+    # behave like something that CLOSES on that date: the renderer's umbrella
+    # demotion switched off once the fake date came within 180 days, promoting
+    # 24 sports-class adverts to the top of the page, and they would have
+    # vanished entirely on 2027-01-01. Defaulted so older cached blocks still
+    # rehydrate without a schema drift.
+    open_ended: bool = False
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -724,12 +733,16 @@ def _scrape_static(venue_row: dict) -> list[Event]:
             log.warning("%s: static_events entry skipped (bad start=%r)", venue_row["id"], start_raw)
             continue
         category = item.get("category") or venue_row.get("category", "other")
+        # `open_ended: true` marks a permanently-running entry. It may be set
+        # per static_event or once for the whole venue row.
+        open_ended = bool(item.get("open_ended", venue_row.get("open_ended", False)))
         out.append(_make_event(
             venue_row, title, start, end,
             url=item.get("detail_url") or venue_row.get("homepage", "#"),
             category=category,
             audience=item.get("audience", "general"),
             description=_clean_title(item.get("description") or "") or None,
+            open_ended=open_ended,
         ))
     return out
 

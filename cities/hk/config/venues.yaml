@@ -2246,6 +2246,7 @@
       detail_url: https://grassroots.hkfa.com/index_en.html
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: esf-sports-classes
@@ -2268,6 +2269,7 @@
       detail_url: https://www.esfsla.org.hk/sports/
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: apss-soccer-school
@@ -2283,6 +2285,7 @@
       detail_url: https://www.apsoccer.hk/apss-hk-about-football-classes/
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: hkjc-public-riding
@@ -2298,11 +2301,13 @@
       detail_url: https://corporate.hkjc.com/corporate/english/jc-news-and-activities/jc-equestrian-development/public-riding-schools/pfl/pfl-programms/pfl-lesson.aspx
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: HKJC Tuen Mun Riding School — kids horse-riding lessons
       detail_url: https://corporate.hkjc.com/corporate/english/jc-news-and-activities/jc-equestrian-development/public-riding-schools/tm/tm-programms/tm-lesson.aspx
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: harry-wright-swim
@@ -2318,6 +2323,7 @@
       detail_url: https://www.harrywright.com.hk/swimming-programmes
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: hkba-badminton-courses
@@ -2333,6 +2339,7 @@
       detail_url: http://www.hkbadmintonassn.org.hk/en/training-course/
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: ymca-multisport
@@ -2348,16 +2355,19 @@
       detail_url: https://mcs.ymcahk.org.hk/en/BADMINTON
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: YMCA — Kids Gymnastics Classes
       detail_url: https://mcs.ymcahk.org.hk/en/GYMNASTICS
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: YMCA — Kids Table Tennis Classes
       detail_url: https://mcs.ymcahk.org.hk/en/TABLE.TENNIS
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: trybe-gym-ninja
@@ -2373,6 +2383,7 @@
       detail_url: https://www.trybehk.com/trybekidsschedule
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: tennis-hk-junior
@@ -2388,11 +2399,13 @@
       detail_url: https://www.tennishk.org/en/training/junior-training/tennis-for-all-training-scheme/timetables
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: HK Tennis — Bank of China Junior Team Tennis League
       detail_url: https://www.tennishk.org/en/leagues/junior-team-tennis/
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: try-hk-rugby
@@ -2408,11 +2421,13 @@
       detail_url: https://try.hkrugby.com/
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: HKRU School Rugby Programme (Jockey Club)
       detail_url: https://www.hkrugby.com/play-rugby/get-involved/school-rugby
       start: 2026-05-25
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 # ===========================================================================
@@ -2446,11 +2461,13 @@
       detail_url: https://www.smartplay.lcsd.gov.hk/programme/search-result?district=all&startDate=ALL&activityType=%5B%5D&lang=en
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: LCSD — Free Community Programmes (next 7 days, all districts)
       detail_url: https://www.smartplay.lcsd.gov.hk/programme/search-result?district=all&startDate=ALL&activityType=%5B%5D&enrlStatus=ASC_7_D&lang=en
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: ryze-hk
@@ -2466,6 +2483,7 @@
       detail_url: https://www.ryzehongkong.com/activities/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: bounce-hk
@@ -2481,6 +2499,7 @@
       detail_url: https://www.bouncehk.com/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: cityplaza-ice-palace
@@ -2496,6 +2515,7 @@
       detail_url: https://www.cityplaza.com/en/ice-palace/ice-skating-programmes
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: vermcity-climbing
@@ -2511,6 +2531,7 @@
       detail_url: https://www.vermcity.com/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: just-climb
@@ -2526,6 +2547,7 @@
       detail_url: https://justclimb.hk/en/teenkidclimb/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: attic-v-climbing
@@ -2541,6 +2563,7 @@
       detail_url: https://www.atticv.com.hk/classes
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: hktkda-taekwondo
@@ -2563,6 +2586,7 @@
       detail_url: http://www.hktkda.com/en/event/local/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: hk-judo
@@ -2606,6 +2630,7 @@
       detail_url: https://hockey.org.hk/MenFixture.asp
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: 3rd Men's Junior AHF Cup
       detail_url: https://hockey.org.hk/Content.asp?Uid=129
@@ -2634,11 +2659,13 @@
       detail_url: https://www.crickethongkong.com/matches
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: Cricket HK — Junior Cricket Programme
       detail_url: https://www.hkcricket.org/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: hk-baseball-youth
@@ -2701,6 +2728,7 @@
       detail_url: https://hkaaa.com/en/calendar
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
     - title: HK Athletics Series 2026 (Kai Tak Sports Park)
       detail_url: https://www.kaitaksportspark.com.hk/events-tickets
@@ -2731,6 +2759,7 @@
       detail_url: https://hongkongsurfinglesson.com/2026surfkids/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: hk-ballet-academy
@@ -2794,6 +2823,7 @@
       detail_url: https://www.hkybacademy.com/classes
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 - id: megaice-skating
@@ -2809,6 +2839,7 @@
       detail_url: https://www.megaice.com.hk/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
       audience: kids
 
 # ============================================================================
@@ -2927,6 +2958,7 @@
       detail_url: https://www.eventbrite.hk/d/hong-kong-sar--central/basehall/
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
     - title: Oktoberfest at BaseHall 01 (annual; date TBC each year)
       detail_url: https://www.eventbrite.com/
       start: 2026-10-01
@@ -3109,6 +3141,7 @@
       detail_url: https://www.sohohouse.com/houses/soho-house-hong-kong
       start: 2026-05-26
       end: 2026-12-31
+      open_ended: true
   notes: |
     SCRAPE STATUS: 2026-05-26 re-investigation. Soho House publishes its
     programme exclusively inside the members-only app (sohohouse.com
@@ -3265,6 +3298,7 @@
       detail_url: https://www.sassyhongkong.com/hong-kong-events-weekend-activities-things-to-do-whats-on/
       start: 2026-05-27
       end: 2026-12-31
+      open_ended: true
 
 - id: tatler-asia-whats-on
   name: Tatler Asia — What's On (Hong Kong)
@@ -3287,6 +3321,7 @@
       detail_url: https://www.tatlerasia.com/lifestyle/entertainment
       start: 2026-05-27
       end: 2026-12-31
+      open_ended: true
 
 - id: klook-hk
   name: Klook Hong Kong
@@ -3316,6 +3351,7 @@
       detail_url: https://www.klook.com/en-HK/city/16-hong-kong/
       start: 2026-05-27
       end: 2026-12-31
+      open_ended: true
 
 - id: kkday-hk
   name: KKday Hong Kong
@@ -3337,3 +3373,4 @@
       detail_url: https://www.kkday.com/en-hk/city/hong_kong
       start: 2026-05-27
       end: 2026-12-31
+      open_ended: true
