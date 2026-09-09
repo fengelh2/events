@@ -14,6 +14,11 @@ No JavaScript. System fonts. Designed to read well on a phone for a 60+ user.
 from __future__ import annotations
 
 import html
+
+try:
+    import zh_gloss
+except ImportError:      # renderer must still work standalone
+    zh_gloss = None
 import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -1403,6 +1408,16 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
     # means "not known", NOT "in English", which is why there is no "EN" badge
     # to pair with it: that would assert something no source told us.
     lang_html = ""
+    gloss_html = ""
+    if zh_gloss is not None:
+        # A rough English gloss under a Chinese title. The ORIGINAL stays as
+        # the title because that is what you search for or quote when
+        # booking; the gloss only has to be good enough to decide whether to
+        # click. zh_gloss returns None rather than emitting a half-Chinese
+        # string it could not cover.
+        _g = zh_gloss.gloss(title)
+        if _g:
+            gloss_html = f'<div class="row-gloss">{html.escape(_g)}</div>'
     if (_attr(ev, "language") or "") == "zh":
         lang_html = ('<span class="lang-badge" title="Likely conducted in '
                      'Cantonese or Mandarin">中文</span>')
@@ -1424,7 +1439,7 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
           <div class="row-time">{html.escape(time_display)}</div>
           <div class="row-body">
             <div class="row-title"><span class="new-badge"{badge_attr}>NEW</span>{title_html}{lang_html}</div>
-            <div class="row-venue">{venue_line}</div>
+            <div class="row-venue">{venue_line}</div>{gloss_html}
             <div class="row-meta">{relative_html}</div>
             {extras_text}
           </div>
@@ -1914,6 +1929,10 @@ _PAGE_HEAD = """<!DOCTYPE html>
       padding-top: 2px;
     }}
     .row-body {{ min-width: 0; align-self: start; }}
+    .row-gloss {{
+      font-size: 12.5px; color: var(--muted, #8a8a8f);
+      margin-top: 2px; font-style: italic; line-height: 1.35;
+    }}
     .lang-badge {{
       display: inline-block; margin-left: 6px; padding: 1px 5px;
       font-size: 11px; font-weight: 600; line-height: 1.5;
