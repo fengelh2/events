@@ -411,9 +411,17 @@ def _collapse_recurrences(events: list) -> list:
     Single-occurrence events are unchanged.
     """
     from collections import defaultdict
-    groups: dict[tuple[str, str], list] = defaultdict(list)
+    # Location is part of the key. Multi-branch sources repeat one title across
+    # many places: HKPL runs "Storytelling for Children (Cantonese)" at 21+
+    # library branches, and keying on (venue_id, title) alone collapsed all of
+    # them into a single row whose link pointed at one arbitrarily-chosen
+    # branch — the one fact a parent needs, discarded. venue_name is constant
+    # for single-site venues, so their grouping is unchanged.
+    groups: dict[tuple[str, str, str], list] = defaultdict(list)
     for e in events:
-        key = (_attr(e, "venue_id") or "", _normalize_title(_attr(e, "title") or ""))
+        key = (_attr(e, "venue_id") or "",
+               _attr(e, "venue_name") or "",
+               _normalize_title(_attr(e, "title") or ""))
         groups[key].append(e)
 
     out: list = []
@@ -1287,7 +1295,16 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
     if extras:
         last = _attr(ev, "occurrence_last")
         last_str = f"{MONTHS_SHORT[last.month - 1]} {last.day}" if last else ""
-        extras_text = f'<div class="row-recurring">+ {len(extras)} more {"date" if len(extras) == 1 else "dates"} through {last_str}</div>'
+        # Count DISTINCT dates, not occurrences. `extra_occurrences` is a list
+        # of datetimes (not events — see _collapse_recurrences), and a session
+        # repeated twice in one day is one more date to a parent, not two.
+        # Counting raw entries printed "+ 125 more dates" for 13 real dates.
+        extra_days = {d.date() for d in extras if d is not None}
+        n = len(extra_days)
+        extras_text = (
+            f'<div class="row-recurring">+ {n} more {"date" if n == 1 else "dates"} '
+            f'through {last_str}</div>'
+        ) if n else ""
 
     pill_html = ""
     if category:

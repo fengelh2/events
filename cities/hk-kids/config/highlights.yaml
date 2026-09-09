@@ -1,58 +1,54 @@
-# events-hk — featured / "must-see" highlights
+# hk-kids — featured / "must-see" highlights, ages 0-5
 #
-# Same logic as events-nrw + events-la:
-#   1. featured_keywords: case-insensitive substring match on title (or description)
-#   2. featured_events: manual entries by venue_id + fuzzy title match (with `until:` expiry)
+# Rewritten 2026-09-08. This file was previously a byte-identical copy of
+# adult HK's highlights: Vermeer, Rembrandt, Caravaggio, Beethoven, Mahler,
+# Wagner. On a toddler calendar it matched ZERO events every build, so the
+# "Don't Miss" carousel never rendered at all.
 #
-# Featured events appear pinned at top in "Don't Miss" + ★ badge inline.
-# Cap: 6 cards. Sort: closest closing first.
+# Logic (unchanged, see tools/rebuild_calendar.py _compute_featured_set):
+#   1. featured_keywords: case-insensitive substring match on title
+#   2. featured_events: manual entries by venue_id + fuzzy title match
+# Cap: 6 cards, closest closing first.
+#
+# WHAT BELONGS HERE: the rare, special outing worth planning a weekend around.
+# NOT the routine good stuff — library storytime runs 122 times across 25
+# branches and science-museum workshops repeat weekly, so neither is a
+# "don't miss". Featuring them would just mirror the agenda back at itself.
+# Every keyword below was checked against titles actually present in the feed.
 
 featured_keywords:
-  # Old Masters / canonical Western
-  - Vermeer
-  - Rembrandt
-  - Caravaggio
-  - Picasso
-  - Monet
-  - Van Gogh
-  - Hokusai
+  # Seasonal park events — the big days out
+  - Disney Christmas
+  - Disney Halloween
+  - Halloween Fest
+  - Christmas Art Camp
+  - lantern carnival
+  - family carnival
 
-  # Classical composers (HK Phil staples)
-  - Beethoven
-  - Mozart
-  - Mahler
-  - Tchaikovsky
-  - Shostakovich
-  - Brahms
-  - Wagner
-  - Verdi
-  - Puccini
+  # Animals up close — the single most reliable 0-5 draw
+  - Animal Encounters
+  - Amphibians and Reptiles Encounter
+  - Butterfly Walk
+  - petting zoo
 
-  # Modern conductors / soloists frequently visiting HK
-  - Yo-Yo Ma
-  - Lang Lang
-  - Yuja Wang
-  - Jaap van Zweden
+  # Explicit parent-and-child sessions (a 3-year-old cannot attend alone)
+  - Parent & Child
+  - Parents and Kids
+  - Baby & Me
+  - Forest Tales
 
-  # Chinese masters
-  - Wu Guanzhong       # major M+ / HKMoA exhibitions
-  - Zao Wou-Ki
-  - Xu Bing
-  - Ai Weiwei
+  # Character / brand appearances
+  - Peppa
+  - Snoopy
+  - Paw Patrol
+  - Bluey
+  - character meet
 
-  # Opera blockbusters
-  - Aida
-  - Carmen
-  - La Traviata
-  - Madama Butterfly
-  - Tosca
-  - Turandot
+  # Family concerts and shows pitched at the very young
+  - Swire Family Series
+  - the Musical
+  - Countryside Eco-festival
 
-  # Ballet blockbusters
-  - Swan Lake
-  - Nutcracker
-  - Sleeping Beauty
-  - Giselle
-  - Romeo and Juliet
-
+# Manual pins. Use `until:` so a stale pin expires on its own rather than
+# silently outliving the event.
 featured_events: []

@@ -757,6 +757,15 @@ def main() -> int:
     #   audience_filter: adults → drop events that are explicitly kids-targeted
     #                              (currently a no-op since adult sites are the default).
     # An event is kid-relevant when ANY of these is true (and audience != "adults"):
+    # Snapshot per-venue counts BEFORE the audience filter. The freshness and
+    # zero-yield checks must judge "did this scraper work", not "did this
+    # scraper produce events for THIS audience". Measured post-filter on
+    # hk-kids, 50 of 65 non-static venues report 0 simply because they are
+    # adult venues — and the one venue that was genuinely dead
+    # (hk-science-museum-kids) sat anonymously in that list of 50 every build
+    # for months. That is why nobody noticed.
+    _prefilter_counts = _per_venue_counts(all_events)
+
     #   - venue id is in `always_include_venues` (hard whitelist, e.g. Disneyland)
     #   - audience classifier returned "kids"
     #   - title matches a `kids_keywords` regex
@@ -893,11 +902,15 @@ def main() -> int:
         log.warning("chip audit failed: %s", exc)
 
     # Freshness check — warn if any configured venue produced 0 events.
-    _counts = _per_venue_counts(all_events)
+    # Judged on the PRE-filter counts so a view city (hk-kids) reports scraper
+    # health, not audience yield. See the _prefilter_counts snapshot above.
+    _counts = _prefilter_counts
     _emit_freshness_warnings(venues, venue_events=_counts)
 
     # Persistent zero-yield tracker — escalates silent scraper drift across builds.
     # State lives next to seen_events.json so it travels with the city.
+    # NOTE: this only works if the state file is COMMITTED — the escalations
+    # read `last_nonzero_run` and `streak` back from disk. See rebuild.yml.
     try:
         _streak_path = Path(args.seen).parent / "zero_yield_streak.json"
         zero_yield_tracker.update_and_alert(venues, _counts, _streak_path)

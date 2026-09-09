@@ -2270,6 +2270,14 @@ def _assemble_from_html_item(
     if item_venue:
         venue_name = _clean_title(item_venue)
 
+    # Optional separate clock-time field (`selectors.time`). Sites that print
+    # the date and the time in different elements otherwise render every row
+    # as "all day" — HKPL puts "2026/9/12" in .date_de and "4:30 p.m. to
+    # 5:30 p.m." in .time_de, and the date_extract_regex necessarily discards
+    # the latter. Time of day is what decides whether a session fits a nap.
+    if sel.get("time") and start is not None:
+        start = _merge_clock_time(start, _select_text(item, sel.get("time")))
+
     category = _infer_category(title, venue_row, stage_default=stage_default_category)
 
     return _make_event(

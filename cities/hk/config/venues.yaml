@@ -1656,6 +1656,7 @@
     item: ".shadow_wrap"
     title: ".event_title .word_c"
     date: ".date_de"
+    time: ".time_de"
     venue: ".venue_de"
     detail_link: ".event_title a@href"
   date_extract_regex: '\d{4}/\d{1,2}/\d{1,2}'

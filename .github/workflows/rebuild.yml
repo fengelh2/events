@@ -101,8 +101,14 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet cities/*/data/seen_events.json cities/*/data/events_cache.json cities/*/config/venues.yaml; then
-            git add cities/*/data/seen_events.json cities/*/data/events_cache.json cities/*/config/venues.yaml
+          # zero_yield_streak.json MUST be committed: the drift alarm reads
+          # `streak` and `last_nonzero_run` back from disk. Without it every
+          # run starts from an empty file, so streak never exceeds 1 (the
+          # warning needs 3) and last_nonzero_run is always null (the error
+          # needs it set) — both escalations were dead, which is how two
+          # venues sat at 0 events for months unnoticed.
+          if ! git diff --quiet cities/*/data/seen_events.json cities/*/data/events_cache.json cities/*/config/venues.yaml cities/*/data/zero_yield_streak.json; then
+            git add cities/*/data/seen_events.json cities/*/data/events_cache.json cities/*/config/venues.yaml cities/*/data/zero_yield_streak.json
             git commit -m "auto: seen_events + scrape cache + auto-patched broken URLs"
             for i in 1 2 3; do
               if git push origin main; then break; fi
