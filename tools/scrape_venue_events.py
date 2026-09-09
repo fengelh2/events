@@ -2389,6 +2389,37 @@ def _parse_date_range(text: str, explicit_format: Optional[str] = None,
         return (None, None)
     text = text.strip()
 
+    # "06 - 08 Aug 2021" — only the END carries month+year, the start is a bare
+    # day. The mirror of the year-less-RIGHT case handled further down, and it
+    # fails far more dangerously: _parse_one("06") does not return None, it
+    # SUCCEEDS on the bare day and PREFER_DATES_FROM=future rolls it to the
+    # next 6th, so "2021 Hong Kong Brands & Products Shopping Festival" landed
+    # on 2027-09-06. Wrong by years, and entirely plausible-looking.
+    # Normalise to a full range before any parsing so both ends carry a year.
+    m_bare = re.match(
+        r"^(\d{1,2})\s*[-–—]\s*(\d{1,2}\s+[A-Za-z]{3,9}\.?\s*,?\s*\d{4})$", text)
+    if m_bare:
+        tail = m_bare.group(2)
+        parts = tail.split(None, 1)
+        if len(parts) == 2:
+            text = f"{m_bare.group(1)} {parts[1]} - {tail}"
+    else:
+        # "30 Sep - 01 Oct 2023" — cross-month range; the start carries a day
+        # and month but still no year, so it hit the same future-inference
+        # trap ("TONE Music Festival 2023" landed on 2026-09-30).
+        m_nyr = re.match(
+            r"^(\d{1,2}\s+[A-Za-z]{3,9}\.?)\s*[-–—]\s*"
+            r"(\d{1,2}\s+[A-Za-z]{3,9}\.?\s*,?\s*(\d{4}))$", text)
+        if m_nyr:
+            left_full = f"{m_nyr.group(1)} {m_nyr.group(3)}"
+            l_try = _parse_one(left_full, explicit_format, date_prefer=date_prefer)
+            r_try = _parse_one(m_nyr.group(2), explicit_format, date_prefer=date_prefer)
+            # A range spanning New Year ("30 Dec - 01 Jan 2024") starts the
+            # PREVIOUS year; borrowing the end's year blindly would invert it.
+            if l_try and r_try and l_try > r_try:
+                left_full = f"{m_nyr.group(1)} {int(m_nyr.group(3)) - 1}"
+            text = f"{left_full} - {m_nyr.group(2)}"
+
     # Range patterns — try a few separators. JP variants ～〜 added (Fukuoka).
     for sep in [" – ", " — ", " - ", "–", "—", "～", "〜", " bis ", " – bis "]:
         if sep in text:

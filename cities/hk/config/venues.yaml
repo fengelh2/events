@@ -955,6 +955,51 @@
     by the audience_filter.
 
 # ----- HKCEC Event Calendar (HKTDC Book Fair, Toy Fair, Comic Con etc.) -----
+- id: asiaworld-expo
+  name: AsiaWorld-Expo
+  display_name: AsiaWorld-Expo
+  city: Lantau
+  category: other
+  homepage: https://www.asiaworld-expo.com
+  calendar_url: https://www.asiaworld-expo.com/en-us/whats-on/upcoming-events/
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: ".event-filter-tab-inner"
+    title: "h3"
+    date: ".event-filter-tab-date"
+    venue: ".event-filter-tab-location"
+    detail_link: ".event-filter-tab-text@href"
+  skip_if_title_matches:
+    - '(?i)\[cancelled\]'
+    - '(?i)\[postponed\]'
+  accept_drop_rate: 0.6
+  notes: |
+    Added 2026-09-09. HK's second major exhibition venue alongside HKCEC, and
+    the home of Ani-Com & Games HK, toy fairs and large kids' expos — the
+    project had NO source for any of it.
+
+    URL TRAP: the obvious /en/events/ returns 404. The live path is
+    /en-us/whats-on/upcoming-events/ (note the en-us locale segment).
+
+    Despite the name, the page carries the FULL archive back to 2020 — 571
+    cards, ~507 unique events, filtered client-side by tabs. That is fine:
+    every card has an inline date, so html_list reads them all and the
+    pipeline's future-only filter keeps the upcoming ones. No detail-page
+    fetches needed, so this costs one request.
+
+    Dates print as "30 Aug 2020" (DD Mon YYYY) — unambiguous, so unlike HKPL
+    and art-mate this needs NO per-venue date_format.
+
+    Cards carry a real per-event hall in .event-filter-tab-location
+    ("AsiaWorld-Arena (Hall 1)"), read via selectors.venue.
+
+    Cancelled and postponed shows are still listed with [CANCELLED] /
+    [POSTPONED] title prefixes; skip_if_title_matches drops them.
+
+    NOT whitelisted into hk-kids: the hall hosts concerts, trade fairs and
+    boxing alongside family expos, so kids_keywords decide per event.
+
 - id: hkcec
   name: Hong Kong Convention and Exhibition Centre (Event Calendar)
   display_name: HKCEC
