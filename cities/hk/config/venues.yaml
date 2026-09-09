@@ -2175,6 +2175,60 @@
 #   - Cityline → blank response on /en/events.
 #   - Discover Hong Kong /eng/what-s-new/events.html → server-rendered but
 #     no obvious JSON-LD list or volume; HKTB disclaims event accuracy.
+- id: parentmap-hk
+  name: ParentMap.HK 放電地圖
+  display_name: ParentMap HK
+  city: __aggregator__
+  category: other
+  homepage: https://parentmap.hk
+  calendar_url: https://parentmap.hk/events
+  kind: html_list
+  source_priority: 1
+  selectors:
+    item: 'div[id^="event-EV"]'
+    title: "h3.font-bold"
+    date: "div.text-gray-500.font-bold"
+    detail_link: "a@href"
+  date_extract_regex: '\d{4}年\d{1,2}月\d{1,2}日|\d{1,2}月\d{1,2}日'
+  date_find_all: true
+  date_format: "%Y年%m月%d日"
+  accept_drop_rate: 0.5
+  notes: |
+    Added 2026-09-09. A dedicated Hong Kong 親子 (parent-and-child) listings
+    site — the whole site is family content, which is why it is whitelisted
+    into hk-kids. Verified 20 server-rendered cards: 碰碰船大冒險 (bumper
+    boats), 大尾篤恐龍水上樂園 (dinosaur water park), KFBG 70th-anniversary
+    free entry, CREATIVE CHILDREN FESTIVAL, 劇場版 CHIIKAWA.
+
+    DATE TRAP (the fourth in this project): prints "2026年8月5日 - 9月13日" —
+    a range where the END omits the year, the mirror of AsiaWorld-Expo's
+    "06 - 08 Aug 2021" where the START omits it.
+
+    CAPTURING ONLY THE START IS NOT ENOUGH: every card here is a
+    CURRENTLY-RUNNING range whose start is already past, so with end=None
+    the future-only filter dropped all 20. The regex therefore matches both
+    the year-ful and year-less forms and date_find_all builds a range, which
+    _parse_date_range's existing year-less-RIGHT completion resolves:
+    2026年8月5日 - 9月13日 -> 2026-08-05 .. 2026-09-13. Verified.
+
+    date_format is required. HK is lang: en, which cannot parse 年月日 at
+    all; and setting lang: zh is WORSE, not better — dateparser then reads
+    2026年8月5日 as 2026-05-08.
+
+    detail_link points at the ORGANISER's site (popwalk.com.hk, kfbg.org,
+    airside.com.hk), not back to ParentMap — which is what we want.
+
+    ROBOTS: `User-agent: * / Allow: /` with
+    `Content-Signal: search=yes, ai-train=no, use=reference`. The Disallow
+    list targets AI-TRAINING crawlers (ClaudeBot, GPTBot, CCBot, Bytespider,
+    Amazonbot). This calendar links back to the source, i.e. reference use,
+    which the signal permits, and we do not train on it.
+
+    Only the ~20 currently-running cards are server-rendered. The page also
+    ships 332 records (58 future) inside a Next.js `self.__next_f.push(...)`
+    flight payload, which _decode_inline_json_var cannot read (it requires a
+    literal `var <name> =`). Reaching those needs a parser addition.
+
 - id: art-mate-family
   name: art-mate.net (family tag 合家歡)
   display_name: art-mate Family
@@ -2184,6 +2238,13 @@
   calendar_url: https://art-mate.net/group/ticketing?tag=%E5%90%88%E5%AE%B6%E6%AD%A1
   extra_calendar_urls:
     - https://art-mate.net/group/hk_coming_performance?tag=%E5%90%88%E5%AE%B6%E6%AD%A1
+    # 兒童 (children) tag — a second, tighter vocabulary than 合家歡.
+    # Verified 2026-09-09: 5 + 4 cards, e.g. 幼兒／兒童戲劇課程 (HK Rep),
+    # CCDC 兒童舞蹈課程. art-mate returns HTTP 200 with a full 23KB page and
+    # ZERO cards for a tag that does not exist, so a typo here shows up as a
+    # silently empty venue rather than an error — only 合家歡 and 兒童 work.
+    - https://art-mate.net/group/ticketing?tag=%E5%85%92%E7%AB%A5
+    - https://art-mate.net/group/hk_coming_performance?tag=%E5%85%92%E7%AB%A5
   kind: html_list
   source_priority: 1
   pages: 2

@@ -197,6 +197,7 @@ always_include_venues:
   # calligraphy, writing courses, Cantonese opera talks). Keywords admit the
   # 0-5 rows ("Storytelling for Children", "Parent-child Workshop") instead.
   - kids-gallery                # kid arts studio, open play from toddler age
+  - parentmap-hk                # dedicated HK 親子 listings site, 100% family
   # Sport / movement providers that run genuine toddler & preschool classes
   - hkfa-grassroots             # grassroots football from age 4
   - esf-sports-classes

@@ -21,6 +21,7 @@ kids_only_venues:
   - ocean-park-whatson
   - noahs-ark-hk
   - hk-arcades-kid-friendly
+  - parentmap-hk
   - hk-science-museum-kids
   # hk-public-libraries-kids removed 2026-09-08: it now scrapes ALL library
   # programmes, so its adult talks belong on this calendar. Its kid rows are
