@@ -380,6 +380,29 @@ kids_keywords:
   - toy fair
   - toy expo
   - book fair
+  # Fandom + big-ticket family days out. These were dropped in the 0-5
+  # retarget as "older kid" content, which was wrong: a comic con or an
+  # Ani-Com is a mascot-and-costume day out that a 3-year-old enjoys, and
+  # they are among the few genuinely large family events in the HK calendar.
+  # HK Comic Con runs in May and Ani-Com in July, so both are currently out
+  # of window — these keywords make sure they are admitted when they appear.
+  - comic con
+  - comicon
+  - comic-con
+  - ani-com
+  - anicom
+  - cosplay
+  - mascot parade
+  # Annual HK festivals that are family-default
+  - lantern festival
+  - mid-autumn
+  - dragon boat
+  - flower show
+  - bun festival
+  - winterfest
+  - christmas town
+  - new year parade
+  - fireworks
   # Chinese title signals. Many HK listings are bilingual and some are
   # Chinese-only — "Victoria Playpark - Playtime 假日親子活動" was dropped
   # before these were added. _keyword_pattern deliberately does NOT word-
