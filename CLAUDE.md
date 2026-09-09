@@ -232,6 +232,7 @@ Each city page includes a GoatCounter `<script>`. Unified dashboard: https://fen
 
 - **Workspace-root `tools/`** (`c:/Users/asus/Agentic Workflows/tools/`) is **legacy**. Active scraper is `projects/events/tools/`.
 - **Eventbrite TLS fingerprinting** — needs `use_playwright: true`. Plain headers (even full Chrome) get 405.
+- **Eventbrite is now blocked in CI outright (2026-09-09).** `hk-eventbrite-citywide` is already fully escalated — `use_playwright: true` + `browser_headers: true` + `pages: 25` — and still returned **0 events** in the 2026-09-08 CI run. It fetches fine (HTTP 200) from a residential IP, so a local test proves nothing: GitHub Actions IP ranges are what Eventbrite blocks. **Do not add more Eventbrite rows** (its `/d/hong-kong-sar/kids/` and `/children/` category pages hold ~65 genuinely good 0-5 events, and are unreachable from CI). Getting them needs a residential proxy or a paid scraping service.
 - **Klook / KKday / Sassy AJAX** — DataDome CAPTCHA. Stealth Playwright NOT enough. Static umbrella only.
 - **Playwright on Windows** is flaky locally (random EPIPE crashes). Linux CI runner is reliable.
 - **SISTIC chip explosion**: the SG SISTIC parser slugifies `venue_name` into sub-venue chips so the renderer shows real venues.

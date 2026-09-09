@@ -2132,6 +2132,44 @@
 #   - Cityline → blank response on /en/events.
 #   - Discover Hong Kong /eng/what-s-new/events.html → server-rendered but
 #     no obvious JSON-LD list or volume; HKTB disclaims event accuracy.
+- id: art-mate-family
+  name: art-mate.net (family tag 合家歡)
+  display_name: art-mate Family
+  city: __aggregator__
+  category: other
+  homepage: https://www.art-mate.net
+  calendar_url: https://art-mate.net/group/ticketing?tag=%E5%90%88%E5%AE%B6%E6%AD%A1
+  extra_calendar_urls:
+    - https://art-mate.net/group/hk_coming_performance?tag=%E5%90%88%E5%AE%B6%E6%AD%A1
+  kind: html_list
+  source_priority: 1
+  pages: 2
+  selectors:
+    item: "div.database_postcard.event_item.cs_postcard_frame"
+    title: ".database_postcard_name"
+    date: ".database_postcard_date"
+    detail_link: ".database_postcard_name a@href"
+  date_extract_regex: '\d{4}\.\d{1,2}\.\d{1,2}'
+  date_format: "%Y.%m.%d"
+  accept_drop_rate: 0.5
+  notes: |
+    Added 2026-09-09. HK arts aggregator, filtered to its 合家歡 ("family")
+    tag. Densest 0-5 source found: toddler music, baby sensory opera, Alice
+    in Wonderland, 美荷樓 parent-child workshops, children's dance courses.
+
+    Titles are mostly CHINESE, which is why cities/hk-kids/site.yaml carries
+    Chinese admit keywords (親子 / 兒童 / 幼兒 / 嬰兒 / 小朋友). Deliberately
+    NOT whitelisted: the family tag still carries adult craft workshops
+    (lip-balm DIY, ikebana), so keywords decide per event.
+
+    DATE TRAP: prints YMD with dots ("2026.9.13") while HK's city DATE_ORDER
+    is DMY. date_format "%Y.%m.%d" pins it. Ranges appear as "2026.9.5 - 12"
+    and "2026.7.26 - 9.12"; date_extract_regex takes the first full date as
+    the start, since the range tail omits the year.
+
+    Cards carry no venue element, hence city: __aggregator__.
+    Pages 3-6 repeat page 2, so pages: 2.
+
 - id: hk-eventbrite-citywide
   name: Eventbrite Hong Kong
   display_name: Eventbrite HK
