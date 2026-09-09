@@ -99,7 +99,8 @@ def _venue_hash(venue: dict, site_hash: str, code_hash: str) -> str:
 
 
 def _save_cache(cache_path: Path, events: list, site_hash: str, code_hash: str,
-                venues: list[dict]) -> None:
+                venues: list[dict], scraped_ids: set[str] | None = None,
+                prior_blocks: dict[str, dict] | None = None) -> None:
     """Per-venue cache file (schema 2). Events grouped by source venue_id so a
     per-venue refresh replaces only that venue's events — never a mix of stale
     + fresh for the same venue. Events without a `source` aren't cached."""
@@ -130,9 +131,19 @@ def _save_cache(cache_path: Path, events: list, site_hash: str, code_hash: str,
         if isinstance(ttl_h, (int, float)) and ttl_h > 0:
             cache_until = (datetime.now(timezone.utc)
                            + timedelta(hours=float(ttl_h))).isoformat(timespec="seconds")
+        # `scraped_at` records when this venue was last ACTUALLY fetched, and
+        # is carried forward untouched for venues served from cache this run.
+        # `saved_at` keeps its old meaning (when the file was written) so
+        # nothing that reads it changes behaviour — but it is useless as a
+        # freshness signal precisely because it is rewritten for every venue
+        # every run, which is what hid 93 nights of frozen data.
+        prior = (prior_blocks or {}).get(vid) or {}
+        was_scraped = vid in (scraped_ids or set())
+        scraped_at = now_iso if was_scraped else (prior.get("scraped_at") or now_iso)
         venues_block[vid] = {
             "venue_hash": _venue_hash(v, site_hash, code_hash),
             "saved_at": now_iso,
+            "scraped_at": scraped_at,
             "cache_until": cache_until,
             "events": by_source.get(vid, []),
         }
@@ -183,12 +194,53 @@ def _events_from_cache_block(block: dict) -> list | None:
     return out
 
 
-def _venue_cache_hit(block: dict | None, expected_venue_hash: str) -> tuple[bool, str]:
-    """Return (hit, reason). Hit when venue_hash matches OR cache_until > now
-    (per-venue TTL keeps stable venues warm across unrelated config touches)."""
+# Hard ceiling on how long a venue may serve from cache without being
+# re-scraped, regardless of a matching hash.
+#
+# WHY: the hash key is (venue config + site locale + parser code), none of
+# which changes when a VENUE'S OWN WEBSITE changes. So a venue whose config is
+# stable was never re-fetched. Measured across commits 8ef2c97..16aedf6 — 93
+# nightly CI runs — all 117 HK venues had byte-identical event arrays and 86%
+# of cached events were already in the past. Two venues sat at 0 events for
+# months, and the scraper's own "100% dropped" warning never printed because
+# the code that emits it never ran. Staggered by venue id so a full expiry
+# doesn't stampede every venue into one build.
+CACHE_MAX_AGE_HOURS = 72
+
+
+def _cache_age_hours(block: dict) -> float | None:
+    """Hours since this venue was ACTUALLY scraped, or None if unknown.
+
+    Reads `scraped_at`, which only advances on a real scrape. Deliberately not
+    `saved_at`: _save_cache re-stamps that on every venue every run, including
+    pure cache hits, so it records when the FILE was written and always looks
+    fresh. That is precisely why the staleness was invisible.
+    """
+    ts = block.get("scraped_at")
+    if not ts:
+        return None
+    try:
+        return (datetime.now(timezone.utc)
+                - datetime.fromisoformat(ts)).total_seconds() / 3600.0
+    except ValueError:
+        return None
+
+
+def _venue_cache_hit(block: dict | None, expected_venue_hash: str,
+                     max_age_hours: float | None = None) -> tuple[bool, str]:
+    """Return (hit, reason). Hit when venue_hash matches AND the block has not
+    aged past the max-age ceiling, OR when cache_until > now (per-venue TTL
+    keeps stable venues warm across unrelated config touches)."""
     if not block:
         return False, "missing"
     if block.get("venue_hash") == expected_venue_hash:
+        limit = CACHE_MAX_AGE_HOURS if max_age_hours is None else max_age_hours
+        if limit:
+            age = _cache_age_hours(block)
+            # A block with no scraped_at predates this field — treat as stale
+            # once, so the migration re-scrapes everything exactly one time.
+            if age is None or age >= limit:
+                return False, "stale"
         return True, "hash_match"
     cu = block.get("cache_until")
     if cu:
@@ -636,6 +688,9 @@ def main() -> int:
         session = requests.Session()
         session.headers.update(scrape_venue_events.DEFAULT_HEADERS)
         cached_venues: dict[str, dict] = (cache_index or {}).get("venues") or {}
+        # Venues actually re-fetched this run; drives `scraped_at` in the
+        # saved cache so a cache hit does not fake a fresh timestamp.
+        scraped_ids: set[str] = set()
         for v in venues:
             if v.get("kind") == "unknown":
                 skipped += 1
@@ -655,6 +710,8 @@ def main() -> int:
                 # Schema drift on this venue's block — fall through to re-scrape.
                 log.info("cache schema drift for %s — re-scraping", vid)
             cache_misses += 1
+            if vid:
+                scraped_ids.add(vid)
             try:
                 evs = scrape_venue_events.scrape(v, session=session)
             except Exception as exc:
@@ -690,7 +747,8 @@ def main() -> int:
         # _save_cache groups events by `source` (venue_id), so each venue's
         # block in the new file contains EITHER its fresh-scraped events OR
         # the cached events we served — never a mix.
-        _save_cache(cache_path, all_events, site_hash, code_hash, venues)
+        _save_cache(cache_path, all_events, site_hash, code_hash, venues,
+                    scraped_ids=scraped_ids, prior_blocks=cached_venues)
 
     # ─── Cross-source deduplication ──────────────────────────────────────
     # Aggregator sources (visitessen, sistic, discover-los-angeles,
