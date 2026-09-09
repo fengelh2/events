@@ -826,6 +826,7 @@ def _render_html(
     parts.append('  <input type="radio" name="catfilter" id="f-film" class="filter-input">')
     parts.append('  <input type="radio" name="catfilter" id="f-sport" class="filter-input">')
     parts.append('  <input type="radio" name="catfilter" id="f-exh" class="filter-input">')
+    parts.append('  <input type="radio" name="catfilter" id="f-other" class="filter-input">')
     parts.append('  <input type="radio" name="catfilter" id="f-fav" class="filter-input">')
     parts.append('  <input type="radio" name="cityfilter" id="c-all" class="filter-input" checked>')
     for cslug, _ in cities:
@@ -897,6 +898,7 @@ def _render_html(
     parts.append('    <label for="f-film"    class="filter-chip cat-film"><span class="cat-icon">🎬</span><span>Film</span></label>')
     parts.append('    <label for="f-sport"   class="filter-chip cat-sport"><span class="cat-icon">⚽</span><span>Sport</span></label>')
     parts.append('    <label for="f-exh"     class="filter-chip cat-exh"><span class="cat-icon">🎨</span><span>Exhibition</span></label>')
+    parts.append('    <label for="f-other"   class="filter-chip cat-other"><span class="cat-icon">🎪</span><span>Activities</span></label>')
     # Spacer pushes the Favoriten chip to the right edge of the Was row
     parts.append('    <span class="filter-bar-spacer" aria-hidden="true"></span>')
     parts.append('    <label for="f-fav"     class="filter-chip filter-chip-fav"><span class="cat-icon">❤️</span><span>Favorites</span></label>')
@@ -1556,6 +1558,7 @@ _PAGE_HEAD = """<!DOCTYPE html>
     #f-film:checked     ~ .filter-panel .filter-bar .filter-chip[for="f-film"],
     #f-sport:checked    ~ .filter-panel .filter-bar .filter-chip[for="f-sport"],
     #f-exh:checked      ~ .filter-panel .filter-bar .filter-chip[for="f-exh"],
+    #f-other:checked    ~ .filter-panel .filter-bar .filter-chip[for="f-other"],
     #c-all:checked      ~ .filter-panel .filter-bar .filter-chip[for="c-all"] {{
       background: var(--ink);
       color: var(--bg);
@@ -1627,6 +1630,15 @@ _PAGE_HEAD = """<!DOCTYPE html>
     #f-exh:checked     ~ .agenda:not(:has(.row.cat-exh:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty {{ display: block; }}
     #show-extras:checked ~ #f-exh:checked ~ .agenda .day:has(.row.cat-exh:not(.venue-hidden)),
     #show-extras:checked ~ #f-exh:checked ~ .agenda .week:has(.row.cat-exh:not(.venue-hidden)) {{ display: block !important; }}
+    /* Activities (category "other") */
+    #f-other:checked     ~ .featured .featured-card:not(.cat-other),
+    #f-other:checked     ~ .agenda .row:not(.cat-other),
+    #f-other:checked     ~ .agenda .day:not(:has(.row.cat-other:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-other:checked     ~ .agenda .week:not(:has(.row.cat-other:not(.audience-kids):not(.audience-active):not(.venue-hidden))),
+    #f-other:checked     ~ .featured:not(:has(.featured-card.cat-other)) {{ display: none; }}
+    #f-other:checked     ~ .agenda:not(:has(.row.cat-other:not(.audience-kids):not(.audience-active):not(.venue-hidden))) .filter-empty {{ display: block; }}
+    #show-extras:checked ~ #f-other:checked ~ .agenda .day:has(.row.cat-other:not(.venue-hidden)),
+    #show-extras:checked ~ #f-other:checked ~ .agenda .week:has(.row.cat-other:not(.venue-hidden)) {{ display: block !important; }}
     /* Sport — added 2026-05-25 */
     #f-sport:checked   ~ .featured .featured-card:not(.cat-sport),
     #f-sport:checked   ~ .agenda .row:not(.cat-sport),
@@ -1845,13 +1857,13 @@ _PAGE_HEAD = """<!DOCTYPE html>
       padding-top: 2px;
     }}
     .row-body {{ min-width: 0; align-self: start; }}
-    .lang-badge {
+    .lang-badge {{
       display: inline-block; margin-left: 6px; padding: 1px 5px;
       font-size: 11px; font-weight: 600; line-height: 1.5;
       border-radius: 4px; vertical-align: middle;
       background: rgba(120,120,128,0.16); color: #6b6b70;
       border: 1px solid rgba(120,120,128,0.22);
-    }
+    }}
     .row-title {{
       font-size: 17px;
       font-weight: 600;
@@ -2082,6 +2094,7 @@ _PAGE_HEAD = """<!DOCTYPE html>
     #f-ballet:checked  ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-ballet)  {{ display: none; }}
     #f-theatre:checked ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-theatre) {{ display: none; }}
     #f-exh:checked     ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-exh)     {{ display: none; }}
+    #f-other:checked   ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-other)   {{ display: none; }}
     #f-film:checked    ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-film)    {{ display: none; }}
     #f-sport:checked   ~ .filter-panel .venue-chips .venue-chip:not(.has-cat-sport)   {{ display: none; }}
     /* "Alle" reset button — same chip shape, slightly emphasized on hover */
