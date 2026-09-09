@@ -168,6 +168,12 @@ veto_keywords:
   - fur babies            # dog event, not a baby event
   - brony                 # adult My Little Pony fandom carnival
   - storytelling evening  # adult storytelling night, not story time
+  # Library shelf displays, not dated activities a parent can attend. HKPL
+  # runs them month-long across 80+ branches and they swamped the calendar
+  # (65 of 261 admitted library rows). Real programmes - storytelling,
+  # parent-child workshops - are unaffected.
+  - book display
+  - roving exhibition
 
 # ── ADMIT: whitelisted venues ────────────────────────────────────────────────
 # ONLY venues whose programming works for an under-5. Venues in this list bypass

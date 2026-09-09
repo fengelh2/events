@@ -2067,23 +2067,46 @@ def _scrape_html_list(venue_row: dict, session=None) -> list[Event]:
 
 
 def _paginated_urls(venue_row: dict) -> list[tuple[str, Optional[int]]]:
-    """Return [(url, year_for_that_url), ...] — one entry per month for
-    paginated venues, or just [(calendar_url, None)] for non-paginated."""
-    base = venue_row["calendar_url"]
+    """Return [(url, year_for_that_url), ...] — the listing URLs to fetch.
+
+    Three independent expansions, applied to `calendar_url` plus any
+    `extra_calendar_urls`:
+
+      extra_calendar_urls: [...]  additional listing windows for sites that
+                                  split their calendar into separate pages
+                                  (HKPL serves this-month and next-month at
+                                  different paths, not via a date param).
+      paginate_months: N          append `?<paginate_url_param>=YYYY-MM` for
+                                  the current month plus N-1 future months.
+      pages: N                    append `?<page_param>=1..N` for sites with
+                                  numbered pagination. Same field names as
+                                  the json_ld_aggregator parser uses.
+
+    `paginate_months` and `pages` are mutually exclusive; months wins if both
+    are set, since no venue needs the cross-product.
+    """
+    bases = [venue_row["calendar_url"]] + list(venue_row.get("extra_calendar_urls") or [])
     months = venue_row.get("paginate_months")
-    if not months:
-        return [(base, None)]
-    param = venue_row.get("paginate_url_param", "date")
+    pages = venue_row.get("pages")
+
     out: list[tuple[str, Optional[int]]] = []
-    today = datetime.now(timezone.utc).date()
-    y, m = today.year, today.month
-    sep = "&" if "?" in base else "?"
-    for _ in range(int(months)):
-        url = f"{base}{sep}{param}={y:04d}-{m:02d}"
-        out.append((url, y))
-        m += 1
-        if m > 12:
-            m, y = 1, y + 1
+    for base in bases:
+        sep = "&" if "?" in base else "?"
+        if months:
+            param = venue_row.get("paginate_url_param", "date")
+            today = datetime.now(timezone.utc).date()
+            y, m = today.year, today.month
+            for _ in range(int(months)):
+                out.append((f"{base}{sep}{param}={y:04d}-{m:02d}", y))
+                m += 1
+                if m > 12:
+                    m, y = 1, y + 1
+        elif pages:
+            page_param = venue_row.get("page_param", "page")
+            for p in range(1, int(pages) + 1):
+                out.append((f"{base}{sep}{page_param}={p}", None))
+        else:
+            out.append((base, None))
     return out
 
 
@@ -2236,6 +2259,16 @@ def _assemble_from_html_item(
     venue_id, venue_name, city, stage_default_category = _resolve_stage(
         location="", title=title, venue_row=venue_row
     )
+
+    # Optional per-item venue label (`selectors.venue`). For multi-branch
+    # sources the item, not the venue row, carries the real location: HKPL
+    # runs "Storytelling for Children (Cantonese)" 122 times across dozens of
+    # branches, and without the branch every row is an indistinguishable
+    # duplicate. The renderer chips on venue_name, so this is what makes those
+    # rows usable. Falls back to the venue row's own label when absent.
+    item_venue = _select_text(item, sel.get("venue")) if sel.get("venue") else ""
+    if item_venue:
+        venue_name = _clean_title(item_venue)
 
     category = _infer_category(title, venue_row, stage_default=stage_default_category)
 

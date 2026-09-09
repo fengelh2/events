@@ -1646,13 +1646,17 @@
   city: Hong Kong Island
   category: other
   homepage: https://www.hkpl.gov.hk
-  calendar_url: https://www.hkpl.gov.hk/en/extension-activities/all-events/this-week
+  calendar_url: https://www.hkpl.gov.hk/en/extension-activities/all-events/this-month
+  extra_calendar_urls:
+    - https://www.hkpl.gov.hk/en/extension-activities/all-events/next-month
+  pages: 12
   kind: html_list
   source_priority: 1
   selectors:
     item: ".shadow_wrap"
     title: ".event_title .word_c"
     date: ".date_de"
+    venue: ".venue_de"
     detail_link: ".event_title a@href"
   date_extract_regex: '\d{4}/\d{1,2}/\d{1,2}'
   date_format: "%Y/%m/%d"
@@ -1677,8 +1681,12 @@
     opera talks. The kids keywords admit the 0-5 rows ("Storytelling for
     Children", "Parent-child Workshop") and leave the rest to adult HK.
 
-    Window is one week per fetch, so the calendar stays shallow; a wider
-    range would need the month navigation (.monthOpt) driven per month.
+    DEPTH: the listing is paginated (?page=N) and a single fetch returns
+    only ~12 of them. Measured 2026-09-09: this-week 111 events over 8+
+    pages, this-month 164, next-month 219 — the original single-page
+    config was capturing about 7% of one week. Now fetches this-month +
+    next-month, 12 pages each. There IS an arbitrary-month endpoint
+    (all-events/search?year=YYYY&month=MM) if more depth is ever needed.
 - id: hk-arcades-kid-friendly
   name: Kid-friendly video arcades + indoor playgrounds (curated)
   display_name: Indoor playgrounds + arcades
