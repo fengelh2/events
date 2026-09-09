@@ -189,6 +189,11 @@ WHEN_OPTIONS = [
     ("next-weekend",  "Next Weekend"),
     ("this-month",    "This Month"),
     ("next-month",    "Next Month"),
+    # Anything further out. Without this slot, an event beyond next month
+    # got NO when-tag at all and every When chip hid it, with no chip able
+    # to bring it back: 15 rows on hk-kids, 136 of 513 on HK, 123 of 358 on
+    # LA. The 2027 KidsFest run is exactly this shape.
+    ("later",         "Later"),
 ]
 ALL_WHEN_TAGS = [slot for slot, _ in WHEN_OPTIONS]
 
@@ -232,6 +237,8 @@ def _when_tags(start: Optional[datetime], end: Optional[datetime], now: datetime
         tags.append("this-month")
     elif next_m_start <= sd < after_next_m:
         tags.append("next-month")
+    elif sd >= after_next_m:
+        tags.append("later")
 
     return tags
 
@@ -700,7 +707,16 @@ def _render_html(
     city_counts: dict[str, tuple[str, int]] = {}
     for e in visible_events:
         city = _attr(e, "city") or ""
-        if not city or city == "__aggregator__":
+        # Citywide sources (ParentMap, art-mate, Cityline, URBTIX) carry the
+        # "__aggregator__" sentinel because they have no single district.
+        # Skipping them here left their rows tagged `city-aggregator` with NO
+        # chip pointing at them: picking ANY Where city hid all 31 of them,
+        # and no venue chip reached them either. They get their own chip.
+        if city == "__aggregator__":
+            name, n = city_counts.get("aggregator", ("Citywide", 0))
+            city_counts["aggregator"] = (name, n + 1)
+            continue
+        if not city:
             continue
         slug = _city_slug(city)
         name, n = city_counts.get(slug, (city, 0))
@@ -891,14 +907,29 @@ def _render_html(
     parts.append('  <nav class="filter-bar" aria-label="Filter by category">')
     parts.append('    <span class="filter-label">What</span>')
     parts.append('    <label for="f-all"     class="filter-chip filter-all">All</label>')
-    parts.append('    <label for="f-opera"   class="filter-chip cat-opera"><span class="cat-icon">🎭</span><span>Opera</span></label>')
-    parts.append('    <label for="f-concert" class="filter-chip cat-concert"><span class="cat-icon">🎵</span><span>Concert</span></label>')
-    parts.append('    <label for="f-ballet"  class="filter-chip cat-ballet"><span class="cat-icon">🩰</span><span>Ballet</span></label>')
-    parts.append('    <label for="f-theatre" class="filter-chip cat-theatre"><span class="cat-icon">🎟️</span><span>Theatre</span></label>')
-    parts.append('    <label for="f-film"    class="filter-chip cat-film"><span class="cat-icon">🎬</span><span>Film</span></label>')
-    parts.append('    <label for="f-sport"   class="filter-chip cat-sport"><span class="cat-icon">⚽</span><span>Sport</span></label>')
-    parts.append('    <label for="f-exh"     class="filter-chip cat-exh"><span class="cat-icon">🎨</span><span>Exhibition</span></label>')
-    parts.append('    <label for="f-other"   class="filter-chip cat-other"><span class="cat-icon">🎪</span><span>Activities</span></label>')
+    # Only emit a What chip that actually matches something. Opera, Ballet and
+    # Film each matched ZERO rows on hk-kids — three dead controls that made the
+    # filter bar look like the calendar was mostly the categories that remained.
+    _cat_counts: dict[str, int] = {}
+    for _e in visible_events:
+        _cat_counts[CATEGORY_SLUGS.get(_attr(_e, "category") or "other", "other")] =             _cat_counts.get(CATEGORY_SLUGS.get(_attr(_e, "category") or "other", "other"), 0) + 1
+    for _slug, _fid, _icon_ch, _label in (
+        ("opera",   "f-opera",   "🎭", "Opera"),
+        ("concert", "f-concert", "🎵", "Concert"),
+        ("ballet",  "f-ballet",  "🩰", "Ballet"),
+        ("theatre", "f-theatre", "🎟️", "Theatre"),
+        ("film",    "f-film",    "🎬", "Film"),
+        ("sport",   "f-sport",   "⚽", "Sport"),
+        ("exh",     "f-exh",     "🎨", "Exhibition"),
+        ("other",   "f-other",   "🎪", "Activities"),
+    ):
+        if not _cat_counts.get(_slug):
+            continue
+        parts.append(
+            f'    <label for="{_fid}" class="filter-chip cat-{_slug}">'
+            f'<span class="cat-icon">{_icon_ch}</span>'
+            f'<span>{_label} {_cat_counts[_slug]}</span></label>'
+        )
     # Spacer pushes the Favoriten chip to the right edge of the Was row
     parts.append('    <span class="filter-bar-spacer" aria-hidden="true"></span>')
     parts.append('    <label for="f-fav"     class="filter-chip filter-chip-fav"><span class="cat-icon">❤️</span><span>Favorites</span></label>')
@@ -1155,9 +1186,15 @@ def _render_html(
     parts.append('    document.querySelectorAll(".featured").forEach(function(sec){')
     parts.append('      var cards=sec.querySelectorAll(".featured-card");')
     parts.append('      if(cards.length===0) return;')
+    parts.append('      // Clear our own inline hide BEFORE measuring. offsetParent is')
+    parts.append('      // null for every card inside a display:none section, so once this')
+    parts.append('      // function hid a strip it could never see it as non-empty again —')
+    parts.append('      // 8 of 19 filter chips permanently lost all 14 featured cards for')
+    parts.append('      // the rest of the session, recoverable only by reloading.')
+    parts.append('      sec.style.display = "";')
     parts.append('      var any=false;')
     parts.append('      cards.forEach(function(c){ if(c.offsetParent!==null) any=true; });')
-    parts.append('      sec.style.display = any ? "" : "none";')
+    parts.append('      if(!any) sec.style.display = "none";')
     parts.append('    });')
     parts.append('  }')
     parts.append('  document.addEventListener("change", function(e){')
