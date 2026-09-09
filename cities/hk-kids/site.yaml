@@ -162,7 +162,12 @@ veto_keywords:
   - eco-literate
   - photography workshop
   - teacher training      # "100-hours Kids Yoga Teacher Training" is for adults
-  - assessment            # school-admission assessment days
+  # NOT bare "assessment". Its stated purpose — school-admission assessment
+  # days — fired ZERO times, while it killed 12 rows of "A Glimpse of the Hong
+  # Kong Cetaceans and their Health Assessment" at hk-science-museum-kids, a
+  # venue whose own note says every row is a kid workshop.
+  - assessment day
+  - admission assessment
   - summit
   - tedx
   - fur babies            # dog event, not a baby event
@@ -173,7 +178,12 @@ veto_keywords:
   # (65 of 261 admitted library rows). Real programmes - storytelling,
   # parent-child workshops - are unaffected.
   - book display
-  - roving exhibition
+  # "roving exhibition" was right 32 times out of 33, but it also killed
+  # "Family Fun Day x Marine Parks 30th Anniversary Roving Exhibition". The
+  # admit keywords cannot rescue it because vetoes run first, so exempt the
+  # family-flagged case by requiring the adult shapes.
+  - reading roving exhibition
+  - roving exhibition on
   # Adult KFBG programming that surfaced in the first real re-scrape since
   # June (the cache had been frozen, hiding it).
   - residential workshop
@@ -205,6 +215,13 @@ always_include_venues:
   # 0-5 rows ("Storytelling for Children", "Parent-child Workshop") instead.
   - kids-gallery                # kid arts studio, open play from toddler age
   - parentmap-hk                # dedicated HK 親子 listings site, 100% family
+  # art-mate is filtered AT SOURCE to its 合家歡 (family) and 兒童 (children)
+  # tags, so the feed is already curated. Leaving it keyword-gated cost 53
+  # rows / 35 distinct titles — 《愛麗絲夢遊仙境》 (Alice in Wonderland),
+  # 童心同行 charity musical, 香港小莎翁 annual show, lantern-making and
+  # STEAM workshops — none of which carry a kid keyword. A few adult craft
+  # workshops (ikebana, lip-balm DIY) come with it; that is the lenient trade.
+  - art-mate-family
   # Sport / movement providers that run genuine toddler & preschool classes
   - hkfa-grassroots             # grassroots football from age 4
   - esf-sports-classes

@@ -1694,6 +1694,11 @@
   calendar_url: https://www.hkpl.gov.hk/en/extension-activities/all-events/this-month
   extra_calendar_urls:
     - https://www.hkpl.gov.hk/en/extension-activities/all-events/next-month
+    # /search adds the LONG TAIL. this-month + next-month reach 2026-10-31;
+    # /search carries rows out to 2027-03 (fewer rows, further out), so the
+    # two are complementary. NOT a replacement: /search alone returns 63
+    # cards against 617 from the paginated month feeds — a 9x downgrade.
+    - https://www.hkpl.gov.hk/en/extension-activities/all-events/search
   pages: 12
   kind: html_list
   source_priority: 1
@@ -2348,6 +2353,15 @@
     date: ".database_postcard_date"
     detail_link: ".database_postcard_name a@href"
   date_extract_regex: '\d{4}\.\d{1,2}\.\d{1,2}'
+  # Without date_find_all the parser takes only the FIRST regex match, so a
+  # range collapses to its start and `end` stays None — and an event whose
+  # start is already past then fails the renderer's future-only check. That is
+  # how "香港兒童探索博物館" (HK Children's Discovery Museum, source range
+  # "2023.3.1 - 2026.12.31", i.e. open right now) became invisible on a
+  # toddler calendar, and how the family musical "合家歡長壽音樂劇《童話帝國》"
+  # (2026.2.6 - 2028.2.5) was lost. With it, both ends are captured whenever
+  # both are written in full.
+  date_find_all: true
   date_format: "%Y.%m.%d"
   accept_drop_rate: 0.5
   notes: |
