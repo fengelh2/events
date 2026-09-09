@@ -134,6 +134,49 @@ def _display(venue_row: dict) -> str:
     return venue_row.get("display_name") or venue_row["name"]
 
 
+# Explicit statements that an event runs in Chinese. Checked BEFORE the
+# character-ratio heuristic, because an English title can still announce a
+# Cantonese session — "Storytelling for Children (Cantonese)" is the common
+# HKPL shape.
+_ZH_MARKERS = (
+    "(cantonese)", "(mandarin)", "(putonghua)", "in cantonese", "in mandarin",
+    "in chinese", "chinese only", "cantonese only", "conducted in chinese",
+    "粵語", "廣東話", "普通話", "國語", "中文",
+)
+_CJK_RANGES = ((0x3400, 0x4DBF), (0x4E00, 0x9FFF), (0xF900, 0xFAFF), (0x20000, 0x2A6DF))
+
+
+def _is_cjk(ch: str) -> bool:
+    o = ord(ch)
+    return any(lo <= o <= hi for lo, hi in _CJK_RANGES)
+
+
+def _infer_language(*texts) -> Optional[str]:
+    """Return "zh" when an event is likely conducted in Chinese, else None.
+
+    Two signals, in order:
+      1. An explicit marker anywhere in the supplied text. This matters most:
+         the title can be English while the session is Cantonese.
+      2. A predominantly-CJK title. The ratio is CJK vs LATIN LETTERS, not vs
+         all characters, so digits, punctuation and years cannot dilute it —
+         "親子星空探索之旅 2026" still reads as Chinese.
+
+    None means "no signal", NOT "English". Most sources say nothing about
+    language, and asserting English would be a guess dressed as a fact.
+    """
+    joined = " ".join(t for t in texts if t)
+    if not joined:
+        return None
+    if any(m in joined.lower() for m in _ZH_MARKERS):
+        return "zh"
+    title = texts[0] if texts else ""
+    cjk = sum(1 for ch in title if _is_cjk(ch))
+    latin = sum(1 for ch in title if ch.isascii() and ch.isalpha())
+    if cjk and cjk >= max(2, latin):
+        return "zh"
+    return None
+
+
 def _make_event(
     venue_row: dict,
     title: str,
@@ -168,6 +211,7 @@ def _make_event(
         description=None,
         source=venue_row["id"],
         audience=audience if audience is not None else _infer_audience(title),
+        language=_infer_language(title, overrides.get("description") or ""),
     )
     defaults.update(overrides)
     return Event(**defaults)
@@ -247,6 +291,12 @@ class Event:
     source: str = ""
     audience: str = "general"   # general | kids | educational  (drives display dimming)
     first_seen: Optional[str] = None   # ISO date this event-key was first observed (orchestrator-stamped)
+    # "zh" when the event is likely to be conducted in Cantonese/Mandarin —
+    # a Chinese-only storytelling session is a different proposition for a
+    # non-Chinese-speaking parent than an English one. Set by _infer_language
+    # from explicit markers ("(Cantonese)", 粵語) or a predominantly-CJK title.
+    # None means "no signal", NOT "English".
+    language: Optional[str] = None
     # True for permanently-running entries (year-round class providers, venues
     # that are simply open daily). There was previously no way to say "no end
     # date", so these carried a placeholder `end: 2026-12-31`, which made them
@@ -290,6 +340,8 @@ def scrape(venue_row: dict, session: Optional[requests.Session] = None) -> list[
             events = _scrape_playwright_detail_pages(venue_row, session=session)
         elif kind == "json_ld_aggregator":
             events = _scrape_json_ld_aggregator(venue_row, session=session)
+        elif kind == "urbtix_xml":
+            events = _scrape_urbtix_xml(venue_row, session=session)
         elif kind == "tribe_rest":
             events = _scrape_tribe_rest(venue_row, session=session)
         elif kind == "algolia_calendar":
@@ -1529,6 +1581,136 @@ def _merge_clock_time(start: datetime, clock) -> datetime:
     return start.replace(hour=hour, minute=minute)
 
 
+def _scrape_urbtix_xml(venue_row: dict, session=None) -> list[Event]:
+    """URBTIX / LCSD box-office open data (data.gov.hk), one Event per PERFORMANCE.
+
+    Config:
+      calendar_url: URL containing a `{yyyymmdd}` token — the feed is published
+                    as a dated file. Resolved in Asia/Hong_Kong and retried one
+                    day back on 404, because CI's 20:00 UTC cron is 04:00 HKT
+                    the NEXT day, when today's file may not exist yet.
+      title_lang:   "EG" (default) or "TC"
+
+    Shape: BATCH > EVENTS > EVENT > PERFORMANCES > PERFORMANCE. A single event
+    fans out to many dated performances (Charlie and the Chocolate Factory has
+    31), so each performance becomes its own row — that is the whole point,
+    since a parent needs the night, not the run.
+
+    Why this source: it is the same catalogue as the seven fragile lcsd-*
+    Playwright venues, served as static government XML with no anti-bot, and it
+    carries per-event REGION_EG that maps straight onto the district chips.
+    """
+    import xml.etree.ElementTree as _ET
+    from datetime import timedelta as _td
+
+    sess = session or requests
+    raw_url = venue_row["calendar_url"]
+    hk_now = datetime.now(timezone(_td(hours=8)))
+    attempts = []
+    if "{yyyymmdd}" in raw_url:
+        attempts = [raw_url.replace("{yyyymmdd}", (hk_now - _td(days=n)).strftime("%Y%m%d"))
+                    for n in (0, 1, 2)]
+    else:
+        attempts = [raw_url]
+
+    body = None
+    for url in attempts:
+        try:
+            r = sess.get(url, headers=DEFAULT_HEADERS, timeout=DEFAULT_TIMEOUT)
+        except requests.RequestException as exc:
+            log.warning("%s: fetch failed for %s: %s", venue_row["id"], url, exc)
+            continue
+        if r.status_code == 200 and r.content:
+            body = r.content
+            break
+        log.info("%s: %s -> HTTP %s, trying previous day",
+                 venue_row["id"], url.rsplit("/", 1)[-1], r.status_code)
+    if body is None:
+        log.warning("%s: no dated feed file resolved", venue_row["id"])
+        return []
+
+    try:
+        root = _ET.fromstring(body)
+    except _ET.ParseError as exc:
+        log.warning("%s: XML parse failed: %s", venue_row["id"], exc)
+        return []
+
+    # URBTIX's own taxonomy -> this project's category vocabulary. Without this
+    # the raw values ("Music", "Chinese Opera") fall outside CATEGORY_SLUGS and
+    # render as unstyled rows with no label.
+    cat_map = {
+        "music": "concert", "pop concerts": "concert", "concert": "concert",
+        "chinese opera": "opera", "opera": "opera",
+        "dance": "ballet",
+        "theatre": "theatre", "family entertainment": "theatre",
+        "film": "film",
+        "exhibition": "museum_exhibition",
+        "festivals": "other", "multi-arts": "other", "others": "other",
+    }
+    # Genres that are family programming by definition. Marking these
+    # audience="kids" lets the view-city filter admit them on evidence rather
+    # than on a title keyword — "The Great Solar System Adventure! 3D" and
+    # "Desert Elephants: The Adventures of Little Foot" match no kid word at
+    # all. Using the taxonomy also avoids whitelisting the Space Museum by
+    # name, which would drag in its adult film screenings, Erhu concerts and
+    # Classical Music Lecture Series.
+    # NOT "international arts carnival": despite the name, URBTIX uses it as a
+    # generic festival umbrella. In this feed it carries the ADULT Asia+
+    # Festival — a guitar duo recital and a gamelan programme — so treating it
+    # as a kids marker admitted exactly the sort of row this calendar exists to
+    # keep out.
+    kid_cats = {"family entertainment", "omnimax show", "sky show"}
+    # Genres performed in Cantonese. A Chinese TITLE proves nothing here (the
+    # whole catalogue is bilingual); the genre does.
+    zh_cats = {"cantonese opera", "cantonese drama", "chinese opera"}
+    lang = (venue_row.get("title_lang") or "EG").upper()
+    other = "TC" if lang == "EG" else "EG"
+    out: list[Event] = []
+    for ev in root.findall(".//EVENT"):
+        ev_title = (ev.findtext(f"EVENT_{lang}") or ev.findtext(f"EVENT_{other}") or "").strip()
+        ev_url = (ev.findtext("REFERENCE_LINK") or "").strip()
+        cat = (ev.findtext("CATEGORY/MAIN_CAT/EG") or "").strip()
+        sub = (ev.findtext("CATEGORY/SUB_CAT/EG") or "").strip()
+        cats_low = {cat.lower(), sub.lower()}
+        venue_name = (ev.findtext("LOCATION/VENUE_EG") or "").strip()
+        region = (ev.findtext("LOCATION/REGION_EG") or "").strip()
+        # VENUE_EG is literally "-" for some rows; fall back rather than
+        # emitting a dash as the venue label.
+        if venue_name in ("", "-"):
+            venue_name = _display(venue_row)
+        for perf in ev.findall(".//PERFORMANCE"):
+            dt_raw = (perf.findtext("PERFORMANCE_DATETIME") or "").strip()
+            if not dt_raw:
+                continue
+            try:
+                start = datetime.fromisoformat(dt_raw)
+            except ValueError:
+                continue
+            if start.tzinfo is None:
+                start = start.replace(tzinfo=_LOCAL_TZ)
+            title = (perf.findtext(f"TITLE_{lang}") or "").strip() or ev_title
+            if not title:
+                continue
+            purl = (perf.findtext("REFERENCE_LINK") or "").strip() or ev_url
+            out.append(_make_event(
+                venue_row, _clean_title(title), start, None,
+                url=purl or venue_row.get("homepage", "#"),
+                category=cat_map.get(cat.lower(), "other"),
+                venue_name=venue_name,
+                city=region or venue_row.get("city", ""),
+                # NOT _infer_language(title, TC_title): URBTIX is a fully
+                # bilingual catalogue, so EVERY event has a Chinese title and
+                # its presence says nothing about the language spoken on
+                # stage. The reliable signal here is the genre — Chinese Opera
+                # is performed in Cantonese — plus any explicit marker.
+                audience=("kids" if cats_low & kid_cats else None),
+                language=("zh" if cats_low & zh_cats else _infer_language(title)),
+            ))
+    log.info("%s: %d performances from %d events",
+             venue_row["id"], len(out), len(root.findall(".//EVENT")))
+    return out
+
+
 def _decode_inline_json_var(html_text: str, var_name: str):
     """Extract the JSON value assigned to a JS variable inside an HTML page.
 
@@ -1572,6 +1754,12 @@ def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
       venue_path: dot-path to venue name (optional)
       filter_field: dot-path to filter on (e.g. 'venue.name')
       filter_value: substring match against filter_field (case-insensitive)
+      exclude_field: dot-path to filter OUT on (e.g. 'content.venueEn')
+      exclude_values: list of substrings; a record whose exclude_field contains
+                      ANY of them is dropped (case-insensitive). filter_value
+                      can only include, and some feeds need excluding — Cityline
+                      is one HK feed that also carries Shenzhen / Guangzhou /
+                      Macau venues, ~35% of its rows.
       categories_path: dot-path to list of category objects (each {name: ...});
                        names get joined for category-keyword matching
     """
@@ -1611,6 +1799,8 @@ def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
     cats_path = venue_row.get("categories_path")
     filter_field = venue_row.get("filter_field")
     filter_value = (venue_row.get("filter_value") or "").lower()
+    exclude_field = venue_row.get("exclude_field")
+    exclude_values = [str(x).lower() for x in (venue_row.get("exclude_values") or [])]
     # Dedup key. Default "url" is the long-standing behaviour (one row per
     # detail URL). Feeds that list recurring sessions repeat the same URL on
     # many dates — HK Science Museum runs "Multiple Perspectives on Disaster
@@ -1627,6 +1817,10 @@ def _scrape_flat_json_feed(venue_row: dict, session=None) -> list[Event]:
         if filter_field and filter_value:
             field_val = (_dig(raw, filter_field) or "")
             if filter_value not in str(field_val).lower():
+                continue
+        if exclude_field and exclude_values:
+            ex_val = str(_dig(raw, exclude_field) or "").lower()
+            if any(x in ex_val for x in exclude_values):
                 continue
         title = _clean_title(_html_decode(_dig(raw, title_path) or ""))
         if not title:

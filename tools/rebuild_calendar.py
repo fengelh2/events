@@ -397,13 +397,22 @@ def _keyword_pattern(words: list[str]):
         w = (w or "").strip()
         if not w:
             continue
+        # Trailing "*" = prefix match: drop the closing boundary. Word-boundary
+        # anchoring is right for "child" (which must not match "Moonchild") but
+        # wrong for compounds — "kids" could not match "KidsFest! 2027", so the
+        # entire KidsFest umbrella was being dropped. Write "kids*" to admit
+        # KidsFest / KidsZone without loosening "kids" itself.
+        prefix_only = w.endswith("*") and len(w) > 1
+        if prefix_only:
+            w = w[:-1]
         core = re.escape(w)
         # Anchor only on ASCII word chars. Python's \w covers CJK, so anchoring
         # a Chinese keyword would demand a boundary that never occurs inside a
         # CJK run — "親子" would never match "假日親子活動".
         def _anchor(ch):
             return r"\b" if ch.isascii() and (ch.isalnum() or ch == "_") else ""
-        parts.append(_anchor(w[0]) + core + _anchor(w[-1]))
+        tail = "" if prefix_only else _anchor(w[-1])
+        parts.append(_anchor(w[0]) + core + tail)
     return re.compile("|".join(parts), re.IGNORECASE) if parts else None
 
 
@@ -905,6 +914,11 @@ def main() -> int:
         pat = _keyword_pattern([k.lower() for k in (site.get("kids_keywords") or [])])
         veto_pat = _keyword_pattern([k.lower() for k in (site.get("veto_keywords") or [])])
         always = set(site.get("always_include_venues") or [])
+        # Substring match on the event's VENUE NAME, for events that reach us
+        # through an aggregator. always_include_venues matches venue_id, which
+        # is the SOURCE id — so Space Museum shows arriving via urbtix-lcsd were
+        # missed even though hk-space-museum is whitelisted.
+        always_names = [n.lower() for n in (site.get("always_include_venue_names") or [])]
         excluded = set(site.get("exclude_venues") or [])
         max_age = site.get("max_start_age")
         max_age = int(max_age) if max_age is not None else None
@@ -930,6 +944,10 @@ def main() -> int:
             # --- admit layer ---
             if getattr(e, "source", "") in always or getattr(e, "venue_id", "") in always:
                 return True
+            if always_names:
+                vname = (getattr(e, "venue_name", "") or "").lower()
+                if any(n in vname for n in always_names):
+                    return True
             if aud == "kids":
                 return True
             if pat and pat.search(title):

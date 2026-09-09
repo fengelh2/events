@@ -2175,6 +2175,100 @@
 #   - Cityline → blank response on /en/events.
 #   - Discover Hong Kong /eng/what-s-new/events.html → server-rendered but
 #     no obvious JSON-LD list or volume; HKTB disclaims event accuracy.
+- id: urbtix-lcsd
+  name: URBTIX / LCSD box office (open data)
+  display_name: URBTIX
+  city: __aggregator__
+  category: other
+  homepage: https://www.urbtix.hk
+  calendar_url: https://fs-open-1304240968.cos.ap-hongkong.myqcloud.com/prod/gprd/URBTIX_eventBatch_{yyyymmdd}.xml
+  kind: urbtix_xml
+  source_priority: 1
+  title_lang: EG
+  notes: |
+    Added 2026-09-09. The HK government box-office catalogue as open data via
+    data.gov.hk. Verified: 217 events fanning out to 586 dated performances,
+    545KB, HTTP 200 with a plain UA — no cookie, no JS, no anti-bot.
+
+    This is the SAME catalogue as the seven fragile lcsd-* Playwright venues,
+    served as static XML. Several of those are currently dead or lossy
+    (lcsd-hkcc 11 items -> 6, lcsd-stth 18 -> 9), so this is both a big gain
+    and a candidate to retire them against later.
+
+    Use the OPEN DATA file, never www.urbtix.hk: the site itself answers
+    HTTP 202 with a Reblaze JS challenge, and its robots.txt disallows
+    /performance-detail and /advanced-search.
+
+    ONE ROW PER PERFORMANCE, deliberately. Roald Dahl's Charlie and the
+    Chocolate Factory has 31 dates — a parent needs the night, not the run.
+
+    DATED FILENAME: the {yyyymmdd} token is resolved in Asia/Hong_Kong and
+    retried up to two days back on 404. CI's 20:00 UTC cron is 04:00 HKT the
+    NEXT day, when that day's file may not have been published yet; without
+    the fallback the venue would silently return zero every night.
+
+    Dates are ISO "2026-09-19 20:00", read by datetime.fromisoformat, so
+    dateparser and the city's DMY DATE_ORDER never come into it.
+
+    LOCATION/REGION_EG is literally Kowloon / Hong Kong Island / New
+    Territories, which drops straight onto the district chips. VENUE_EG is "-"
+    on some rows, so it falls back to the display name rather than rendering a
+    dash.
+
+    NOT whitelisted into hk-kids: the catalogue is mostly adult (109 Music,
+    41 Chinese Opera, 12 Pop Concerts). Its kid programming — Charlie and the
+    Chocolate Factory, The Great Solar System Adventure 3D, Desert Elephants,
+    Reaching the Rainbow, HK Phil Swire Family Series — comes in by keyword.
+
+- id: cityline-hk
+  name: Cityline (HK shows + KidsFest)
+  display_name: Cityline
+  city: __aggregator__
+  category: theatre
+  homepage: https://www.cityline.com
+  calendar_url: https://shows.cityline.com/data/event-list.json
+  kind: flat_json_feed
+  source_priority: 1
+  title_path: content.titleEn
+  start_path: content.effectiveTo
+  venue_path: content.venueEn
+  url_path: url
+  exclude_field: content.venueEn
+  exclude_values:
+    - shenzhen
+    - guangzhou
+    - macau
+    - "china"
+    - xinghai
+  notes: |
+    Added 2026-09-09. HK's major ticketing platform, and the ONLY route to the
+    whole KidsFest! lineup — Room on the Broom, Stick Man, The Gruffalo, The
+    Lion Inside, The 78-storey Treehouse, Horrible Histories. Those play the
+    Rita Tong Liu Drama Theatre at HKAPA as external hires, so the existing
+    `hkapa` venue (filtered to type=academy) never sees them. Also carries
+    West Kowloon programming that is otherwise Cloudflare-blocked.
+
+    Found by reading the bundle: www.cityline.com is an empty Vue shell, and
+    /assets/js/app.*.js points at /data/*.json. The feed needs only a UA — no
+    cookie, no JS, no auth. Same bytes on shows./cultural./sports./movies.
+
+    Dates are ISO "2027-01-16 23:59", which _parse_jsonld_dt reads via
+    datetime.fromisoformat, so this path never touches dateparser and the
+    city's DMY DATE_ORDER is irrelevant. No date_format needed — unlike HKPL,
+    art-mate, AsiaWorld-Expo and ParentMap.
+
+    ACCURACY LIMIT, deliberate: start_path is content.effectiveTo, which is
+    the END of the booking window — for a run this is the LAST performance,
+    so a multi-date show appears once, on its final date, not on each night.
+    content.perfDateEn holds the real dates but as free text
+    ("4-6, 11-13 September 2026 (Friday-Sunday）"), and one record even
+    carries a source typo ("15-17 January 2026" for a 2027 run). Parsing that
+    reliably needs a custom parser; one row on the closing date beats a wrong
+    date or nothing.
+
+    exclude_values is why exclude_field was added: ~35% of the 122 records are
+    Shenzhen / Guangzhou / Macau venues. filter_value can only INCLUDE.
+
 - id: parentmap-hk
   name: ParentMap.HK 放電地圖
   display_name: ParentMap HK

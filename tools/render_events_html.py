@@ -1338,6 +1338,16 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
         f'<span class="relative">{html.escape(relative)}</span>' if relative else ""
     )
 
+    # Language badge. Only rendered when a source gave positive evidence the
+    # event runs in Chinese — a Cantonese-opera genre tag, an explicit
+    # "(Cantonese)" marker, or a predominantly-CJK title. Absence of the badge
+    # means "not known", NOT "in English", which is why there is no "EN" badge
+    # to pair with it: that would assert something no source told us.
+    lang_html = ""
+    if (_attr(ev, "language") or "") == "zh":
+        lang_html = ('<span class="lang-badge" title="Likely conducted in '
+                     'Cantonese or Mandarin">中文</span>')
+
     classes = ["row", f"cat-{cat_slug}", f"city-{_city_slug(_attr(ev, 'city') or '')}"]
     if is_featured:
         classes.append("featured-row")
@@ -1354,7 +1364,7 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
     return f"""        <a class="{' '.join(classes)}" href="{url}" target="_blank" rel="noopener noreferrer" data-venue="{venue_id_attr}" data-when="{when_attr}">
           <div class="row-time">{html.escape(time_display)}</div>
           <div class="row-body">
-            <div class="row-title"><span class="new-badge"{badge_attr}>NEW</span>{title_html}</div>
+            <div class="row-title"><span class="new-badge"{badge_attr}>NEW</span>{title_html}{lang_html}</div>
             <div class="row-venue">{venue} · {city}</div>
             <div class="row-meta">{relative_html}</div>
             {extras_text}
@@ -1835,6 +1845,13 @@ _PAGE_HEAD = """<!DOCTYPE html>
       padding-top: 2px;
     }}
     .row-body {{ min-width: 0; align-self: start; }}
+    .lang-badge {
+      display: inline-block; margin-left: 6px; padding: 1px 5px;
+      font-size: 11px; font-weight: 600; line-height: 1.5;
+      border-radius: 4px; vertical-align: middle;
+      background: rgba(120,120,128,0.16); color: #6b6b70;
+      border: 1px solid rgba(120,120,128,0.22);
+    }
     .row-title {{
       font-size: 17px;
       font-weight: 600;

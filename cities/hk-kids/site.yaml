@@ -180,6 +180,13 @@ veto_keywords:
   - yoga retreat
   - singing bowl
   - camera trap
+  # Adult titles that the broad kid words let through. `baby` has to stay
+  # (Baby & Me Workout, Good Music for Babies) so the film title is vetoed
+  # by name, as `terrible baby` already is.
+  - million dollar baby   # Clint Eastwood boxing drama, admitted by `baby`
+  - charity night         # black-tie fundraiser, admitted by `children`
+  - charity gala
+  - charity ball
 
 # ── ADMIT: whitelisted venues ────────────────────────────────────────────────
 # ONLY venues whose programming works for an under-5. Venues in this list bypass
@@ -222,6 +229,15 @@ always_include_venues:
   - wetland-park
   - hk-space-museum             # planetarium
   - hk-park-events              # HK Park (aviary, playgrounds)
+
+# Substring match on an event's VENUE NAME rather than its source id.
+# always_include_venues matches venue_id, which for an aggregator is the
+# SOURCE id — so Space Museum shows arriving via urbtix-lcsd are invisible to
+# it. Left EMPTY on purpose: 'space museum' was tried and over-admitted, since
+# that venue also hosts adult film screenings, Erhu concerts and a Classical
+# Music Lecture Series. Its kid programming comes in by keyword instead.
+always_include_venue_names: []
+
   # NOT whitelisted (deliberate): hkpl-events, new-town-plaza, harbour-city.
   # Whitelisting them admitted adult library book displays ("Sci-fi May",
   # "Home Design") and mall marketing rows ("Spend and earn HK$6,140
@@ -268,6 +284,8 @@ kids_keywords:
   # Broad kid/family signals
   - kid
   - kids
+  - kids*                  # prefix form: admits KidsFest / KidsZone,
+                           # which plain kids cannot (the word boundary fails on the F)
   - child
   - children
   - family
@@ -376,6 +394,26 @@ kids_keywords:
   - pokémon
   - thomas the tank
   - gruffalo
+  # KidsFest's perennial picture-book adaptations (mostly Julia
+  # Donaldson), which arrive via Cityline and match nothing else.
+  # These are genuinely 2-6 material. Horrible Histories and The
+  # 78-storey Treehouse are DELIBERATELY absent — both are ~6+.
+  - stick man
+  - room on the broom
+  - the lion inside
+  - zog
+  - tiddler
+  - snail and the whale
+  - superworm
+  - monkey puzzle
+  - what the ladybird heard
+  - tabby mctat
+  - smeds and the smoos
+  # Classic children's-book stage adaptations that arrive via URBTIX and
+  # match nothing else. Charlie alone is 31 performances.
+  - chocolate factory
+  - roald dahl
+  - reaching the rainbow
   - teletubbies
   - cocomelon
   - toy fair
