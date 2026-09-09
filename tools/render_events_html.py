@@ -957,12 +957,22 @@ def _render_html(
                 f'</label>'
             )
         parts.append('  </nav>')
-    parts.append('  <div class="extras-toggle-wrapper">')
-    parts.append('    <label for="show-extras" class="extras-toggle">'
-                 '<span class="extras-checkbox" aria-hidden="true"></span>'
-                 'Also show classes, workshops, and family programmes'
-                 '</label>')
-    parts.append('  </div>')
+    # Only render the toggle when there is something for it to reveal.
+    # `.row.audience-kids` and `.row.audience-active` are display:none by
+    # default and ONLY #show-extras:checked brings them back, so with the
+    # label hidden those rows were in the DOM and unreachable by any mouse
+    # action: 22 rows on HK, 9 on LA, 58 on NRW, 51 on Singapore.
+    # hk-kids has none because rebuild_calendar promotes kids/active rows
+    # to "general" on the kids site — which is why this stayed invisible.
+    _n_extras = sum(1 for _e in visible_events
+                    if (_attr(_e, 'audience') or 'general') in ('kids', 'active'))
+    if _n_extras:
+        parts.append('  <div class="extras-toggle-wrapper">')
+        parts.append('    <label for="show-extras" class="extras-toggle">'
+                     '<span class="extras-checkbox" aria-hidden="true"></span>'
+                     f'Also show {_n_extras} classes, workshops and family programmes'
+                     '</label>')
+        parts.append('  </div>')
     parts.append('  </div>')  # close .filter-panel
 
     # Featured / "Don't Miss" — carousel (hidden scrollbar, arrows, wiggle hint)
@@ -1581,8 +1591,22 @@ _PAGE_HEAD = """<!DOCTYPE html>
       margin: 0 0 8px;
     }}
     .filter-bar:last-child {{ margin-bottom: 0; }}
-    /* "Auch Kurse..." toggle hidden; underlying audience filter still applies */
-    .extras-toggle-wrapper {{ display: none; }}
+    /* The toggle is rendered only when there are audience-kids/active rows
+       to reveal; it used to be display:none unconditionally, which left
+       140 such rows across HK/LA/NRW/SG permanently unreachable. */
+    .extras-toggle-wrapper {{ margin: 4px 0 2px; }}
+    .extras-toggle {{
+      display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+      font-size: 13px; color: var(--muted, #6b6b70); user-select: none;
+    }}
+    .extras-checkbox {{
+      width: 14px; height: 14px; border-radius: 3px;
+      border: 1.5px solid rgba(120,120,128,0.5); display: inline-block;
+    }}
+    #show-extras:checked ~ .filter-panel .extras-toggle {{ color: var(--ink); }}
+    #show-extras:checked ~ .filter-panel .extras-checkbox {{
+      background: var(--ink); border-color: var(--ink);
+    }}
     /* Spacer that grows to fill remaining width — pushes Favoriten chip right. */
     .filter-bar-spacer {{ flex: 1; min-width: 12px; }}
     .filter-chip-fav .cat-icon {{ font-size: 11px; }}
