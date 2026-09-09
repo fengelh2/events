@@ -17,6 +17,7 @@ import json
 import logging
 import re
 import sys
+import time
 import unicodedata
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -206,6 +207,64 @@ def _events_from_cache_block(block: dict) -> list | None:
 # the code that emits it never ran. Staggered by venue id so a full expiry
 # doesn't stampede every venue into one build.
 CACHE_MAX_AGE_HOURS = 72
+
+
+# How long a venue may keep serving its last known-good events after a scrape
+# comes back empty. BOUNDED on purpose: an unbounded fallback would recreate
+# exactly the silent rot the cache max-age was added to kill — a venue whose
+# website died would serve its final good scrape forever and never surface.
+# Inside the window a blip is absorbed; past it the venue goes to zero and the
+# zero-yield tracker escalates.
+EMPTY_FALLBACK_GRACE_DAYS = 7
+SCRAPE_ATTEMPTS = 2
+
+
+def _scrape_with_retry(venue: dict, session, vid: str):
+    """Scrape a venue, retrying once. Returns (events, exception_or_None).
+
+    A single retry exists because empty is not reliably distinguishable from
+    broken: hk-science-museum-kids returned "Response ended prematurely" (0
+    events) on one run and 1,091 on the next, and an independent audit hit the
+    same coin-flip on the same venue. One retry converts most of those into a
+    correct result instead of a venue-wide blank.
+    """
+    last_exc = None
+    evs: list = []
+    for attempt in range(SCRAPE_ATTEMPTS):
+        try:
+            evs = scrape_venue_events.scrape(venue, session=session) or []
+            last_exc = None
+        except Exception as exc:          # noqa: BLE001 - per-venue isolation
+            last_exc, evs = exc, []
+        if evs:
+            if attempt:
+                log.info("%s: recovered on retry (%d events)", vid, len(evs))
+            return evs, None
+        if attempt + 1 < SCRAPE_ATTEMPTS:
+            log.info("%s: empty/failed, retrying once", vid)
+            time.sleep(2)
+    return evs, last_exc
+
+
+def _stale_fallback(block: dict | None, vid: str) -> list:
+    """Last known-good events for a venue whose scrape came back empty, or []
+    once the block is older than EMPTY_FALLBACK_GRACE_DAYS."""
+    if not block:
+        return []
+    stale = _events_from_cache_block(block) or []
+    if not stale:
+        return []
+    age_h = _cache_age_hours(block)
+    if age_h is not None and age_h > EMPTY_FALLBACK_GRACE_DAYS * 24:
+        log.error("%s: scrape empty AND last good data is %.1f days old "
+                  "(> %d-day grace) — letting it go to ZERO so the drift alarm fires",
+                  vid, age_h / 24, EMPTY_FALLBACK_GRACE_DAYS)
+        return []
+    log.warning("%s: scrape returned nothing — serving %d cached events "
+                "from %.1fh ago (grace %dd)",
+                vid, len(stale), age_h if age_h is not None else -1,
+                EMPTY_FALLBACK_GRACE_DAYS)
+    return stale
 
 
 def _cache_age_hours(block: dict) -> float | None:
@@ -710,28 +769,30 @@ def main() -> int:
                 # Schema drift on this venue's block — fall through to re-scrape.
                 log.info("cache schema drift for %s — re-scraping", vid)
             cache_misses += 1
-            if vid:
-                scraped_ids.add(vid)
-            try:
-                evs = scrape_venue_events.scrape(v, session=session)
-            except Exception as exc:
+            evs, exc = _scrape_with_retry(v, session, vid)
+            if exc is not None:
                 log.error("scrape() raised for %s: %s", vid, exc)
                 failed.append((vid, str(exc)))
-                # On scrape failure, fall back to cached events for this
-                # venue if any exist (better stale than empty). Hash mismatch
-                # is acceptable here — alternative is dropping the venue.
-                if block is not None:
-                    stale = _events_from_cache_block(block) or []
-                    if stale:
-                        log.warning("scrape failed for %s — serving %d stale cached events",
-                                    vid, len(stale))
-                        all_events.extend(stale)
-                continue
-            if not evs:
+            elif not evs:
                 failed.append((vid, "no events returned"))
-            else:
+
+            if evs:
+                # Only a SUCCESSFUL fetch advances scraped_at. Marking the
+                # venue scraped on failure would reset the age clock every
+                # run, so the stale-fallback grace below would never expire
+                # and a dead venue would serve its last good scrape forever —
+                # the very rot the cache max-age exists to surface.
+                if vid:
+                    scraped_ids.add(vid)
                 all_events.extend(evs)
                 ok += 1
+                continue
+
+            # Empty result — either a raise or a parser that swallowed its own
+            # error and returned []. Both get the same bounded stale fallback.
+            stale = _stale_fallback(block, vid)
+            if stale:
+                all_events.extend(stale)
 
         log.info("scraped %d venues OK, %d failed, %d skipped (kind=unknown); "
                  "cache hits=%d misses=%d",
