@@ -1192,7 +1192,17 @@ def _render_featured_card(ev, now: datetime, fresh_keys: Optional[set] = None) -
     title = html.escape(_attr(ev, "title") or "")
     venue_name_raw = _attr(ev, "venue_name") or ""
     venue = html.escape(venue_name_raw)
-    city = html.escape(_attr(ev, "city") or "")
+    # "__aggregator__" is an INTERNAL sentinel meaning "this venue has no
+    # canonical district". The chip builders already skip it, but the row
+    # byline did not, so aggregator sources rendered literally as
+    # "ParentMap HK · __aggregator__".
+    _city_raw = _attr(ev, "city") or ""
+    if _city_raw == "__aggregator__":
+        _city_raw = ""
+    city = html.escape(_city_raw)
+    # Omit the separator entirely when there is no district, rather than
+    # leaving a dangling "Venue · ".
+    venue_line = f"{venue} · {city}" if (venue and city) else (venue or city)
     url = html.escape(_safe_url(_attr(ev, "url")))
     raw_desc = _attr(ev, "description") or ""
     description = html.escape(_clean_description(raw_desc, venue_name_raw))[:240]
@@ -1237,7 +1247,7 @@ def _render_featured_card(ev, now: datetime, fresh_keys: Optional[set] = None) -
         {pill_html}
         <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
         <div class="fc-title"><span class="new-badge"{badge_attr}>NEW</span>{title}</div>
-        <div class="fc-venue">{venue} · {city}</div>
+        <div class="fc-venue">{venue_line}</div>
         <div class="fc-date">{date_line}</div>
         {f'<div class="fc-desc">{description}</div>' if description else ''}
         <div class="fc-meta"><span class="arrow">→</span></div>
@@ -1291,7 +1301,17 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
     e = _end(ev)
     title = _attr(ev, "title") or ""
     venue = html.escape(_attr(ev, "venue_name") or "")
-    city = html.escape(_attr(ev, "city") or "")
+    # "__aggregator__" is an INTERNAL sentinel meaning "this venue has no
+    # canonical district". The chip builders already skip it, but the row
+    # byline did not, so aggregator sources rendered literally as
+    # "ParentMap HK · __aggregator__".
+    _city_raw = _attr(ev, "city") or ""
+    if _city_raw == "__aggregator__":
+        _city_raw = ""
+    city = html.escape(_city_raw)
+    # Omit the separator entirely when there is no district, rather than
+    # leaving a dangling "Venue · ".
+    venue_line = f"{venue} · {city}" if (venue and city) else (venue or city)
     url = html.escape(_safe_url(_attr(ev, "url")))
     category_raw = _attr(ev, "category") or "other"
     category = CATEGORY_LABELS.get(category_raw, "")
@@ -1367,7 +1387,7 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
           <div class="row-time">{html.escape(time_display)}</div>
           <div class="row-body">
             <div class="row-title"><span class="new-badge"{badge_attr}>NEW</span>{title_html}{lang_html}</div>
-            <div class="row-venue">{venue} · {city}</div>
+            <div class="row-venue">{venue_line}</div>
             <div class="row-meta">{relative_html}</div>
             {extras_text}
           </div>
