@@ -1241,7 +1241,23 @@ def _render_html(
 
 
 def _render_featured_card(ev, now: datetime, fresh_keys: Optional[set] = None) -> str:
-    title = html.escape(_attr(ev, "title") or "")
+    _raw_title = _attr(ev, "title") or ""
+    title = html.escape(_raw_title)
+    # Same English-headline treatment as the agenda rows. This renderer is
+    # separate, so the first pass at the gloss missed it entirely and the
+    # "Don't Miss" and "Recently Added" strips — the most prominent things
+    # on the page — kept showing untranslated Chinese.
+    fc_gloss_html = ""
+    fc_lang_html = ""
+    if zh_gloss is not None:
+        _fg = zh_gloss.gloss(_raw_title)
+        if _fg:
+            title = html.escape(_fg)
+            fc_gloss_html = (f'<div class="fc-gloss" lang="zh-Hant">'
+                             f'{html.escape(_raw_title)}</div>')
+    if (_attr(ev, "language") or "") == "zh" or fc_gloss_html:
+        fc_lang_html = ('<span class="lang-badge" title="Original listing is in '
+                        'Chinese; the English title above is a rough gloss">中文</span>')
     venue_name_raw = _attr(ev, "venue_name") or ""
     venue = html.escape(venue_name_raw)
     # "__aggregator__" is an INTERNAL sentinel meaning "this venue has no
@@ -1298,7 +1314,8 @@ def _render_featured_card(ev, now: datetime, fresh_keys: Optional[set] = None) -
       <div class="fc-inner">
         {pill_html}
         <button type="button" class="fav-btn fc-fav" aria-label="Mark as favorite">♡</button>
-        <div class="fc-title"><span class="new-badge"{badge_attr}>NEW</span>{title}</div>
+        <div class="fc-title"><span class="new-badge"{badge_attr}>NEW</span>{title}{fc_lang_html}</div>
+        {fc_gloss_html}
         <div class="fc-venue">{venue_line}</div>
         <div class="fc-date">{date_line}</div>
         {f'<div class="fc-desc">{description}</div>' if description else ''}
@@ -1961,6 +1978,10 @@ _PAGE_HEAD = """<!DOCTYPE html>
       padding-top: 2px;
     }}
     .row-body {{ min-width: 0; align-self: start; }}
+    .fc-gloss {{
+      font-size: 12.5px; color: var(--muted, #8a8a8f);
+      margin: 2px 0 4px; font-style: italic; line-height: 1.35;
+    }}
     .row-gloss {{
       font-size: 12.5px; color: var(--muted, #8a8a8f);
       margin-top: 2px; font-style: italic; line-height: 1.35;

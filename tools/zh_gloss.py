@@ -35,6 +35,18 @@ _TERMS: dict[str, str] = {
     "博物館": "museum", "劇場": "theatre", "農場": "farm", "廣場": "plaza",
     "海岸公園": "Marine Park", "公園": "park", "大埔": "Tai Po", "香港": "Hong Kong",
     "星光大道": "Avenue of Stars", "六廠": "Mills",
+    "香港兒童探索博物館": "HK Children's Discovery Museum",
+    "大澳": "Tai O", "西灣河": "Sai Wan Ho", "漁業": "fishing industry",
+    # Added after 3 featured-card headlines came through untranslated.
+    "興衰": "rise and fall", "探究": "study", "體驗": "experience",
+    "長壽": "long-running", "音樂劇": "musical", "童話": "fairytale",
+    "帝國": "empire", "設計": "design", "感受": "experience",
+    "日常": "everyday", "奇妙": "wonder", "場景": "scene",
+    "愛麗絲夢遊仙境": "Alice in Wonderland", "草間彌生": "Yayoi Kusama",
+    "小莎翁": "Mini Shakespeare", "匯演": "showcase", "燈藝": "lantern craft",
+    "牧場": "dairy farm", "手作": "handicraft", "月光": "moonlight",
+    "企劃": "project", "玩學": "play-and-learn", "樂園": "park",
+    "傳說": "legend", "如你所願": "As You Like It", "建築": "architecture",
     # ── audience ───────────────────────────────────────────────────────
     "親子": "parent-child", "兒童": "children", "幼兒": "toddler", "嬰兒": "baby",
     "小朋友": "kids", "青少年": "youth", "寶寶": "baby", "小小": "little",
