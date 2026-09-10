@@ -34,7 +34,7 @@ _TERMS: dict[str, str] = {
     "國際廣場": "Plaza", "朗壹廣場": "One North", "圖書館": "library",
     "博物館": "museum", "劇場": "theatre", "農場": "farm", "廣場": "plaza",
     "海岸公園": "Marine Park", "公園": "park", "大埔": "Tai Po", "香港": "Hong Kong",
-    "星光大道": "Avenue of Stars", "六廠": "CHAT Mills",
+    "星光大道": "Avenue of Stars", "六廠": "Mills",
     # ── audience ───────────────────────────────────────────────────────
     "親子": "parent-child", "兒童": "children", "幼兒": "toddler", "嬰兒": "baby",
     "小朋友": "kids", "青少年": "youth", "寶寶": "baby", "小小": "little",

@@ -1420,17 +1420,25 @@ def _render_row(ev, now: datetime, featured: set, fresh_keys: Optional[set] = No
     lang_html = ""
     gloss_html = ""
     if zh_gloss is not None:
-        # A rough English gloss under a Chinese title. The ORIGINAL stays as
-        # the title because that is what you search for or quote when
-        # booking; the gloss only has to be good enough to decide whether to
-        # click. zh_gloss returns None rather than emitting a half-Chinese
-        # string it could not cover.
+        # A Chinese headline tells a non-Chinese-reading parent nothing, so
+        # the English gloss becomes the TITLE and the original drops to a
+        # subtitle. The original is never discarded — it is what you search
+        # for or quote when booking, and it is the authoritative text when
+        # the gloss reads awkwardly (this is term substitution, not
+        # translation). zh_gloss returns None rather than emit a
+        # half-Chinese string, in which case the Chinese title stays put.
         _g = zh_gloss.gloss(title)
         if _g:
-            gloss_html = f'<div class="row-gloss">{html.escape(_g)}</div>'
-    if (_attr(ev, "language") or "") == "zh":
-        lang_html = ('<span class="lang-badge" title="Likely conducted in '
-                     'Cantonese or Mandarin">中文</span>')
+            title_html = f"{star}{html.escape(_g)}"
+            gloss_html = f'<div class="row-gloss" lang="zh-Hant">{html.escape(title)}</div>'
+    # Badge whenever the row is Chinese in origin: either a source told us
+    # the event runs in Cantonese/Mandarin, OR we replaced a Chinese title
+    # with an English gloss. In the second case the headline now reads as
+    # English, so without the badge there is nothing left to warn a parent
+    # that the listing — and probably the event — is in Chinese.
+    if (_attr(ev, "language") or "") == "zh" or gloss_html:
+        lang_html = ('<span class="lang-badge" title="Original listing is in '
+                     'Chinese; the English title above is a rough gloss">中文</span>')
 
     classes = ["row", f"cat-{cat_slug}", f"city-{_city_slug(_attr(ev, 'city') or '')}"]
     if is_featured:
