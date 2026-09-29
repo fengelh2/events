@@ -36,8 +36,8 @@
     "streak": 0
   },
   "hk-anahata-yoga": {
-    "last_nonzero_run": null,
-    "streak": 26
+    "last_nonzero_run": "2026-09-29",
+    "streak": 0
   },
   "hk-arts-centre": {
     "last_nonzero_run": "2026-09-29",
@@ -45,7 +45,7 @@
   },
   "hk-arts-festival": {
     "last_nonzero_run": null,
-    "streak": 26
+    "streak": 27
   },
   "hk-backstage-comedy": {
     "last_nonzero_run": "2026-09-29",
@@ -53,7 +53,7 @@
   },
   "hk-ballet": {
     "last_nonzero_run": null,
-    "streak": 26
+    "streak": 27
   },
   "hk-baseball-youth": {
     "last_nonzero_run": "2026-09-29",
@@ -73,7 +73,7 @@
   },
   "hk-eventbrite-citywide": {
     "last_nonzero_run": null,
-    "streak": 26
+    "streak": 27
   },
   "hk-fringe-workshops": {
     "last_nonzero_run": "2026-09-29",
@@ -125,11 +125,11 @@
   },
   "hk-seed-by-farmacy": {
     "last_nonzero_run": null,
-    "streak": 26
+    "streak": 27
   },
   "hk-sinfonietta": {
     "last_nonzero_run": null,
-    "streak": 26
+    "streak": 27
   },
   "hk-space-museum": {
     "last_nonzero_run": "2026-09-29",
@@ -137,7 +137,7 @@
   },
   "hk-swimming": {
     "last_nonzero_run": null,
-    "streak": 26
+    "streak": 27
   },
   "hk-takeout-comedy": {
     "last_nonzero_run": "2026-09-29",
@@ -145,7 +145,7 @@
   },
   "hk-the-hive": {
     "last_nonzero_run": null,
-    "streak": 26
+    "streak": 27
   },
   "hkapa": {
     "last_nonzero_run": "2026-09-29",
@@ -157,7 +157,7 @@
   },
   "hkfc-rugby-fixtures": {
     "last_nonzero_run": "2026-09-29",
-    "streak": 0
+    "streak": 1
   },
   "hkiff": {
     "last_nonzero_run": "2026-09-29",
@@ -253,7 +253,7 @@
   },
   "tai-kwun": {
     "last_nonzero_run": null,
-    "streak": 26
+    "streak": 27
   },
   "tennis-hk": {
     "last_nonzero_run": "2026-09-29",
