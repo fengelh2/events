@@ -25,7 +25,7 @@
   },
   "french-may": {
     "last_nonzero_run": "2026-10-01",
-    "streak": 29
+    "streak": 30
   },
   "harbour-city": {
     "last_nonzero_run": "2026-10-31",
@@ -45,7 +45,7 @@
   },
   "hk-arts-festival": {
     "last_nonzero_run": null,
-    "streak": 58
+    "streak": 59
   },
   "hk-backstage-comedy": {
     "last_nonzero_run": "2026-10-31",
@@ -53,7 +53,7 @@
   },
   "hk-ballet": {
     "last_nonzero_run": null,
-    "streak": 58
+    "streak": 59
   },
   "hk-baseball-youth": {
     "last_nonzero_run": "2026-10-31",
@@ -73,7 +73,7 @@
   },
   "hk-eventbrite-citywide": {
     "last_nonzero_run": null,
-    "streak": 58
+    "streak": 59
   },
   "hk-fringe-workshops": {
     "last_nonzero_run": "2026-10-31",
@@ -125,7 +125,7 @@
   },
   "hk-seed-by-farmacy": {
     "last_nonzero_run": null,
-    "streak": 58
+    "streak": 59
   },
   "hk-sinfonietta": {
     "last_nonzero_run": "2026-10-31",
@@ -133,11 +133,11 @@
   },
   "hk-space-museum": {
     "last_nonzero_run": "2026-10-04",
-    "streak": 26
+    "streak": 27
   },
   "hk-swimming": {
     "last_nonzero_run": null,
-    "streak": 58
+    "streak": 59
   },
   "hk-takeout-comedy": {
     "last_nonzero_run": "2026-10-31",
@@ -145,7 +145,7 @@
   },
   "hk-the-hive": {
     "last_nonzero_run": null,
-    "streak": 58
+    "streak": 59
   },
   "hkapa": {
     "last_nonzero_run": "2026-10-31",
@@ -157,7 +157,7 @@
   },
   "hkfc-rugby-fixtures": {
     "last_nonzero_run": "2026-09-29",
-    "streak": 32
+    "streak": 33
   },
   "hkiff": {
     "last_nonzero_run": "2026-10-31",
@@ -169,7 +169,7 @@
   },
   "hkihl-ice-hockey": {
     "last_nonzero_run": "2026-10-20",
-    "streak": 11
+    "streak": 12
   },
   "hkpl-events": {
     "last_nonzero_run": "2026-10-31",
@@ -253,7 +253,7 @@
   },
   "tai-kwun": {
     "last_nonzero_run": null,
-    "streak": 58
+    "streak": 59
   },
   "tennis-hk": {
     "last_nonzero_run": "2026-10-31",
@@ -265,11 +265,11 @@
   },
   "timeout-hk-month": {
     "last_nonzero_run": "2026-10-22",
-    "streak": 8
+    "streak": 9
   },
   "timeout-hk-weekend": {
     "last_nonzero_run": "2026-10-22",
-    "streak": 8
+    "streak": 9
   },
   "urbtix-lcsd": {
     "last_nonzero_run": "2026-10-31",
