@@ -1,11 +1,11 @@
 {
   "academy-museum": {
     "last_nonzero_run": "2026-11-01",
-    "streak": 5
+    "streak": 6
   },
   "discover-los-angeles": {
     "last_nonzero_run": null,
-    "streak": 65
+    "streak": 66
   },
   "geffen-playhouse": {
     "last_nonzero_run": "2026-11-07",
@@ -21,7 +21,7 @@
   },
   "hollywood-bowl": {
     "last_nonzero_run": null,
-    "streak": 65
+    "streak": 66
   },
   "hollywood-palladium": {
     "last_nonzero_run": "2026-11-07",
@@ -33,7 +33,7 @@
   },
   "la-master-chorale": {
     "last_nonzero_run": "2026-11-01",
-    "streak": 5
+    "streak": 6
   },
   "la-opera": {
     "last_nonzero_run": "2026-11-07",
@@ -41,7 +41,7 @@
   },
   "la-philharmonic": {
     "last_nonzero_run": null,
-    "streak": 65
+    "streak": 66
   },
   "lacma": {
     "last_nonzero_run": "2026-11-07",
@@ -77,7 +77,7 @@
   },
   "the-ford": {
     "last_nonzero_run": null,
-    "streak": 65
+    "streak": 66
   },
   "the-soraya": {
     "last_nonzero_run": "2026-11-07",
